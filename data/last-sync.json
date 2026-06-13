@@ -1,6 +1,18 @@
 {
-  "syncedAt": "2026-06-13T05:30:29.949Z",
+  "syncedAt": "2026-06-13T10:29:00.421Z",
   "activities": [
+    {
+      "id": "i156867308",
+      "date": "2026-06-13",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 10288,
+      "avgWatts": 191,
+      "avgHr": 139,
+      "kj": 1964,
+      "trainingLoad": 161,
+      "rpe": null
+    },
     {
       "id": "i156604070",
       "date": "2026-06-12",
@@ -1134,8 +1146,8 @@
       "sleepHours": null,
       "sleepQuality": null,
       "kcalConsumed": null,
-      "ctl": 90.739876,
-      "atl": 85.42084
+      "ctl": 94.52794,
+      "atl": 106.8535
     }
   ],
   "powerCurve": [
@@ -1177,8 +1189,8 @@
     }
   ],
   "fitness": {
-    "ctl": 90.7,
-    "atl": 85.4,
-    "tsb": 5.3
+    "ctl": 94.5,
+    "atl": 106.9,
+    "tsb": -12.3
   }
 }

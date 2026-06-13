@@ -1,1 +1,178 @@
-null
+{
+  "goal": "FTP → 300W\n1-minute power → 600W\n5-second power → 1000W\nNutrition → Dial in daily intake for energy, performance, and quality of life\nTraining → Proper weekly structure with structured recovery; maintain high volume\nDurability → Sustain power on 3h+ rides\nLocal performance → Hill KOMs in Novo Mesto area, Slovenia\nRacing → Begin competing at amateur level\n(progress is working towards this goals)",
+  "lengthWeeks": 4,
+  "startDate": "2026-06-13",
+  "endDate": "2026-07-10",
+  "overview": "This 4-week block targets FTP progression toward 300W, 1-minute power toward 600W, and 5-second sprint power toward 1000W through a polarised structure: two weekly quality sessions (rotating threshold, VO2max, and SIT) anchored by a long Saturday Z2 ride for durability, with strict easy-day power ceilings to eliminate the grey-zone drift that currently accounts for 92% of training load. Week 4 is a recovery week (30–40% volume reduction) to convert accumulated training stress into fitness. Nutrition targets are embedded in every session to address the chronic under-fuelling identified as a primary recovery limiter. ---",
+  "createdAt": "2026-06-13T05:38:28.774Z",
+  "days": [
+    {
+      "date": "2026-06-13",
+      "name": "Long Z2 — Durability Ride",
+      "type": "Z2",
+      "durationMin": 240
+    },
+    {
+      "date": "2026-06-14",
+      "name": "Easy Z2 — Flush",
+      "type": "Z2",
+      "durationMin": 60
+    },
+    {
+      "date": "2026-06-15",
+      "name": "Rest",
+      "type": "Rest",
+      "durationMin": 0
+    },
+    {
+      "date": "2026-06-16",
+      "name": "Threshold — 2×20",
+      "type": "Threshold",
+      "durationMin": 90
+    },
+    {
+      "date": "2026-06-17",
+      "name": "Easy Z2",
+      "type": "Z2",
+      "durationMin": 90
+    },
+    {
+      "date": "2026-06-18",
+      "name": "SIT — Sprint Foundation",
+      "type": "SIT",
+      "durationMin": 60
+    },
+    {
+      "date": "2026-06-19",
+      "name": "Easy Z2",
+      "type": "Z2",
+      "durationMin": 90
+    },
+    {
+      "date": "2026-06-20",
+      "name": "Long Z2 — Durability Ride",
+      "type": "Z2",
+      "durationMin": 240
+    },
+    {
+      "date": "2026-06-21",
+      "name": "Easy Z2 — Flush",
+      "type": "Z2",
+      "durationMin": 60
+    },
+    {
+      "date": "2026-06-22",
+      "name": "Rest",
+      "type": "Rest",
+      "durationMin": 0
+    },
+    {
+      "date": "2026-06-23",
+      "name": "VO2max — 4×4",
+      "type": "VO2max",
+      "durationMin": 75
+    },
+    {
+      "date": "2026-06-24",
+      "name": "Easy Z2",
+      "type": "Z2",
+      "durationMin": 90
+    },
+    {
+      "date": "2026-06-25",
+      "name": "SIT + 1-Minute Power",
+      "type": "SIT",
+      "durationMin": 75
+    },
+    {
+      "date": "2026-06-26",
+      "name": "Easy Z2",
+      "type": "Z2",
+      "durationMin": 90
+    },
+    {
+      "date": "2026-06-27",
+      "name": "Long Z2 — Durability Ride",
+      "type": "Z2",
+      "durationMin": 240
+    },
+    {
+      "date": "2026-06-28",
+      "name": "Easy Z2 — Flush",
+      "type": "Z2",
+      "durationMin": 60
+    },
+    {
+      "date": "2026-06-29",
+      "name": "Rest",
+      "type": "Rest",
+      "durationMin": 0
+    },
+    {
+      "date": "2026-06-30",
+      "name": "Threshold — Over-Unders",
+      "type": "Threshold",
+      "durationMin": 90
+    },
+    {
+      "date": "2026-07-01",
+      "name": "Easy Z2",
+      "type": "Z2",
+      "durationMin": 90
+    },
+    {
+      "date": "2026-07-02",
+      "name": "SIT — Sprint Volume Build",
+      "type": "SIT",
+      "durationMin": 75
+    },
+    {
+      "date": "2026-07-03",
+      "name": "Easy Z2",
+      "type": "Z2",
+      "durationMin": 90
+    },
+    {
+      "date": "2026-07-04",
+      "name": "Z2 — Short Long Ride",
+      "type": "Z2",
+      "durationMin": 150
+    },
+    {
+      "date": "2026-07-05",
+      "name": "Easy Z2 — Flush",
+      "type": "Z2",
+      "durationMin": 60
+    },
+    {
+      "date": "2026-07-06",
+      "name": "Rest",
+      "type": "Rest",
+      "durationMin": 0
+    },
+    {
+      "date": "2026-07-07",
+      "name": "Threshold — Short 3×10",
+      "type": "Threshold",
+      "durationMin": 75
+    },
+    {
+      "date": "2026-07-08",
+      "name": "Easy Z2",
+      "type": "Z2",
+      "durationMin": 60
+    },
+    {
+      "date": "2026-07-09",
+      "name": "SIT — Reduced Volume",
+      "type": "SIT",
+      "durationMin": 45
+    },
+    {
+      "date": "2026-07-10",
+      "name": "Easy Z2",
+      "type": "Z2",
+      "durationMin": 60
+    }
+  ]
+}
