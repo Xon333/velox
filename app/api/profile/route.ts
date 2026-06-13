@@ -29,6 +29,11 @@ export async function GET() {
     nutrition: profile.nutrition,
     athleteMd,
     syncedPowerCurve: sync?.powerCurve ?? [],
+    weightHistory: (sync?.wellness ?? [])
+      .filter((w) => w.weightKg !== null)
+      .map((w) => ({ date: w.date, weightKg: w.weightKg as number }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-56), // last 8 weeks
     latestWeightKg:
       (sync?.wellness ?? [])
         .filter((w) => w.weightKg !== null)

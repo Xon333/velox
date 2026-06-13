@@ -10,6 +10,7 @@ import {
   readTodayAnalysis,
 } from "@/lib/data-store";
 import { analyseRide, buildRideAnalysisInput, isAnthropicConfigured } from "@/lib/anthropic-api";
+import { adjustBuffer, weightTrendFromWellness } from "@/lib/nutrition";
 import type { TodayAnalysis } from "@/lib/types";
 
 function todayIso(): string {
@@ -72,6 +73,13 @@ export async function POST() {
               ? Math.round((todayActivity.avgWatts / ftp) * 100) / 100
               : null;
 
+          // Advised daily intake using real ride kJ (1 kJ ≈ 1 kcal for cyclists)
+          const weightTrend = weightTrendFromWellness(lastSync.wellness) ?? 0;
+          const { bufferApplied } = adjustBuffer(profile.nutrition.buffer, weightTrend);
+          const rideFuelKcal = todayActivity.kj ?? 0;
+          const advisedBaseKcal = profile.nutrition.baseCalories;
+          const advisedIntakeKcal = Math.round(advisedBaseKcal + rideFuelKcal + bufferApplied);
+
           const input = buildRideAnalysisInput(
             todayActivity,
             plannedDay ? { name: plannedDay.name, type: plannedDay.type, durationMin: plannedDay.durationMin } : null,
@@ -99,6 +107,10 @@ export async function POST() {
             plannedDurationMin: plannedDay?.durationMin ?? null,
             compliancePct,
             intensityFactor,
+            advisedIntakeKcal,
+            advisedBaseKcal,
+            advisedBufferKcal: bufferApplied,
+            advisedRideFuelKcal: rideFuelKcal,
             coachNote,
           };
           await writeTodayAnalysis(todayAnalysis);

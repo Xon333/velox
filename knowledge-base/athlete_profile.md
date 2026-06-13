@@ -15,7 +15,7 @@
 | Estimated body fat | ~10% |
 | Lean body mass | ~55.8kg |
 | Bike | S-Works Tarmac SL2 |
-| Power meter | Magene PES P515 (crank-based) |
+| Power meter | Magene PES P515 (spider-based) |
 
 ---
 

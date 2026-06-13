@@ -29,6 +29,11 @@ interface BufferStatus {
   reason: string;
 }
 
+interface WeightPoint {
+  date: string;
+  weightKg: number;
+}
+
 interface ProfileResponse {
   nutrition: NutritionSettings;
   athleteMd: AthleteMdSnapshot;
@@ -36,6 +41,7 @@ interface ProfileResponse {
   bufferStatus: BufferStatus;
   syncedPowerCurve: PowerCurvePoint[];
   latestWeightKg: number | null;
+  weightHistory: WeightPoint[];
 }
 
 type SaveState = { state: "idle" | "saving" | "saved" } | { state: "error"; message: string };
@@ -44,6 +50,49 @@ const POWER_CURVE_LABELS: Record<number, string> = {
   5: "5s", 15: "15s", 30: "30s", 60: "1 min",
   120: "2 min", 300: "5 min", 1200: "20 min", 1800: "30 min", 3600: "60 min",
 };
+
+// ---------- Weight sparkline ----------
+
+function WeightSparkline({ points }: { points: WeightPoint[] }) {
+  if (points.length < 2) return null;
+
+  const W = 280;
+  const H = 48;
+  const PAD = 4;
+
+  const weights = points.map((p) => p.weightKg);
+  const minW = Math.min(...weights);
+  const maxW = Math.max(...weights);
+  const range = maxW - minW || 0.5;
+
+  const toX = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
+  const toY = (w: number) => PAD + (1 - (w - minW) / range) * (H - PAD * 2);
+
+  const d = points
+    .map((p, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(p.weightKg).toFixed(1)}`)
+    .join(" ");
+
+  const latest = points[points.length - 1];
+  const latestX = toX(points.length - 1);
+  const latestY = toY(latest.weightKg);
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
+      <path d={d} fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-500" />
+      <circle cx={latestX} cy={latestY} r="3" className="fill-blue-500" />
+      <text
+        x={Math.min(latestX + 5, W - 30)}
+        y={latestY - 4}
+        fontSize="9"
+        className="fill-zinc-400 dark:fill-zinc-500"
+      >
+        {latest.weightKg.toFixed(1)} kg
+      </text>
+    </svg>
+  );
+}
+
+// ---------- Shared helpers ----------
 
 function Section({
   title,
@@ -69,18 +118,20 @@ function Section({
   );
 }
 
-function KvGrid({ entries }: { entries: [string, string][] }) {
+function StatGrid({ items }: { items: Array<{ label: string; value: string }> }) {
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
-      {entries.map(([k, v]) => (
-        <div key={k}>
-          <dt className="text-[11px] text-zinc-400 dark:text-zinc-500">{k}</dt>
-          <dd className="mt-0.5 text-sm font-medium text-zinc-800 dark:text-zinc-200">{v || "—"}</dd>
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+      {items.map(({ label, value }) => (
+        <div key={label}>
+          <dt className="text-[11px] text-zinc-400 dark:text-zinc-500">{label}</dt>
+          <dd className="mt-0.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200">{value || "—"}</dd>
         </div>
       ))}
     </dl>
   );
 }
+
+// ---------- Main component ----------
 
 export default function AthleteProfileForm() {
   const [data, setData] = useState<ProfileResponse | null>(null);
@@ -136,10 +187,7 @@ export default function AthleteProfileForm() {
   }
   if (!data) return <p className="py-12 text-center text-sm text-zinc-400">Loading…</p>;
 
-  const { athleteMd, autoSync, bufferStatus, syncedPowerCurve, latestWeightKg } = data;
-
-  const perfEntries = Object.entries(athleteMd.performanceData);
-  const personalEntries = Object.entries(athleteMd.personalData);
+  const { athleteMd, autoSync, bufferStatus, syncedPowerCurve, latestWeightKg, weightHistory } = data;
 
   return (
     <div className="space-y-4">
@@ -150,40 +198,52 @@ export default function AthleteProfileForm() {
         </Link>
       </div>
 
-      {/* Performance snapshot */}
-      {(personalEntries.length > 0 || perfEntries.length > 0) && (
-        <Section title="Performance snapshot" editHref="/knowledge">
-          <div className="space-y-4">
-            {personalEntries.length > 0 && (
-              <div>
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Personal</p>
-                <KvGrid entries={personalEntries as [string, string][]} />
+      {/* 1. Live data from Intervals.icu — top priority */}
+      <Section title="Live data from Intervals.icu">
+        {autoSync.syncedAt === null ? (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            No sync yet —{" "}
+            <Link href="/dashboard" className="text-blue-600 hover:underline dark:text-blue-400">
+              sync from the dashboard
+            </Link>.
+          </p>
+        ) : (
+          <>
+            <StatGrid items={[
+              { label: "Latest weight", value: autoSync.latestWeightKg != null ? `${autoSync.latestWeightKg.toFixed(1)} kg` : "—" },
+              { label: "7-day trend", value: autoSync.weightTrend7Day != null ? `${autoSync.weightTrend7Day > 0 ? "+" : ""}${autoSync.weightTrend7Day.toFixed(1)} kg` : "—" },
+              { label: "Avg RPE (7d)", value: autoSync.avgRpe7Day != null ? `${autoSync.avgRpe7Day}/10` : "—" },
+              { label: "Last intake", value: autoSync.lastKcalConsumed != null ? `${autoSync.lastKcalConsumed} kcal` : "—" },
+            ]} />
+            {weightHistory.length >= 3 && (
+              <div className="mt-4">
+                <p className="mb-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+                  Weight — last {weightHistory.length} entries
+                </p>
+                <div className="overflow-hidden rounded bg-zinc-50 px-2 py-1 dark:bg-zinc-900">
+                  <WeightSparkline points={weightHistory} />
+                </div>
               </div>
             )}
-            {perfEntries.length > 0 && (
-              <div>
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Performance</p>
-                <KvGrid entries={perfEntries as [string, string][]} />
-              </div>
-            )}
-          </div>
-        </Section>
-      )}
+          </>
+        )}
+        <p className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">Synced {timeAgo(autoSync.syncedAt)}.</p>
+      </Section>
 
-      {/* Power PRs — from sync if available, else from athlete_profile.md */}
+      {/* 2. Power PRs — from sync or manual */}
       {(syncedPowerCurve.length > 0 || athleteMd.powerProfile.length > 0) && (
         <Section title="Power PRs" editHref={syncedPowerCurve.length > 0 ? undefined : "/knowledge"}>
           {syncedPowerCurve.length > 0 ? (
-            <div>
-              <p className="mb-2 text-[10px] text-zinc-400 dark:text-zinc-500">
-                84-day best efforts · from Intervals.icu sync · synced {timeAgo(autoSync.syncedAt)}
+            <>
+              <p className="mb-3 text-[11px] text-zinc-400 dark:text-zinc-500">
+                84-day best efforts · from Intervals.icu · {timeAgo(autoSync.syncedAt)}
               </p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                 {syncedPowerCurve.map((pt) => {
                   const label = POWER_CURVE_LABELS[pt.durationSec] ?? `${pt.durationSec}s`;
                   const wkg = latestWeightKg ? (pt.watts / latestWeightKg).toFixed(1) : null;
                   return (
-                    <div key={pt.durationSec} className="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+                    <div key={pt.durationSec} className="rounded bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
                       <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{label}</p>
                       <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{pt.watts}W</p>
                       {wkg && <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{wkg} W/kg</p>}
@@ -191,7 +251,7 @@ export default function AthleteProfileForm() {
                   );
                 })}
               </div>
-            </div>
+            </>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
@@ -217,35 +277,7 @@ export default function AthleteProfileForm() {
         </Section>
       )}
 
-      {/* Training zones */}
-      {athleteMd.trainingZones.length > 0 && (
-        <Section title="Training zones" editHref="/knowledge">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-zinc-400 dark:text-zinc-500">
-                  <th className="pb-1 pr-3 font-medium">Zone</th>
-                  <th className="pb-1 pr-3 font-medium">Name</th>
-                  <th className="pb-1 pr-3 font-medium">Power</th>
-                  <th className="pb-1 font-medium">HR</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700">
-                {athleteMd.trainingZones.map((z) => (
-                  <tr key={z.zone}>
-                    <td className="py-1 pr-3 font-semibold text-zinc-800 dark:text-zinc-200">{z.zone}</td>
-                    <td className="py-1 pr-3 text-zinc-500 dark:text-zinc-400">{z.name}</td>
-                    <td className="py-1 pr-3 text-zinc-500 dark:text-zinc-400">{z.power}</td>
-                    <td className="py-1 text-zinc-500 dark:text-zinc-400">{z.hr}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
-      )}
-
-      {/* Goals & Weakpoints side by side */}
+      {/* 3. Goals & Weakpoints */}
       {(athleteMd.goals.length > 0 || athleteMd.weakpoints.length > 0) && (
         <div className="grid gap-4 sm:grid-cols-2">
           {athleteMd.goals.length > 0 && (
@@ -279,30 +311,35 @@ export default function AthleteProfileForm() {
         </div>
       )}
 
-      {/* Live Intervals.icu data */}
-      <Section title="Live data from Intervals.icu">
-        {autoSync.syncedAt === null ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            No sync yet —{" "}
-            <Link href="/dashboard" className="text-blue-600 hover:underline dark:text-blue-400">
-              sync from the dashboard
-            </Link>{" "}
-            to populate.
-          </p>
-        ) : (
-          <KvGrid entries={[
-            ["Latest weight", autoSync.latestWeightKg !== null ? `${autoSync.latestWeightKg.toFixed(1)} kg` : "—"],
-            ["7-day trend", autoSync.weightTrend7Day !== null ? `${autoSync.weightTrend7Day > 0 ? "+" : ""}${autoSync.weightTrend7Day.toFixed(1)} kg` : "—"],
-            ["Avg RPE (7d)", autoSync.avgRpe7Day !== null ? `${autoSync.avgRpe7Day}/10` : "—"],
-            ["Last intake", autoSync.lastKcalConsumed !== null ? `${autoSync.lastKcalConsumed} kcal` : "—"],
-          ]} />
-        )}
-        <p className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
-          Synced {timeAgo(autoSync.syncedAt)}.
-        </p>
-      </Section>
+      {/* 4. Training zones */}
+      {athleteMd.trainingZones.length > 0 && (
+        <Section title="Training zones" editHref="/knowledge">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-zinc-400 dark:text-zinc-500">
+                  <th className="pb-1 pr-3 font-medium">Zone</th>
+                  <th className="pb-1 pr-3 font-medium">Name</th>
+                  <th className="pb-1 pr-3 font-medium">Power</th>
+                  <th className="pb-1 font-medium">HR</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700">
+                {athleteMd.trainingZones.map((z) => (
+                  <tr key={z.zone}>
+                    <td className="py-1 pr-3 font-semibold text-zinc-800 dark:text-zinc-200">{z.zone}</td>
+                    <td className="py-1 pr-3 text-zinc-500 dark:text-zinc-400">{z.name}</td>
+                    <td className="py-1 pr-3 text-zinc-500 dark:text-zinc-400">{z.power}</td>
+                    <td className="py-1 text-zinc-500 dark:text-zinc-400">{z.hr}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
 
-      {/* Nutrition formula settings */}
+      {/* 5. Nutrition formula — bottom */}
       <Section title="Nutrition formula">
         <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
           Drives the deterministic formula that pre-computes daily targets for every generated session.

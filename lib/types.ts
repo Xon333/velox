@@ -201,6 +201,11 @@ export interface TodayAnalysis {
   // Computed metrics
   compliancePct: number | null; // actual / planned duration %
   intensityFactor: number | null; // avg watts / FTP
+  // Advised daily intake (deterministic, same formula as block generation)
+  advisedIntakeKcal: number | null;
+  advisedBaseKcal: number | null;
+  advisedBufferKcal: number | null;
+  advisedRideFuelKcal: number | null;
   coachNote: string; // Claude 2-3 sentence narrative
 }
 

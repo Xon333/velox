@@ -40,7 +40,7 @@ function TodayRideCard({ analysis }: { analysis: TodayAnalysis }) {
     : null;
 
   const complianceColor =
-    analysis.compliancePct === null
+    analysis.compliancePct == null
       ? ""
       : analysis.compliancePct >= 90
       ? "text-green-700 dark:text-green-400"
@@ -49,19 +49,19 @@ function TodayRideCard({ analysis }: { analysis: TodayAnalysis }) {
       : "text-red-600 dark:text-red-400";
 
   const metrics: Array<{ label: string; value: string; highlight?: string }> = [];
-  if (analysis.compliancePct !== null)
+  if (analysis.compliancePct != null)
     metrics.push({ label: "Compliance", value: `${analysis.compliancePct}%`, highlight: complianceColor });
-  if (analysis.intensityFactor !== null)
+  if (analysis.intensityFactor != null)
     metrics.push({ label: "IF", value: analysis.intensityFactor.toFixed(2) });
-  if (analysis.activityNormalizedPower !== null)
+  if (analysis.activityNormalizedPower != null)
     metrics.push({ label: "NP", value: `${analysis.activityNormalizedPower}W` });
-  if (analysis.activityAvgWatts !== null)
+  if (analysis.activityAvgWatts != null)
     metrics.push({ label: "Avg power", value: `${analysis.activityAvgWatts}W` });
-  if (analysis.activityTrainingLoad !== null)
+  if (analysis.activityTrainingLoad != null)
     metrics.push({ label: "TSS", value: String(analysis.activityTrainingLoad) });
-  if (analysis.activityDecoupling !== null)
+  if (analysis.activityDecoupling != null)
     metrics.push({ label: "Decoupling", value: `${analysis.activityDecoupling.toFixed(1)}%` });
-  if (analysis.activityRpe !== null)
+  if (analysis.activityRpe != null)
     metrics.push({ label: "RPE", value: `${analysis.activityRpe}/10` });
 
   return (
@@ -120,6 +120,23 @@ function TodayRideCard({ analysis }: { analysis: TodayAnalysis }) {
               </p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Advised daily intake */}
+      {analysis.advisedIntakeKcal != null && (
+        <div className="mt-3 flex items-baseline gap-3 rounded bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Advised daily intake</p>
+            <p className="mt-0.5 text-base font-bold text-zinc-900 dark:text-zinc-100">
+              {analysis.advisedIntakeKcal.toLocaleString()} kcal
+            </p>
+          </div>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+            {analysis.advisedBaseKcal?.toLocaleString()} base
+            {analysis.advisedRideFuelKcal ? ` + ${analysis.advisedRideFuelKcal.toLocaleString()} ride` : ""}
+            {analysis.advisedBufferKcal ? ` + ${analysis.advisedBufferKcal.toLocaleString()} buffer` : ""}
+          </p>
         </div>
       )}
 
@@ -357,22 +374,20 @@ function RecentDataSummary({ sync }: { sync: SyncData | null }) {
   );
 
   return (
-    <details className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
-      <summary className="cursor-pointer text-sm font-semibold text-zinc-700 select-none dark:text-zinc-300">
-        Recent data summary
-      </summary>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
+      <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Training status</p>
+      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {stat("CTL (fitness)", sync.fitness.ctl?.toFixed(1) ?? "—")}
         {stat("ATL (fatigue)", sync.fitness.atl?.toFixed(1) ?? "—")}
         {stat("TSB (form)", sync.fitness.tsb?.toFixed(1) ?? "—")}
-        {stat("Last 7-day hours", `${hours7.toFixed(1)} h`)}
+        {stat("7-day hours", `${hours7.toFixed(1)} h`)}
         {stat(
           "Weight",
           latestWeight?.weightKg != null ? `${latestWeight.weightKg.toFixed(1)} kg` : "—"
         )}
         {stat("Weight trend", trend !== null ? `${trend > 0 ? "+" : ""}${trend.toFixed(1)} kg` : "—")}
       </div>
-    </details>
+    </section>
   );
 }
 
