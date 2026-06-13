@@ -49,7 +49,7 @@ export default function Nav() {
           href="/dashboard"
           className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100"
         >
-          Cycling Training Brain
+          Velox
         </Link>
         <nav className="flex items-center gap-1">
           {LINKS.map((link) => {

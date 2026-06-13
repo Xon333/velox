@@ -54,10 +54,14 @@ export interface ActivitySummary {
   name: string;
   movingTimeSec: number;
   avgWatts: number | null;
+  normalizedPower: number | null;
+  maxWatts: number | null;
   avgHr: number | null;
+  maxHr: number | null;
   kj: number | null; // total work in kJ
   trainingLoad: number | null;
   rpe: number | null; // icu_rpe, 1-10
+  decoupling: number | null; // aerobic decoupling %
 }
 
 export interface WellnessEntry {
@@ -183,14 +187,21 @@ export interface TodayAnalysis {
   activityName: string;
   activityDurationMin: number;
   activityAvgWatts: number | null;
+  activityNormalizedPower: number | null;
+  activityMaxWatts: number | null;
   activityAvgHr: number | null;
+  activityMaxHr: number | null;
   activityKj: number | null;
   activityTrainingLoad: number | null;
   activityRpe: number | null;
+  activityDecoupling: number | null;
   plannedName: string | null;
   plannedType: string | null;
   plannedDurationMin: number | null;
-  analysis: string; // Claude's short analysis
+  // Computed metrics
+  compliancePct: number | null; // actual / planned duration %
+  intensityFactor: number | null; // avg watts / FTP
+  coachNote: string; // Claude 2-3 sentence narrative
 }
 
 // ---------- Write-back ----------

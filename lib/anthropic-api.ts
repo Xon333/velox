@@ -293,25 +293,29 @@ export async function analyseRide(input: RideAnalysisInput): Promise<string> {
     throw new Error("Anthropic API is not configured.");
   }
   const planned = input.plannedName
-    ? `Planned: ${input.plannedType} — "${input.plannedName}" (${input.plannedDurationMin} min)${input.plannedWorkoutText ? `\nWorkout steps:\n${input.plannedWorkoutText}` : ""}`
-    : "No session was planned for today.";
+    ? `Planned: ${input.plannedType} — "${input.plannedName}" (${input.plannedDurationMin} min)`
+    : "No session planned today.";
 
+  const np = input.activityAvgWatts !== null ? Math.round(input.activityAvgWatts * 1.05) : null;
   const actual = [
     `Actual: "${input.activityName}" — ${input.activityDurationMin} min`,
-    input.activityAvgWatts !== null ? `Avg power: ${input.activityAvgWatts} W (IF: ${(input.activityAvgWatts / input.athleteFtp).toFixed(2)})` : null,
-    input.activityAvgHr !== null ? `Avg HR: ${input.activityAvgHr} bpm (threshold: ${input.athleteThresholdHr} bpm)` : null,
-    input.activityKj !== null ? `Work: ${input.activityKj} kJ` : null,
-    input.activityTrainingLoad !== null ? `Training load: ${input.activityTrainingLoad}` : null,
-    input.activityRpe !== null ? `RPE: ${input.activityRpe}/10` : null,
-  ].filter(Boolean).join("\n");
+    input.activityAvgWatts !== null
+      ? `Avg ${input.activityAvgWatts}W · NP ~${np}W · IF ${(input.activityAvgWatts / input.athleteFtp).toFixed(2)}`
+      : null,
+    input.activityAvgHr !== null
+      ? `Avg HR ${input.activityAvgHr} bpm (threshold ${input.athleteThresholdHr} bpm)`
+      : null,
+    input.activityTrainingLoad !== null ? `TSS ${input.activityTrainingLoad}` : null,
+    input.activityRpe !== null ? `RPE ${input.activityRpe}/10` : null,
+  ].filter(Boolean).join(" · ");
 
-  const prompt = `You are a cycling coach reviewing today's completed ride against the plan. Give a short, direct analysis (3–5 sentences max). Focus on: did the athlete execute the plan, were there notable deviations (under/over-paced), and one concrete takeaway or adjustment for the next session. No preamble.\n\n${planned}\n\n${actual}`;
+  const prompt = `You are a cycling coach. Review today's ride vs the plan in 2–3 short sentences. Be direct and specific: execution quality, any notable deviation, and one concrete takeaway for the next session. No greeting, no fluff.\n\n${planned}\n${actual}`;
 
   const client = new Anthropic();
   const response = await client.messages.create({
     model: GENERATION_MODEL,
-    max_tokens: 300,
-    temperature: 0.4,
+    max_tokens: 200,
+    temperature: 0.3,
     messages: [{ role: "user", content: prompt }],
   });
 

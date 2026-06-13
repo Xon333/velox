@@ -1,0 +1,15 @@
+{
+  "analysedAt": "2026-06-13T16:35:14.073Z",
+  "activityDate": "2026-06-13",
+  "activityName": "Cycling",
+  "activityDurationMin": 171,
+  "activityAvgWatts": 191,
+  "activityAvgHr": 139,
+  "activityKj": 1964,
+  "activityTrainingLoad": 161,
+  "activityRpe": null,
+  "plannedName": "Long Z2 — Durability Ride",
+  "plannedType": "Z2",
+  "plannedDurationMin": 240,
+  "analysis": "The ride came up 69 minutes short of the planned 240-minute durability session — that's a significant execution gap, completing roughly 70% of the intended duration. Power and HR look appropriate for Z2 (IF 0.66, HR well below threshold), so the intensity was dialed in correctly; the issue is purely with time on bike. At 1964 kJ, the aerobic stimulus is meaningful but falls short of the durability adaptation the longer session was designed to deliver.\n\n**Next session:** Prioritize completing the full duration over any other variable — if 240 minutes feels daunting, build toward it by targeting 210 minutes minimum, keeping the same conservative intensity."
+}

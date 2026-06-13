@@ -35,72 +35,106 @@ function todayIso(): string {
 // ---------- Today's ride analysis ----------
 
 function TodayRideCard({ analysis }: { analysis: TodayAnalysis }) {
-  const style = analysis.plannedType
+  const plannedStyle = analysis.plannedType
     ? TYPE_STYLES[analysis.plannedType as keyof typeof TYPE_STYLES] ?? TYPE_STYLES.Z2
-    : TYPE_STYLES.Z2;
+    : null;
 
-  const fmt = (n: number | null, unit: string) =>
-    n !== null ? `${n} ${unit}` : null;
+  const complianceColor =
+    analysis.compliancePct === null
+      ? ""
+      : analysis.compliancePct >= 90
+      ? "text-green-700 dark:text-green-400"
+      : analysis.compliancePct >= 70
+      ? "text-amber-700 dark:text-amber-400"
+      : "text-red-600 dark:text-red-400";
+
+  const metrics: Array<{ label: string; value: string; highlight?: string }> = [];
+  if (analysis.compliancePct !== null)
+    metrics.push({ label: "Compliance", value: `${analysis.compliancePct}%`, highlight: complianceColor });
+  if (analysis.intensityFactor !== null)
+    metrics.push({ label: "IF", value: analysis.intensityFactor.toFixed(2) });
+  if (analysis.activityNormalizedPower !== null)
+    metrics.push({ label: "NP", value: `${analysis.activityNormalizedPower}W` });
+  if (analysis.activityAvgWatts !== null)
+    metrics.push({ label: "Avg power", value: `${analysis.activityAvgWatts}W` });
+  if (analysis.activityTrainingLoad !== null)
+    metrics.push({ label: "TSS", value: String(analysis.activityTrainingLoad) });
+  if (analysis.activityDecoupling !== null)
+    metrics.push({ label: "Decoupling", value: `${analysis.activityDecoupling.toFixed(1)}%` });
+  if (analysis.activityRpe !== null)
+    metrics.push({ label: "RPE", value: `${analysis.activityRpe}/10` });
 
   return (
     <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-      <div className="flex flex-wrap items-baseline gap-2">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Today's ride</h2>
-        <span className="text-xs text-zinc-500 dark:text-zinc-400">{analysis.activityDate}</span>
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Today's ride</h2>
+        <span className="text-xs text-zinc-400 dark:text-zinc-500">{analysis.activityDate}</span>
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {/* Planned */}
-        <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Planned</p>
+      {/* Planned vs Actual */}
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="rounded border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Planned</p>
           {analysis.plannedName ? (
-            <>
-              <p className="mt-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">{analysis.plannedName}</p>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {analysis.plannedType && (
-                  <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${style.badge}`}>
+            <div className="mt-1">
+              <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{analysis.plannedName}</p>
+              <div className="mt-1 flex items-center gap-2">
+                {plannedStyle && (
+                  <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${plannedStyle.badge}`}>
                     {analysis.plannedType}
                   </span>
                 )}
                 {analysis.plannedDurationMin !== null && (
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">{analysis.plannedDurationMin} min</span>
+                  <span className="text-xs text-zinc-400 dark:text-zinc-500">{analysis.plannedDurationMin} min</span>
                 )}
               </div>
-            </>
+            </div>
           ) : (
-            <p className="mt-1 text-sm text-zinc-400">No session planned</p>
+            <p className="mt-1 text-xs text-zinc-400">No session planned</p>
           )}
         </div>
 
-        {/* Actual */}
-        <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Actual</p>
+        <div className="rounded border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Actual</p>
           <p className="mt-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">{analysis.activityName}</p>
-          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-            {[
-              fmt(analysis.activityDurationMin, "min"),
-              fmt(analysis.activityAvgWatts, "W avg"),
-              fmt(analysis.activityAvgHr, "bpm avg"),
-              fmt(analysis.activityKj, "kJ"),
-              analysis.activityRpe !== null ? `RPE ${analysis.activityRpe}/10` : null,
-            ]
-              .filter(Boolean)
-              .map((v) => (
-                <span key={v} className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {v}
-                </span>
-              ))}
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{analysis.activityDurationMin} min</span>
+            {analysis.activityAvgHr !== null && (
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">{analysis.activityAvgHr} bpm avg</span>
+            )}
+            {analysis.activityKj !== null && (
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">{analysis.activityKj} kJ</span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Claude analysis */}
-      <div className="mt-3 rounded-md border-l-2 border-zinc-300 bg-zinc-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
-        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Coach analysis</p>
-        <p className="mt-1 text-sm leading-6 text-zinc-700 dark:text-zinc-300">{analysis.analysis}</p>
-      </div>
-      <p className="mt-2 text-[11px] text-zinc-400">
-        Analysed at {new Date(analysis.analysedAt).toLocaleTimeString()} · re-sync to refresh
+      {/* Key metrics strip */}
+      {metrics.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {metrics.map((m) => (
+            <div key={m.label} className="rounded bg-zinc-100 px-2.5 py-1.5 dark:bg-zinc-900">
+              <p className="text-[10px] text-zinc-400 dark:text-zinc-500">{m.label}</p>
+              <p className={`text-sm font-semibold text-zinc-800 dark:text-zinc-200 ${m.highlight ?? ""}`}>
+                {m.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Coach note */}
+      {(analysis.coachNote ?? (analysis as unknown as { analysis?: string }).analysis) && (
+        <div className="mt-3 border-l-2 border-zinc-300 pl-3 dark:border-zinc-600">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Coach note</p>
+          <p className="mt-0.5 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
+            {analysis.coachNote ?? (analysis as unknown as { analysis?: string }).analysis}
+          </p>
+        </div>
+      )}
+
+      <p className="mt-2 text-[10px] text-zinc-400 dark:text-zinc-500">
+        {new Date(analysis.analysedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · sync to refresh
       </p>
     </section>
   );

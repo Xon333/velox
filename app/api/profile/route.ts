@@ -28,6 +28,11 @@ export async function GET() {
   return NextResponse.json({
     nutrition: profile.nutrition,
     athleteMd,
+    syncedPowerCurve: sync?.powerCurve ?? [],
+    latestWeightKg:
+      (sync?.wellness ?? [])
+        .filter((w) => w.weightKg !== null)
+        .sort((a, b) => b.date.localeCompare(a.date))[0]?.weightKg ?? null,
     autoSync: {
       syncedAt: sync?.syncedAt ?? null,
       latestWeightKg: weighIns[0]?.weightKg ?? null,

@@ -101,10 +101,14 @@ export async function fetchActivities(oldest: string, newest: string): Promise<A
       name: str(a.name, "Untitled"),
       movingTimeSec: num(a.moving_time) ?? 0,
       avgWatts: num(a.icu_average_watts),
+      normalizedPower: num(a.icu_normalized_power),
+      maxWatts: num(a.max_watts),
       avgHr: num(a.average_heartrate),
+      maxHr: num(a.max_heartrate),
       kj: joules !== null ? Math.round(joules / 1000) : null,
       trainingLoad: num(a.icu_training_load),
       rpe: num(a.icu_rpe),
+      decoupling: num(a.icu_power_hr_decoupling),
     };
   });
 }

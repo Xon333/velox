@@ -15,8 +15,8 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-zinc-700">{label}</label>
-      {hint && <p className="mt-0.5 text-xs text-zinc-400">{hint}</p>}
+      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{label}</label>
+      {hint && <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">{hint}</p>}
       <div className="mt-1.5">{children}</div>
     </div>
   );
@@ -46,9 +46,9 @@ function NumberInput({
         max={max}
         step={step}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-24 rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none"
+        className="w-24 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-400"
       />
-      {suffix && <span className="text-sm text-zinc-500">{suffix}</span>}
+      {suffix && <span className="text-sm text-zinc-500 dark:text-zinc-400">{suffix}</span>}
     </div>
   );
 }
@@ -93,8 +93,8 @@ export default function BlockSettingsForm() {
   return (
     <div className="space-y-6">
       {/* Weekly volume */}
-      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4">
-        <h2 className="mb-4 text-sm font-semibold text-zinc-800">Weekly volume targets</h2>
+      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-800">
+        <h2 className="mb-4 text-sm font-semibold text-zinc-800 dark:text-zinc-200">Weekly volume targets</h2>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field
             label="Loading week: minimum hours"
@@ -149,8 +149,8 @@ export default function BlockSettingsForm() {
       </section>
 
       {/* Weekly structure */}
-      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4">
-        <h2 className="mb-4 text-sm font-semibold text-zinc-800">Weekly structure</h2>
+      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-800">
+        <h2 className="mb-4 text-sm font-semibold text-zinc-800 dark:text-zinc-200">Weekly structure</h2>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field
             label="Quality sessions per loading week"
@@ -190,8 +190,8 @@ export default function BlockSettingsForm() {
       </section>
 
       {/* Training philosophy */}
-      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4">
-        <h2 className="mb-4 text-sm font-semibold text-zinc-800">Training philosophy</h2>
+      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-800">
+        <h2 className="mb-4 text-sm font-semibold text-zinc-800 dark:text-zinc-200">Training philosophy</h2>
         <Field
           label="Approach"
           hint="Polarised keeps easy days very easy and hard days very hard. Sweet spot mixes in 88–93% FTP work."
@@ -208,13 +208,13 @@ export default function BlockSettingsForm() {
                 onClick={() => set("polarisedApproach", opt.value)}
                 className={`flex-1 rounded-md border px-4 py-3 text-left text-sm transition-colors ${
                   settings.polarisedApproach === opt.value
-                    ? "border-zinc-900 bg-zinc-900 text-white"
-                    : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400"
+                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                    : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-400"
                 }`}
               >
                 <span className="block font-semibold">{opt.label}</span>
                 <span
-                  className={`block text-xs ${settings.polarisedApproach === opt.value ? "text-zinc-300" : "text-zinc-400"}`}
+                  className={`block text-xs ${settings.polarisedApproach === opt.value ? "text-zinc-300 dark:text-zinc-600" : "text-zinc-400 dark:text-zinc-500"}`}
                 >
                   {opt.description}
                 </span>
@@ -229,11 +229,11 @@ export default function BlockSettingsForm() {
         <button
           onClick={save}
           disabled={saving}
-          className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+          className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
         >
           {saving ? "Saving…" : "Save settings"}
         </button>
-        {saved && <span className="text-sm text-green-700">Saved — next generation will use these values.</span>}
+        {saved && <span className="text-sm text-green-700 dark:text-green-400">Saved — next generation will use these values.</span>}
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
 

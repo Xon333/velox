@@ -61,33 +61,45 @@ export async function POST() {
         const plannedDay = currentBlock?.days.find((d) => d.date === today) ?? null;
 
         try {
+          const actualMin = Math.round(todayActivity.movingTimeSec / 60);
+          const ftp = profile.performance.ftp;
+          const compliancePct =
+            plannedDay && plannedDay.durationMin > 0
+              ? Math.round((actualMin / plannedDay.durationMin) * 100)
+              : null;
+          const intensityFactor =
+            todayActivity.avgWatts !== null && ftp > 0
+              ? Math.round((todayActivity.avgWatts / ftp) * 100) / 100
+              : null;
+
           const input = buildRideAnalysisInput(
             todayActivity,
-            plannedDay
-              ? {
-                  name: plannedDay.name,
-                  type: plannedDay.type,
-                  durationMin: plannedDay.durationMin,
-                }
-              : null,
-            profile.performance.ftp,
+            plannedDay ? { name: plannedDay.name, type: plannedDay.type, durationMin: plannedDay.durationMin } : null,
+            ftp,
             profile.performance.thresholdHr
           );
-          const analysis = await analyseRide(input);
+          const coachNote = await analyseRide(input);
+
           todayAnalysis = {
             analysedAt: new Date().toISOString(),
             activityDate: today,
             activityName: todayActivity.name,
-            activityDurationMin: Math.round(todayActivity.movingTimeSec / 60),
+            activityDurationMin: actualMin,
             activityAvgWatts: todayActivity.avgWatts,
+            activityNormalizedPower: todayActivity.normalizedPower,
+            activityMaxWatts: todayActivity.maxWatts,
             activityAvgHr: todayActivity.avgHr,
+            activityMaxHr: todayActivity.maxHr,
             activityKj: todayActivity.kj,
             activityTrainingLoad: todayActivity.trainingLoad,
             activityRpe: todayActivity.rpe,
+            activityDecoupling: todayActivity.decoupling,
             plannedName: plannedDay?.name ?? null,
             plannedType: plannedDay?.type ?? null,
             plannedDurationMin: plannedDay?.durationMin ?? null,
-            analysis,
+            compliancePct,
+            intensityFactor,
+            coachNote,
           };
           await writeTodayAnalysis(todayAnalysis);
         } catch {

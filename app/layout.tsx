@@ -14,9 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cycling Training Brain",
-  description:
-    "AI-powered training block generator on top of Intervals.icu — personal single-user tool.",
+  title: "Velox",
+  description: "AI-powered training block generator on top of Intervals.icu.",
 };
 
 export default function RootLayout({
