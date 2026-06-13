@@ -255,8 +255,10 @@ Hard rules:
 - DURATION is an integer number of minutes.
 - TYPE must be one of: Z2, Threshold, VO2max, SIT, Recovery, Strength, Rest.
 - Workout step durations must sum approximately to DURATION.
-- Total weekly hours must respect the athlete's stated availability.
-- Rest days: TYPE: Rest, DURATION: 0, WORKOUT: Rest, and a description with Intent and Daily target only.
+- **WEEKLY VOLUME (non-recovery weeks):** Target 10–12 hours total per week. Loading weeks must reach at least 10h.
+- **WEEKLY VOLUME (recovery week):** Reduce to 6–7 hours total (30–40% volume reduction).
+- **WEEKLY STRUCTURE (loading weeks):** 2 quality sessions (threshold/VO2max/SIT) + 1 long Z2 ride (3–4h) + 2–3 easy Z2 sessions (60–90 min each) + 1 rest day (no recovery spins in addition to Z2 rides; avoid back-to-back hard days).
+- **Rest days:** TYPE: Rest, DURATION: 0, WORKOUT: Rest, description with Intent and Daily target only. Limit to 1 per week.
 - Do not output anything before BLOCK OVERVIEW or after the final day.`;
 }
 
