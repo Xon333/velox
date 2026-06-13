@@ -107,7 +107,14 @@ export default function PlanPreview({
         );
       })}
 
-      <div className="mt-5 flex items-center gap-3">
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <button
+          onClick={onDismiss}
+          disabled={writing}
+          className="rounded-md border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Discard & adjust
+        </button>
         <button
           onClick={onWrite}
           disabled={writing || written || !intervalsConfigured}
