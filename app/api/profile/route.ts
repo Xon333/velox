@@ -1,69 +1,16 @@
 import { NextResponse } from "next/server";
 import { readAthleteProfile, readLastSync, writeAthleteProfile } from "@/lib/data-store";
-import { writeAthleteProfileMd } from "@/lib/kb-loader";
+import { parseAthleteMd } from "@/lib/kb-loader";
 import { adjustBuffer, weightTrendFromWellness } from "@/lib/nutrition";
-import type { AthleteProfile } from "@/lib/types";
 
-function finitePositive(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0;
-}
-
-function stringList(value: unknown): string[] | null {
-  if (!Array.isArray(value)) return null;
-  const items = value.filter((v): v is string => typeof v === "string");
-  if (items.length !== value.length) return null;
-  return items.map((s) => s.trim()).filter((s) => s !== "");
-}
-
-function validateProfile(body: unknown): AthleteProfile | string {
-  if (!body || typeof body !== "object") return "Request body must be a JSON object.";
-  const input = (body as Record<string, unknown>).profile as Record<string, unknown> | undefined;
-  if (!input) return "Missing profile.";
-  const perf = input.performance as Record<string, unknown> | undefined;
-  const nutrition = input.nutrition as Record<string, unknown> | undefined;
-  if (!perf || !nutrition) return "Profile must include performance and nutrition sections.";
-
-  for (const key of ["ftp", "maxHr", "thresholdHr", "weightKg", "weeklyHoursMin", "weeklyHoursMax"]) {
-    if (!finitePositive(perf[key])) return `performance.${key} must be a positive number.`;
-  }
-  if ((perf.weeklyHoursMin as number) > (perf.weeklyHoursMax as number)) {
-    return "weeklyHoursMin cannot exceed weeklyHoursMax.";
-  }
-  for (const key of ["baseCalories", "restDayTarget", "targetWeightKg"]) {
-    if (!finitePositive(nutrition[key])) return `nutrition.${key} must be a positive number.`;
-  }
-  const buffer = nutrition.buffer;
-  if (typeof buffer !== "number" || !Number.isFinite(buffer) || buffer < 0 || buffer > 600) {
-    return "nutrition.buffer must be between 0 and 600 kcal.";
-  }
-  const goals = stringList(input.goals);
-  const weakpoints = stringList(input.weakpoints);
-  if (goals === null || weakpoints === null) return "goals and weakpoints must be string lists.";
-
-  return {
-    performance: {
-      ftp: perf.ftp as number,
-      maxHr: perf.maxHr as number,
-      thresholdHr: perf.thresholdHr as number,
-      weightKg: perf.weightKg as number,
-      weeklyHoursMin: perf.weeklyHoursMin as number,
-      weeklyHoursMax: perf.weeklyHoursMax as number,
-    },
-    goals,
-    weakpoints,
-    nutrition: {
-      baseCalories: nutrition.baseCalories as number,
-      restDayTarget: nutrition.restDayTarget as number,
-      buffer,
-      targetWeightKg: nutrition.targetWeightKg as number,
-    },
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-// GET returns the profile plus read-only values derived from the last sync.
+// GET returns the parsed athlete_profile.md snapshot plus Intervals.icu auto-sync data.
+// Performance, goals and weakpoints all come from the markdown — no re-entry needed.
 export async function GET() {
-  const [profile, sync] = await Promise.all([readAthleteProfile(), readLastSync()]);
+  const [profile, sync, athleteMd] = await Promise.all([
+    readAthleteProfile(),
+    readLastSync(),
+    parseAthleteMd(),
+  ]);
 
   const weighIns = (sync?.wellness ?? [])
     .filter((w) => w.weightKg !== null)
@@ -79,7 +26,8 @@ export async function GET() {
     .sort((a, b) => b.date.localeCompare(a.date))[0];
 
   return NextResponse.json({
-    profile,
+    nutrition: profile.nutrition,
+    athleteMd,
     autoSync: {
       syncedAt: sync?.syncedAt ?? null,
       latestWeightKg: weighIns[0]?.weightKg ?? null,
@@ -96,7 +44,8 @@ export async function GET() {
   });
 }
 
-// PUT saves athlete.json AND regenerates athlete_profile.md (non-negotiable #6).
+// PUT only saves nutrition settings — performance/goals/weakpoints live in athlete_profile.md
+// and are edited there via the Knowledge Base manager.
 export async function PUT(req: Request) {
   let body: unknown;
   try {
@@ -104,11 +53,31 @@ export async function PUT(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
-  const profile = validateProfile(body);
-  if (typeof profile === "string") {
-    return NextResponse.json({ error: profile }, { status: 400 });
+  const input = body && typeof body === "object"
+    ? (body as Record<string, unknown>).nutrition as Record<string, unknown> | undefined
+    : undefined;
+  if (!input) return NextResponse.json({ error: "Missing nutrition." }, { status: 400 });
+
+  const { baseCalories, restDayTarget, buffer, targetWeightKg } = input;
+  const pos = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v > 0;
+  if (!pos(baseCalories)) return NextResponse.json({ error: "baseCalories must be a positive number." }, { status: 400 });
+  if (!pos(restDayTarget)) return NextResponse.json({ error: "restDayTarget must be a positive number." }, { status: 400 });
+  if (!pos(targetWeightKg)) return NextResponse.json({ error: "targetWeightKg must be a positive number." }, { status: 400 });
+  if (typeof buffer !== "number" || !Number.isFinite(buffer) || buffer < 0 || buffer > 600) {
+    return NextResponse.json({ error: "buffer must be between 0 and 600 kcal." }, { status: 400 });
   }
-  await writeAthleteProfile(profile);
-  await writeAthleteProfileMd(profile);
-  return NextResponse.json({ profile });
+
+  const current = await readAthleteProfile();
+  const updated = {
+    ...current,
+    nutrition: {
+      baseCalories: baseCalories as number,
+      restDayTarget: restDayTarget as number,
+      buffer: buffer as number,
+      targetWeightKg: targetWeightKg as number,
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  await writeAthleteProfile(updated);
+  return NextResponse.json({ nutrition: updated.nutrition });
 }

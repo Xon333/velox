@@ -1,1 +1,1184 @@
-null
+{
+  "syncedAt": "2026-06-13T05:01:51.578Z",
+  "activities": [
+    {
+      "id": "i156604070",
+      "date": "2026-06-12",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 9509,
+      "avgWatts": 205,
+      "avgHr": 139,
+      "kj": 1947,
+      "trainingLoad": 157,
+      "rpe": null
+    },
+    {
+      "id": "i156277754",
+      "date": "2026-06-11",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - Recovery Spin",
+      "movingTimeSec": 1940,
+      "avgWatts": 149,
+      "avgHr": 115,
+      "kj": 289,
+      "trainingLoad": 14,
+      "rpe": null
+    },
+    {
+      "id": "i155972251",
+      "date": "2026-06-10",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 9200,
+      "avgWatts": 190,
+      "avgHr": 136,
+      "kj": 1745,
+      "trainingLoad": 156,
+      "rpe": null
+    },
+    {
+      "id": "i155631732",
+      "date": "2026-06-09",
+      "type": "Ride",
+      "name": "Morning Ride - Sveti Jure",
+      "movingTimeSec": 11170,
+      "avgWatts": 168,
+      "avgHr": 138,
+      "kj": 1882,
+      "trainingLoad": 200,
+      "rpe": null
+    },
+    {
+      "id": "i154956403",
+      "date": "2026-06-07",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 6043,
+      "avgWatts": 201,
+      "avgHr": 144,
+      "kj": 1217,
+      "trainingLoad": 107,
+      "rpe": null
+    },
+    {
+      "id": "18805611915",
+      "date": "2026-06-06",
+      "type": "Unknown",
+      "name": "Untitled",
+      "movingTimeSec": 0,
+      "avgWatts": null,
+      "avgHr": null,
+      "kj": null,
+      "trainingLoad": null,
+      "rpe": null
+    },
+    {
+      "id": "i154479289",
+      "date": "2026-06-05",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - Zone 2 Steady State",
+      "movingTimeSec": 3641,
+      "avgWatts": 198,
+      "avgHr": 136,
+      "kj": 722,
+      "trainingLoad": 49,
+      "rpe": null
+    },
+    {
+      "id": "i154213133",
+      "date": "2026-06-04",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 8072,
+      "avgWatts": 208,
+      "avgHr": 151,
+      "kj": 1685,
+      "trainingLoad": 170,
+      "rpe": null
+    },
+    {
+      "id": "i153832284",
+      "date": "2026-06-03",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - Z2",
+      "movingTimeSec": 5408,
+      "avgWatts": 194,
+      "avgHr": 134,
+      "kj": 1050,
+      "trainingLoad": 71,
+      "rpe": null
+    },
+    {
+      "id": "i153361201",
+      "date": "2026-06-02",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 5945,
+      "avgWatts": 212,
+      "avgHr": 144,
+      "kj": 1260,
+      "trainingLoad": 112,
+      "rpe": null
+    },
+    {
+      "id": "i153089565",
+      "date": "2026-06-01",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - Z2",
+      "movingTimeSec": 5432,
+      "avgWatts": 193,
+      "avgHr": 136,
+      "kj": 1049,
+      "trainingLoad": 71,
+      "rpe": null
+    },
+    {
+      "id": "i152670336",
+      "date": "2026-05-30",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 12281,
+      "avgWatts": 217,
+      "avgHr": 149,
+      "kj": 2672,
+      "trainingLoad": 231,
+      "rpe": null
+    },
+    {
+      "id": "i152431816",
+      "date": "2026-05-29",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 5168,
+      "avgWatts": 204,
+      "avgHr": 136,
+      "kj": 1056,
+      "trainingLoad": 85,
+      "rpe": null
+    },
+    {
+      "id": "i152180346",
+      "date": "2026-05-28",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 7651,
+      "avgWatts": 196,
+      "avgHr": 152,
+      "kj": 1509,
+      "trainingLoad": 161,
+      "rpe": null
+    },
+    {
+      "id": "i151895510",
+      "date": "2026-05-27",
+      "type": "Ride",
+      "name": "Bikefit testing",
+      "movingTimeSec": 1928,
+      "avgWatts": 209,
+      "avgHr": null,
+      "kj": 404,
+      "trainingLoad": 43,
+      "rpe": null
+    },
+    {
+      "id": "i151548008",
+      "date": "2026-05-26",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - Z2",
+      "movingTimeSec": 5409,
+      "avgWatts": 194,
+      "avgHr": 142,
+      "kj": 1047,
+      "trainingLoad": 81,
+      "rpe": null
+    },
+    {
+      "id": "i151274690",
+      "date": "2026-05-25",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 8812,
+      "avgWatts": 205,
+      "avgHr": 144,
+      "kj": 1811,
+      "trainingLoad": 187,
+      "rpe": null
+    },
+    {
+      "id": "i150998746",
+      "date": "2026-05-24",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 7105,
+      "avgWatts": 213,
+      "avgHr": 149,
+      "kj": 1515,
+      "trainingLoad": 147,
+      "rpe": null
+    },
+    {
+      "id": "i150521826",
+      "date": "2026-05-22",
+      "type": "Ride",
+      "name": "Morning Ride - Trebelno, Jagodnik",
+      "movingTimeSec": 7900,
+      "avgWatts": 201,
+      "avgHr": 150,
+      "kj": 1592,
+      "trainingLoad": 175,
+      "rpe": null
+    },
+    {
+      "id": "i149951988",
+      "date": "2026-05-20",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - Z2",
+      "movingTimeSec": 5411,
+      "avgWatts": 197,
+      "avgHr": 134,
+      "kj": 1068,
+      "trainingLoad": 84,
+      "rpe": null
+    },
+    {
+      "id": "i149600711",
+      "date": "2026-05-19",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - Z2",
+      "movingTimeSec": 5408,
+      "avgWatts": 197,
+      "avgHr": 138,
+      "kj": 1067,
+      "trainingLoad": 84,
+      "rpe": null
+    },
+    {
+      "id": "i149295830",
+      "date": "2026-05-18",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 5888,
+      "avgWatts": 220,
+      "avgHr": 146,
+      "kj": 1296,
+      "trainingLoad": 120,
+      "rpe": null
+    },
+    {
+      "id": "i149002067",
+      "date": "2026-05-17",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 9287,
+      "avgWatts": 218,
+      "avgHr": 150,
+      "kj": 2025,
+      "trainingLoad": 214,
+      "rpe": null
+    },
+    {
+      "id": "18527611872",
+      "date": "2026-05-16",
+      "type": "Unknown",
+      "name": "Untitled",
+      "movingTimeSec": 0,
+      "avgWatts": null,
+      "avgHr": null,
+      "kj": null,
+      "trainingLoad": null,
+      "rpe": null
+    },
+    {
+      "id": "i148379001",
+      "date": "2026-05-15",
+      "type": "VirtualRide",
+      "name": "MyWhoosh",
+      "movingTimeSec": 5411,
+      "avgWatts": 197,
+      "avgHr": 131,
+      "kj": 1068,
+      "trainingLoad": 84,
+      "rpe": null
+    },
+    {
+      "id": "i148065329",
+      "date": "2026-05-14",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - 90 Minute Endurance",
+      "movingTimeSec": 5439,
+      "avgWatts": 193,
+      "avgHr": 131,
+      "kj": 1049,
+      "trainingLoad": 81,
+      "rpe": null
+    },
+    {
+      "id": "i147760245",
+      "date": "2026-05-13",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - 90 Minute Endurance",
+      "movingTimeSec": 5408,
+      "avgWatts": 194,
+      "avgHr": 135,
+      "kj": 1049,
+      "trainingLoad": 81,
+      "rpe": null
+    },
+    {
+      "id": "i147425869",
+      "date": "2026-05-12",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - 90 Minute Endurance",
+      "movingTimeSec": 5411,
+      "avgWatts": 193,
+      "avgHr": 134,
+      "kj": 1043,
+      "trainingLoad": 80,
+      "rpe": null
+    },
+    {
+      "id": "i147137106",
+      "date": "2026-05-11",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - Zone 2 Steady State",
+      "movingTimeSec": 5410,
+      "avgWatts": 197,
+      "avgHr": 132,
+      "kj": 1066,
+      "trainingLoad": 84,
+      "rpe": null
+    },
+    {
+      "id": "i146650558",
+      "date": "2026-05-09",
+      "type": "Ride",
+      "name": "Golden scar veter",
+      "movingTimeSec": 7259,
+      "avgWatts": 231,
+      "avgHr": 146,
+      "kj": 1679,
+      "trainingLoad": 170,
+      "rpe": null
+    },
+    {
+      "id": "i146411074",
+      "date": "2026-05-08",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - Zone 2 Steady State",
+      "movingTimeSec": 5410,
+      "avgWatts": 190,
+      "avgHr": 138,
+      "kj": 1028,
+      "trainingLoad": 82,
+      "rpe": null
+    },
+    {
+      "id": "i146107328",
+      "date": "2026-05-07",
+      "type": "VirtualRide",
+      "name": "MyWhoosh - Zone 2 Steady State",
+      "movingTimeSec": 5497,
+      "avgWatts": 196,
+      "avgHr": 141,
+      "kj": 1078,
+      "trainingLoad": 84,
+      "rpe": null
+    },
+    {
+      "id": "i145833797",
+      "date": "2026-05-06",
+      "type": "VirtualRide",
+      "name": "Zwift - Z2",
+      "movingTimeSec": 5438,
+      "avgWatts": 200,
+      "avgHr": 148,
+      "kj": 1090,
+      "trainingLoad": 85,
+      "rpe": null
+    },
+    {
+      "id": "i145265581",
+      "date": "2026-05-04",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 5969,
+      "avgWatts": 223,
+      "avgHr": 145,
+      "kj": 1330,
+      "trainingLoad": 135,
+      "rpe": null
+    },
+    {
+      "id": "i145265691",
+      "date": "2026-05-02",
+      "type": "Ride",
+      "name": "Morning Ride",
+      "movingTimeSec": 17284,
+      "avgWatts": 203,
+      "avgHr": 142,
+      "kj": 3512,
+      "trainingLoad": 351,
+      "rpe": null
+    },
+    {
+      "id": "i144384888",
+      "date": "2026-04-30",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 683,
+      "avgWatts": 187,
+      "avgHr": null,
+      "kj": 129,
+      "trainingLoad": 16,
+      "rpe": null
+    },
+    {
+      "id": "i144278130",
+      "date": "2026-04-30",
+      "type": "Ride",
+      "name": "Lunch Ride",
+      "movingTimeSec": 5627,
+      "avgWatts": 219,
+      "avgHr": 145,
+      "kj": 1239,
+      "trainingLoad": 133,
+      "rpe": null
+    },
+    {
+      "id": "i143956321",
+      "date": "2026-04-29",
+      "type": "VirtualRide",
+      "name": "Z2",
+      "movingTimeSec": 5515,
+      "avgWatts": 198,
+      "avgHr": 138,
+      "kj": 1090,
+      "trainingLoad": 86,
+      "rpe": null
+    },
+    {
+      "id": "i143316929",
+      "date": "2026-04-27",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 5959,
+      "avgWatts": 224,
+      "avgHr": 145,
+      "kj": 1338,
+      "trainingLoad": 137,
+      "rpe": null
+    },
+    {
+      "id": "i142779855",
+      "date": "2026-04-25",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 13023,
+      "avgWatts": 204,
+      "avgHr": 149,
+      "kj": 2662,
+      "trainingLoad": 293,
+      "rpe": null
+    },
+    {
+      "id": "i142265511",
+      "date": "2026-04-23",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 6145,
+      "avgWatts": 222,
+      "avgHr": 148,
+      "kj": 1368,
+      "trainingLoad": 144,
+      "rpe": null
+    },
+    {
+      "id": "i141937932",
+      "date": "2026-04-22",
+      "type": "VirtualRide",
+      "name": "Zwift - Big Loop",
+      "movingTimeSec": 5613,
+      "avgWatts": 195,
+      "avgHr": 0,
+      "kj": 1099,
+      "trainingLoad": 89,
+      "rpe": null
+    },
+    {
+      "id": "i141655910",
+      "date": "2026-04-21",
+      "type": "VirtualRide",
+      "name": "Zwift - Coastal Crown Loop",
+      "movingTimeSec": 2320,
+      "avgWatts": 201,
+      "avgHr": 147,
+      "kj": 467,
+      "trainingLoad": 38,
+      "rpe": null
+    },
+    {
+      "id": "i141644006",
+      "date": "2026-04-21",
+      "type": "VirtualRide",
+      "name": "Stage 3: Pas Racing: Yumezi Grit (A)",
+      "movingTimeSec": 1915,
+      "avgWatts": 252,
+      "avgHr": 170,
+      "kj": 498,
+      "trainingLoad": 54,
+      "rpe": null
+    },
+    {
+      "id": "i141639931",
+      "date": "2026-04-21",
+      "type": "VirtualRide",
+      "name": "Zwift - Volcano Circuit CCW in Watopia",
+      "movingTimeSec": 739,
+      "avgWatts": 201,
+      "avgHr": 134,
+      "kj": 149,
+      "trainingLoad": 12,
+      "rpe": null
+    },
+    {
+      "id": "i141341066",
+      "date": "2026-04-20",
+      "type": "VirtualRide",
+      "name": "Zwift - Watopia",
+      "movingTimeSec": 5547,
+      "avgWatts": 197,
+      "avgHr": 132,
+      "kj": 1096,
+      "trainingLoad": 86,
+      "rpe": null
+    },
+    {
+      "id": "i140832639",
+      "date": "2026-04-18",
+      "type": "Ride",
+      "name": "Cycling",
+      "movingTimeSec": 12680,
+      "avgWatts": 209,
+      "avgHr": 141,
+      "kj": 2658,
+      "trainingLoad": 276,
+      "rpe": null
+    }
+  ],
+  "wellness": [
+    {
+      "date": "2026-04-18",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 87.467834,
+      "atl": 118.352234
+    },
+    {
+      "date": "2026-04-19",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 85.40987,
+      "atl": 102.59694
+    },
+    {
+      "date": "2026-04-20",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 85.42375,
+      "atl": 100.38752
+    },
+    {
+      "date": "2026-04-21",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 85.86082,
+      "atl": 100.86842
+    },
+    {
+      "date": "2026-04-22",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 85.93468,
+      "atl": 99.288475
+    },
+    {
+      "date": "2026-04-23",
+      "weightKg": 63.5,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 87.30086,
+      "atl": 105.24057
+    },
+    {
+      "date": "2026-04-24",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 85.24682,
+      "atl": 91.23073
+    },
+    {
+      "date": "2026-04-25",
+      "weightKg": 63.5,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 90.1349,
+      "atl": 118.090675
+    },
+    {
+      "date": "2026-04-26",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 88.01418,
+      "atl": 102.37019
+    },
+    {
+      "date": "2026-04-27",
+      "weightKg": 64,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 89.16674,
+      "atl": 106.98019
+    },
+    {
+      "date": "2026-04-28",
+      "weightKg": 63.6,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 87.068794,
+      "atl": 92.73876
+    },
+    {
+      "date": "2026-04-29",
+      "weightKg": 63.2,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 87.04365,
+      "atl": 91.84168
+    },
+    {
+      "date": "2026-04-30",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 88.50137,
+      "atl": 99.450714
+    },
+    {
+      "date": "2026-05-01",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 86.41908,
+      "atl": 86.211624
+    },
+    {
+      "date": "2026-05-02",
+      "weightKg": 63.6,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 92.644226,
+      "atl": 121.46081
+    },
+    {
+      "date": "2026-05-03",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 90.46446,
+      "atl": 105.29169
+    },
+    {
+      "date": "2026-05-04",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 91.51231,
+      "atl": 109.24652
+    },
+    {
+      "date": "2026-05-05",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 89.35918,
+      "atl": 94.70339
+    },
+    {
+      "date": "2026-05-06",
+      "weightKg": 62.9,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 89.256615,
+      "atl": 93.41166
+    },
+    {
+      "date": "2026-05-07",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 89.132935,
+      "atl": 92.15876
+    },
+    {
+      "date": "2026-05-08",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 88.96511,
+      "atl": 90.806404
+    },
+    {
+      "date": "2026-05-09",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 90.87173,
+      "atl": 101.34882
+    },
+    {
+      "date": "2026-05-10",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 88.733665,
+      "atl": 87.857056
+    },
+    {
+      "date": "2026-05-11",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3149,
+      "ctl": 88.62229,
+      "atl": 87.3436
+    },
+    {
+      "date": "2026-05-12",
+      "weightKg": 63.4,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3071,
+      "ctl": 88.419426,
+      "atl": 86.366005
+    },
+    {
+      "date": "2026-05-13",
+      "weightKg": 63.1,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3034,
+      "ctl": 88.24486,
+      "atl": 85.65167
+    },
+    {
+      "date": "2026-05-14",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 2801,
+      "ctl": 88.0744,
+      "atl": 85.03243
+    },
+    {
+      "date": "2026-05-15",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 2947,
+      "ctl": 87.97854,
+      "atl": 84.895
+    },
+    {
+      "date": "2026-05-16",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 2513,
+      "ctl": 86.873215,
+      "atl": 79.051605
+    },
+    {
+      "date": "2026-05-17",
+      "weightKg": 63,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3494,
+      "ctl": 89.864296,
+      "atl": 97.01622
+    },
+    {
+      "date": "2026-05-18",
+      "weightKg": 62.4,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3200,
+      "ctl": 90.57334,
+      "atl": 100.07587
+    },
+    {
+      "date": "2026-05-19",
+      "weightKg": 62.4,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 90.41868,
+      "atl": 97.935814
+    },
+    {
+      "date": "2026-05-20",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3000,
+      "ctl": 90.267654,
+      "atl": 96.08065
+    },
+    {
+      "date": "2026-05-21",
+      "weightKg": 62.3,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 88.14381,
+      "atl": 83.29019
+    },
+    {
+      "date": "2026-05-22",
+      "weightKg": 62,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3450,
+      "ctl": 90.187386,
+      "atl": 95.498795
+    },
+    {
+      "date": "2026-05-23",
+      "weightKg": 62.6,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 88.06543,
+      "atl": 82.7858
+    },
+    {
+      "date": "2026-05-24",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3427,
+      "ctl": 89.452065,
+      "atl": 91.33413
+    },
+    {
+      "date": "2026-05-25",
+      "weightKg": 63.3,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3690,
+      "ctl": 91.7472,
+      "atl": 104.069374
+    },
+    {
+      "date": "2026-05-26",
+      "weightKg": 62.7,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3074,
+      "ctl": 91.49434,
+      "atl": 100.99833
+    },
+    {
+      "date": "2026-05-27",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 2521,
+      "ctl": 90.35335,
+      "atl": 93.27747
+    },
+    {
+      "date": "2026-05-28",
+      "weightKg": 62.6,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3500,
+      "ctl": 92.01554,
+      "atl": 102.29284
+    },
+    {
+      "date": "2026-05-29",
+      "weightKg": 62.1,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3100,
+      "ctl": 91.85048,
+      "atl": 99.99078
+    },
+    {
+      "date": "2026-05-30",
+      "weightKg": 62.4,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 4096,
+      "ctl": 95.124435,
+      "atl": 117.43101
+    },
+    {
+      "date": "2026-05-31",
+      "weightKg": 61.9,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 2500,
+      "ctl": 92.886314,
+      "atl": 101.79835
+    },
+    {
+      "date": "2026-06-01",
+      "weightKg": 62.5,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3066,
+      "ctl": 92.37137,
+      "atl": 97.69841
+    },
+    {
+      "date": "2026-06-02",
+      "weightKg": 62.1,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3250,
+      "ctl": 92.8332,
+      "atl": 99.602264
+    },
+    {
+      "date": "2026-06-03",
+      "weightKg": 62.5,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3250,
+      "ctl": 92.3195,
+      "atl": 95.79467
+    },
+    {
+      "date": "2026-06-04",
+      "weightKg": 62.2,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3800,
+      "ctl": 94.147194,
+      "atl": 105.67304
+    },
+    {
+      "date": "2026-06-05",
+      "weightKg": 62.1,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 2750,
+      "ctl": 93.08495,
+      "atl": 98.12861
+    },
+    {
+      "date": "2026-06-06",
+      "weightKg": 62,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 2247,
+      "ctl": 90.89482,
+      "atl": 85.06552
+    },
+    {
+      "date": "2026-06-07",
+      "weightKg": 62,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3200,
+      "ctl": 91.27375,
+      "atl": 87.98549
+    },
+    {
+      "date": "2026-06-08",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 2910,
+      "ctl": 89.126236,
+      "atl": 76.272675
+    },
+    {
+      "date": "2026-06-09",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3728,
+      "ctl": 91.73491,
+      "atl": 92.743515
+    },
+    {
+      "date": "2026-06-10",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 3779,
+      "ctl": 93.246956,
+      "atl": 101.16435
+    },
+    {
+      "date": "2026-06-11",
+      "weightKg": 61.8,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 2572,
+      "ctl": 91.38241,
+      "atl": 89.56085
+    },
+    {
+      "date": "2026-06-12",
+      "weightKg": 61.6,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": 4000,
+      "ctl": 92.92628,
+      "atl": 98.53849
+    },
+    {
+      "date": "2026-06-13",
+      "weightKg": null,
+      "hrv": null,
+      "sleepHours": null,
+      "sleepQuality": null,
+      "kcalConsumed": null,
+      "ctl": 90.739876,
+      "atl": 85.42084
+    }
+  ],
+  "powerCurve": [
+    {
+      "durationSec": 5,
+      "watts": 715
+    },
+    {
+      "durationSec": 15,
+      "watts": 664
+    },
+    {
+      "durationSec": 30,
+      "watts": 551
+    },
+    {
+      "durationSec": 60,
+      "watts": 472
+    },
+    {
+      "durationSec": 120,
+      "watts": 372
+    },
+    {
+      "durationSec": 300,
+      "watts": 339
+    },
+    {
+      "durationSec": 1200,
+      "watts": 302
+    },
+    {
+      "durationSec": 1800,
+      "watts": 272
+    },
+    {
+      "durationSec": 3600,
+      "watts": 259
+    }
+  ],
+  "fitness": {
+    "ctl": 90.7,
+    "atl": 85.4,
+    "tsb": 5.3
+  }
+}

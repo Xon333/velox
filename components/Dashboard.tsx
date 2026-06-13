@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isStale, nextMonday } from "@/lib/client-api";
+import type { AthleteMdSnapshot } from "@/lib/kb-loader";
 import type {
-  AthleteProfile,
   CurrentBlock,
   GeneratedPlan,
   SyncData,
@@ -198,14 +198,19 @@ export default function Dashboard() {
         const appState = await api<AppState>("/api/sync");
         if (cancelled) return;
         setState(appState);
-        // Pre-fill weakpoints from the athlete profile (overridable per block).
+        // Pre-fill goal and weakpoints from athlete_profile.md (overridable per block).
         try {
-          const { profile } = await api<{ profile: AthleteProfile }>("/api/profile");
-          if (!cancelled && profile.weakpoints.length > 0) {
-            setWeakpointsText(profile.weakpoints.join("\n"));
+          const { athleteMd } = await api<{ athleteMd: AthleteMdSnapshot }>("/api/profile");
+          if (!cancelled) {
+            if (athleteMd.goals.length > 0) {
+              setGoal(athleteMd.goals.map((g) => g.goal + (g.target ? ` → ${g.target}` : "")).join("\n"));
+            }
+            if (athleteMd.weakpoints.length > 0) {
+              setWeakpointsText(athleteMd.weakpoints.map((w) => w.weakpoint).join("\n"));
+            }
           }
         } catch {
-          // profile prefill is best-effort; the field stays editable
+          // profile prefill is best-effort; both fields stay editable
         }
         // Auto-sync on open when the cache is older than 24 h.
         if (
@@ -370,14 +375,14 @@ export default function Dashboard() {
           </div>
           <div>
             <label htmlFor="goal" className="text-xs font-medium text-zinc-600">
-              Block goal
+              Block goal (one per line)
             </label>
-            <input
+            <textarea
               id="goal"
-              type="text"
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
-              placeholder="e.g. FTP development + durability"
+              rows={2}
+              placeholder="from profile; edit to override"
               className="mt-1.5 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none"
             />
           </div>
