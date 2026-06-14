@@ -101,34 +101,48 @@ export default function Nav() {
 
   return (
     <>
-      {/* Top bar: full nav on desktop, brand + toggle on mobile */}
-      <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/90">
-        <div className="mx-auto flex max-w-5xl items-center justify-end gap-3 px-4 py-3 sm:gap-4">
+      {/* Mobile top bar: brand + toggle only (tabs live in the bottom bar) */}
+      <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur sm:hidden dark:border-zinc-700 dark:bg-zinc-900/90">
+        <div className="flex items-center justify-between px-4 py-3">
           <Link
             href="/dashboard"
             className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-[#00ff88] dark:[text-shadow:0_0_10px_rgba(0,255,136,0.4)]"
           >
             NodeVelo
           </Link>
-          <nav className="hidden items-center gap-1 sm:flex">
-            {LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={isActive(link.href) ? "page" : undefined}
-                className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
-                  isActive(link.href)
-                    ? "bg-zinc-900 text-white dark:bg-[#00ff88]/10 dark:text-[#00ff88] dark:ring-1 dark:ring-[#00ff88]/40"
-                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
           <DarkToggle />
         </div>
       </header>
+
+      {/* Desktop: vertical nav rail pinned to the right edge */}
+      <aside className="no-print fixed right-0 top-0 z-40 hidden h-full w-44 flex-col border-l border-zinc-200 bg-white/90 backdrop-blur sm:flex dark:border-zinc-700 dark:bg-zinc-900/90">
+        <Link
+          href="/dashboard"
+          className="px-4 py-5 text-base font-semibold tracking-tight text-zinc-900 dark:text-[#00ff88] dark:[text-shadow:0_0_10px_rgba(0,255,136,0.4)]"
+        >
+          NodeVelo
+        </Link>
+        <nav className="flex flex-1 flex-col gap-1 px-2">
+          {LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={isActive(link.href) ? "page" : undefined}
+              className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+                isActive(link.href)
+                  ? "bg-zinc-900 text-white dark:bg-[#00ff88]/10 dark:text-[#00ff88] dark:ring-1 dark:ring-[#00ff88]/40"
+                  : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+              }`}
+            >
+              <Icon name={link.icon} className="h-4 w-4 shrink-0" />
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="border-t border-zinc-200 px-3 py-4 dark:border-zinc-700">
+          <DarkToggle />
+        </div>
+      </aside>
 
       {/* Bottom tab bar: mobile only */}
       <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)] sm:hidden dark:border-zinc-700 dark:bg-zinc-900/95">
