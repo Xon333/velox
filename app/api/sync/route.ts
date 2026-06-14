@@ -83,9 +83,19 @@ export async function POST() {
             plannedDay && plannedDay.durationMin > 0
               ? Math.round((actualMin / plannedDay.durationMin) * 100)
               : null;
+          // Intensity Factor is NP/FTP by definition; fall back to avg power
+          // only when normalized power is unavailable.
+          const ifBasis = todayActivity.normalizedPower ?? todayActivity.avgWatts;
           const intensityFactor =
-            todayActivity.avgWatts !== null && ftp > 0
-              ? Math.round((todayActivity.avgWatts / ftp) * 100) / 100
+            ifBasis !== null && ftp > 0
+              ? Math.round((ifBasis / ftp) * 100) / 100
+              : null;
+          // Variability index = NP / avg power; ~1.0 = steady, higher = surgy.
+          const variabilityIndex =
+            todayActivity.normalizedPower !== null &&
+            todayActivity.avgWatts !== null &&
+            todayActivity.avgWatts > 0
+              ? Math.round((todayActivity.normalizedPower / todayActivity.avgWatts) * 100) / 100
               : null;
 
           const executionScore = computeExecutionScore({
@@ -93,6 +103,7 @@ export async function POST() {
             intensityFactor,
             plannedType: plannedDay?.type ?? null,
             decoupling: todayActivity.decoupling,
+            variabilityIndex,
           });
 
           // Advised daily intake using real ride kJ (1 kJ ≈ 1 kcal for cyclists)

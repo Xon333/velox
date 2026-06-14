@@ -1,16 +1,18 @@
 // Deterministic 1-10 ride execution quality score.
-// Based on: duration compliance, intensity appropriateness, aerobic decoupling.
-// No AI required — computable from fields already in TodayAnalysis.
+// Based on: duration compliance, intensity appropriateness, aerobic decoupling,
+// and pacing smoothness (variability index). No AI — computable from fields
+// already in TodayAnalysis.
 
 export interface ExecutionScoreInput {
   compliancePct: number | null;
   intensityFactor: number | null;
   plannedType: string | null;
   decoupling: number | null;
+  variabilityIndex: number | null; // NP / avg power; ~1.0 = perfectly steady
 }
 
 export function computeExecutionScore(input: ExecutionScoreInput): number | null {
-  const { compliancePct, intensityFactor, plannedType, decoupling } = input;
+  const { compliancePct, intensityFactor, plannedType, decoupling, variabilityIndex } = input;
 
   // Need at least one meaningful signal to produce a score.
   if (compliancePct === null && intensityFactor === null && decoupling === null) return null;
@@ -65,6 +67,25 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
         if (IF >= 1.00) score += 2;
         else if (IF >= 0.90) score += 1;
         else score -= 1;
+        break;
+    }
+  }
+
+  // --- Pacing smoothness via variability index (±1) ---
+  // VI = NP / avg power. ~1.0 means perfectly steady; higher means surgy.
+  // Only meaningful for steady session types — intervals (VO2max/SIT) are meant
+  // to be variable, so they are left neutral.
+  if (variabilityIndex !== null && plannedType) {
+    const vi = variabilityIndex;
+    switch (plannedType) {
+      case "Z2":
+      case "Recovery":
+        if (vi <= 1.06) score += 1; // held the zone steadily, as intended
+        else if (vi >= 1.12) score -= 1; // surgy easy ride — didn't ride to plan
+        break;
+      case "Threshold":
+        if (vi <= 1.08) score += 1; // well-controlled threshold effort
+        else if (vi >= 1.15) score -= 1;
         break;
     }
   }
