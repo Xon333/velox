@@ -37,7 +37,7 @@ interface EnergyRow {
   weightKg: number | null;
 }
 interface TrendsData {
-  paHr: Point[];
+  ef: Point[];
   ctl: Point[];
   energy: EnergyRow[];
   blocks: TrendBlock[];
@@ -195,7 +195,7 @@ export default function Trends() {
   if (!data) return <p className="py-12 text-center text-sm text-zinc-400">Loading…</p>;
 
   const noData = !data.syncedAt;
-  const paHrTrend = trendDir(data.paHr, true);
+  const efTrend = trendDir(data.ef, true);
   const ctlTrend = trendDir(data.ctl, true);
   const cards = baselineCards(data.baselines);
 
@@ -253,20 +253,20 @@ export default function Trends() {
 
       <BlockTimeline blocks={data.blocks} />
 
-      {data.paHr.length >= 3 && (
+      {data.ef.length >= 3 && (
         <Card
-          title="Aerobic efficiency — Pa:HR"
-          hint={`${data.paHr.length} endurance rides · last ~8 weeks`}
+          title="Aerobic efficiency — EF"
+          hint={`${data.ef.length} endurance rides · ≥45 min`}
         >
           <div className="mb-1 flex items-center justify-between">
-            <span className={`text-xs font-medium ${paHrTrend.cls}`}>{paHrTrend.label}</span>
+            <span className={`text-xs font-medium ${efTrend.cls}`}>{efTrend.label}</span>
             <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
-              latest {data.paHr[data.paHr.length - 1].value.toFixed(2)}
+              latest {data.ef[data.ef.length - 1].value.toFixed(2)}
             </span>
           </div>
-          <Sparkline points={data.paHr} format={(v) => v.toFixed(2)} />
+          <Sparkline points={data.ef} format={(v) => v.toFixed(2)} />
           <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
-            Power per heartbeat on endurance rides. Rising = more output at the same HR = better aerobic base.
+            Efficiency Factor = normalized power ÷ avg HR on steady endurance rides. Rising = more output at the same HR = better aerobic base.
           </p>
         </Card>
       )}

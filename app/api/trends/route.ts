@@ -20,21 +20,26 @@ export async function GET() {
   ]);
 
   const ftp = profile.performance.ftp;
-  // Pa:HR is only comparable across like-intensity steady rides, so restrict to an
-  // endurance band (~0.56–0.85 of FTP) — excludes recovery spins and hard days that
-  // would make the efficiency trend noisy. If FTP is unknown, fall back to all rides.
+  // Efficiency Factor = NP / avg HR — the standard aerobic-efficiency marker. Restrict
+  // to steady endurance rides (~0.56–0.85 FTP) of at least 45 min so the trend compares
+  // like-for-like; short rides and hard/easy days would make it noisy. NP (falling back
+  // to avg power) keeps variable-terrain rides comparable. If FTP is unknown the band is
+  // skipped and the duration floor still applies.
+  const MIN_SEC = 45 * 60;
   const isEndurance = (w: number) => ftp <= 0 || (w / ftp >= 0.56 && w / ftp <= 0.85);
 
-  const paHr = (sync?.activities ?? [])
-    .filter(
-      (a) =>
-        (a.type === "Ride" || a.type === "VirtualRide") &&
-        a.avgWatts !== null &&
-        a.avgHr !== null &&
-        a.avgHr > 0 &&
-        isEndurance(a.avgWatts)
-    )
-    .map((a) => ({ date: a.date, value: Math.round(((a.avgWatts as number) / (a.avgHr as number)) * 100) / 100 }))
+  const ef = (sync?.activities ?? [])
+    .filter((a) => {
+      if (a.type !== "Ride" && a.type !== "VirtualRide") return false;
+      if (a.avgHr === null || a.avgHr <= 0) return false;
+      if (a.movingTimeSec < MIN_SEC) return false;
+      const power = a.normalizedPower ?? a.avgWatts;
+      return power !== null && isEndurance(power);
+    })
+    .map((a) => {
+      const power = (a.normalizedPower ?? a.avgWatts) as number;
+      return { date: a.date, value: Math.round((power / (a.avgHr as number)) * 100) / 100 };
+    })
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // CTL trajectory over the synced window.
@@ -97,7 +102,7 @@ export async function GET() {
     .sort((a, b) => b.sessions - a.sessions);
 
   return NextResponse.json({
-    paHr,
+    ef,
     ctl,
     energy,
     blocks,
