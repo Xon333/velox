@@ -54,11 +54,15 @@ const POWER_CURVE_LABELS: Record<number, string> = {
 // ---------- Weight sparkline ----------
 
 function WeightSparkline({ points }: { points: WeightPoint[] }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
   if (points.length < 2) return null;
 
   const W = 280;
-  const H = 48;
+  const H = 46;   // chart area
+  const TIP = 28; // tooltip strip at top
   const PAD = 4;
+  const TOTAL = H + TIP;
 
   const weights = points.map((p) => p.weightKg);
   const minW = Math.min(...weights);
@@ -66,28 +70,127 @@ function WeightSparkline({ points }: { points: WeightPoint[] }) {
   const range = maxW - minW || 0.5;
 
   const toX = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
-  const toY = (w: number) => PAD + (1 - (w - minW) / range) * (H - PAD * 2);
+  const toY = (w: number) => TIP + PAD + (1 - (w - minW) / range) * (H - PAD * 2);
 
-  const d = points
+  const pathD = points
     .map((p, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(p.weightKg).toFixed(1)}`)
     .join(" ");
 
-  const latest = points[points.length - 1];
-  const latestX = toX(points.length - 1);
-  const latestY = toY(latest.weightKg);
+  const hp = hoveredIdx !== null ? points[hoveredIdx] : null;
+  const hx = hoveredIdx !== null ? toX(hoveredIdx) : 0;
+  const hy = hp ? toY(hp.weightKg) : 0;
+
+  // Tooltip rect clamped to SVG bounds
+  const TIP_W = 86;
+  const tipRx = hp ? Math.max(0, Math.min(hx - TIP_W / 2, W - TIP_W)) : 0;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
-      <path d={d} fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-500" />
-      <circle cx={latestX} cy={latestY} r="3" className="fill-blue-500" />
-      <text
-        x={Math.min(latestX + 5, W - 30)}
-        y={latestY - 4}
-        fontSize="9"
-        className="fill-zinc-400 dark:fill-zinc-500"
-      >
-        {latest.weightKg.toFixed(1)} kg
-      </text>
+    <svg viewBox={`0 0 ${W} ${TOTAL}`} className="w-full overflow-visible" style={{ height: TOTAL }}>
+      {/* Chart line */}
+      <path
+        d={pathD}
+        fill="none"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        className="stroke-blue-500 dark:stroke-[#00ff88]"
+      />
+
+      {/* Min/max range labels — hide while tooltip active */}
+      {!hp && (
+        <>
+          <text x={W - 2} y={TIP + PAD + 6} textAnchor="end" fontSize={8} className="fill-zinc-400 dark:fill-zinc-600">
+            {maxW.toFixed(1)}
+          </text>
+          <text x={W - 2} y={TOTAL - 2} textAnchor="end" fontSize={8} className="fill-zinc-400 dark:fill-zinc-600">
+            {minW.toFixed(1)}
+          </text>
+        </>
+      )}
+
+      {/* Data points + transparent hit areas */}
+      {points.map((p, i) => {
+        const cx = toX(i);
+        const cy = toY(p.weightKg);
+        const isHovered = hoveredIdx === i;
+        const isLast = i === points.length - 1;
+        return (
+          <g key={i}>
+            <circle
+              cx={cx}
+              cy={cy}
+              r={isHovered ? 4.5 : isLast ? 3 : 1.8}
+              className={
+                isHovered || isLast
+                  ? "fill-blue-500 dark:fill-[#00ff88]"
+                  : "fill-blue-300 dark:fill-zinc-600"
+              }
+              style={{ pointerEvents: "none" }}
+            />
+            {/* Large transparent hit area */}
+            <circle
+              cx={cx}
+              cy={cy}
+              r={10}
+              fill="transparent"
+              className="cursor-crosshair"
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+            />
+          </g>
+        );
+      })}
+
+      {/* Hover tooltip */}
+      {hp && (
+        <g style={{ pointerEvents: "none" }}>
+          {/* Dashed vertical guide */}
+          <line
+            x1={hx} y1={TIP - 2}
+            x2={hx} y2={hy - 6}
+            strokeWidth={1}
+            strokeDasharray="2 2"
+            className="stroke-zinc-300 dark:stroke-[#00ff88]/35"
+          />
+          {/* Tooltip bg */}
+          <rect
+            x={tipRx} y={1}
+            width={TIP_W} height={TIP - 4}
+            rx={3}
+            className="fill-zinc-100 dark:fill-zinc-900"
+            fillOpacity={0.97}
+          />
+          {/* Border line on tooltip rect */}
+          <rect
+            x={tipRx} y={1}
+            width={TIP_W} height={TIP - 4}
+            rx={3}
+            fill="none"
+            strokeWidth={0.5}
+            className="stroke-zinc-300 dark:stroke-[#00ff88]/30"
+          />
+          {/* Weight value */}
+          <text
+            x={tipRx + TIP_W / 2} y={11}
+            textAnchor="middle"
+            fontSize={9}
+            fontWeight="600"
+            fontFamily="monospace"
+            className="fill-zinc-800 dark:fill-[#00ff88]"
+          >
+            {hp.weightKg.toFixed(1)} kg
+          </text>
+          {/* Date */}
+          <text
+            x={tipRx + TIP_W / 2} y={20}
+            textAnchor="middle"
+            fontSize={7.5}
+            fontFamily="monospace"
+            className="fill-zinc-500 dark:fill-zinc-400"
+          >
+            {hp.date}
+          </text>
+        </g>
+      )}
     </svg>
   );
 }
@@ -124,7 +227,7 @@ function StatGrid({ items }: { items: Array<{ label: string; value: string }> })
       {items.map(({ label, value }) => (
         <div key={label}>
           <dt className="text-[11px] text-zinc-400 dark:text-zinc-500">{label}</dt>
-          <dd className="mt-0.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200">{value || "—"}</dd>
+          <dd className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-[#00ff88]">{value || "—"}</dd>
         </div>
       ))}
     </dl>
@@ -245,7 +348,7 @@ export default function AthleteProfileForm() {
                   return (
                     <div key={pt.durationSec} className="rounded bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
                       <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{label}</p>
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{pt.watts}W</p>
+                      <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-[#00ff88]">{pt.watts}W</p>
                       {wkg && <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{wkg} W/kg</p>}
                     </div>
                   );

@@ -115,7 +115,7 @@ function TodayRideCard({ analysis }: { analysis: TodayAnalysis }) {
           {metrics.map((m) => (
             <div key={m.label} className="rounded bg-zinc-100 px-2.5 py-1.5 dark:bg-zinc-900">
               <p className="text-[10px] text-zinc-400 dark:text-zinc-500">{m.label}</p>
-              <p className={`text-sm font-semibold text-zinc-800 dark:text-zinc-200 ${m.highlight ?? ""}`}>
+              <p className={`font-mono text-sm font-semibold text-zinc-800 ${m.highlight ? m.highlight : "dark:text-[#00ff88]"}`}>
                 {m.value}
               </p>
             </div>
@@ -128,7 +128,7 @@ function TodayRideCard({ analysis }: { analysis: TodayAnalysis }) {
         <div className="mt-3 flex items-baseline gap-3 rounded bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Advised daily intake</p>
-            <p className="mt-0.5 text-base font-bold text-zinc-900 dark:text-zinc-100">
+            <p className="mt-0.5 font-mono text-base font-bold text-zinc-900 dark:text-[#00ff88] dark:[text-shadow:0_0_8px_rgba(0,255,136,0.3)]">
               {analysis.advisedIntakeKcal.toLocaleString()} kcal
             </p>
           </div>
@@ -142,7 +142,7 @@ function TodayRideCard({ analysis }: { analysis: TodayAnalysis }) {
 
       {/* Coach note */}
       {(analysis.coachNote ?? (analysis as unknown as { analysis?: string }).analysis) && (
-        <div className="mt-3 border-l-2 border-zinc-300 pl-3 dark:border-zinc-600">
+        <div className="mt-3 border-l-2 border-zinc-300 pl-3 dark:border-[#00ff88]/30">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Coach note</p>
           <p className="mt-0.5 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
             {analysis.coachNote ?? (analysis as unknown as { analysis?: string }).analysis}
@@ -259,20 +259,48 @@ function BlockCalendar({ block }: { block: CurrentBlock }) {
         return (
           <div key={i} className="flex items-center gap-2">
             <span className="w-10 shrink-0 text-right text-[10px] font-medium text-zinc-400">{label}</span>
-            <div className="flex flex-1 gap-1.5">
-              {week.map((day) => (
-                <div
-                  key={day.date}
-                  title={`${day.date} — ${day.name}${day.durationMin ? ` (${day.durationMin} min)` : ""}`}
-                  className={`flex h-9 flex-1 items-center justify-center rounded text-[10px] font-medium ${TYPE_STYLES[day.type].cell} ${
-                    day.type === "Rest" ? "text-zinc-600" : "text-white"
-                  } ${day.date === today ? "ring-2 ring-zinc-900 ring-offset-1 dark:ring-zinc-100" : ""} ${
-                    day.date < today ? "opacity-40" : ""
-                  }`}
-                >
-                  {day.date.slice(8)}
-                </div>
-              ))}
+            <div className="flex flex-1 gap-1.5 overflow-visible">
+              {week.map((day, dayIdx) => {
+                const alignClass =
+                  dayIdx <= 1 ? "left-0" : dayIdx >= week.length - 2 ? "right-0" : "left-1/2 -translate-x-1/2";
+                return (
+                  <div key={day.date} className="group relative flex-1">
+                    <div
+                      className={`flex h-9 w-full items-center justify-center rounded text-[10px] font-medium ${TYPE_STYLES[day.type].cell} ${
+                        day.type === "Rest" ? "text-zinc-600" : "text-white"
+                      } ${day.date === today ? "ring-2 ring-zinc-900 ring-offset-1 dark:ring-[#00ff88] dark:ring-offset-zinc-800" : ""} ${
+                        day.date < today ? "opacity-40" : ""
+                      }`}
+                    >
+                      {day.date.slice(8)}
+                    </div>
+                    {/* Custom tooltip */}
+                    <div
+                      className={`pointer-events-none absolute bottom-full mb-2 z-30 opacity-0 transition-opacity duration-100 group-hover:opacity-100 w-max max-w-[160px] ${alignClass}`}
+                    >
+                      <div className="rounded border border-zinc-200 bg-white px-2.5 py-2 shadow-md dark:border-zinc-700 dark:bg-zinc-900">
+                        <p className="text-[11px] font-semibold leading-tight text-zinc-800 dark:text-zinc-100">
+                          {day.name}
+                        </p>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span
+                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${TYPE_STYLES[day.type].cell}`}
+                          />
+                          <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{day.type}</span>
+                          {day.durationMin > 0 && (
+                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                              · {day.durationMin} min
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 font-mono text-[10px] text-zinc-400 dark:text-zinc-600">
+                          {day.date}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
@@ -313,16 +341,19 @@ function CurrentBlockSection({
   );
   const upcoming = block.days.filter((d) => d.date >= today).length;
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
+    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800 dark:[border-top-color:rgba(0,255,136,0.4)]">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-            Current block: {block.goal}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Active block</h2>
+            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-900 dark:text-[#00ff88]/80">
+              {block.lengthWeeks}w
+            </span>
+          </div>
           <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-            {block.lengthWeeks} weeks · {block.startDate} → {block.endDate} ·{" "}
+            {block.startDate} → {block.endDate} ·{" "}
             {daysRemaining > 0
-              ? `${daysRemaining} days remaining (${upcoming} sessions left)`
+              ? `${daysRemaining} days remaining · ${upcoming} sessions left`
               : "finished"}
           </p>
         </div>
@@ -369,7 +400,7 @@ function RecentDataSummary({ sync }: { sync: SyncData | null }) {
   const stat = (label: string, value: string) => (
     <div className="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
       <p className="text-[11px] uppercase tracking-wide text-zinc-400">{label}</p>
-      <p className="mt-0.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200">{value}</p>
+      <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-[#00ff88]">{value}</p>
     </div>
   );
 
@@ -587,7 +618,7 @@ export default function Dashboard() {
           <button
             onClick={generate}
             disabled={generating || !state.anthropicConfigured}
-            className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
+            className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:border dark:border-[#00ff88]/50 dark:bg-transparent dark:text-[#00ff88] dark:hover:bg-[#00ff88]/10 dark:disabled:border-zinc-600 dark:disabled:text-zinc-500 dark:disabled:bg-transparent"
           >
             {generating
               ? `Generating… ${elapsed}s`
@@ -622,8 +653,8 @@ export default function Dashboard() {
                   onClick={() => setLengthWeeks(w)}
                   className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
                     lengthWeeks === w
-                      ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-                      : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-400"
+                      ? "border-zinc-900 bg-zinc-900 text-white dark:border-[#00ff88]/60 dark:bg-[#00ff88]/10 dark:text-[#00ff88]"
+                      : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500"
                   }`}
                 >
                   {w} weeks

@@ -5,11 +5,15 @@
 :root {
   --background: #fafafa;
   --foreground: #18181b;
+  --neon: #00ff88;
+  --cyan: #00d4ff;
 }
 
 .dark {
   --background: #09090b;
   --foreground: #f4f4f5;
+  --neon: #00ff88;
+  --cyan: #00d4ff;
 }
 
 @theme inline {
@@ -23,6 +27,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Subtle grid texture — dark mode only */
+.dark body {
+  background-image:
+    linear-gradient(rgba(0, 255, 136, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 136, 0.022) 1px, transparent 1px);
+  background-size: 44px 44px;
+  background-attachment: fixed;
 }
 
 @media print {

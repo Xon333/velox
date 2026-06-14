@@ -47,7 +47,7 @@ export default function Nav() {
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link
           href="/dashboard"
-          className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100"
+          className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-[#00ff88] dark:[text-shadow:0_0_10px_rgba(0,255,136,0.4)]"
         >
           Velox
         </Link>
@@ -60,7 +60,7 @@ export default function Nav() {
                 href={link.href}
                 className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
                   active
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                    ? "bg-zinc-900 text-white dark:bg-[#00ff88]/10 dark:text-[#00ff88] dark:ring-1 dark:ring-[#00ff88]/40"
                     : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                 }`}
               >
