@@ -6,7 +6,7 @@ import type { RollingBaselines, WorkoutType } from "@/lib/types";
 import { TYPE_STYLES } from "@/lib/workout-types";
 import Sparkline, { type SparkPoint } from "./Sparkline";
 import MultiSparkline, { type MultiSeries } from "./MultiSparkline";
-import { Card, StatTile } from "./ui";
+import { Card, StatTile, CyberFrame } from "./ui";
 
 type Point = SparkPoint;
 interface TrendBlock {
@@ -67,7 +67,9 @@ function trendDir(points: Point[], higherIsBetter = true): { label: string; cls:
 
 function BlockTimeline({ blocks }: { blocks: TrendBlock[] }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800 dark:[border-top-color:rgba(0,255,136,0.4)]">
+    <section className="relative rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-[#00ff88]/30 dark:bg-zinc-900 dark:shadow-[0_0_24px_-10px_rgba(0,255,136,0.35)]">
+      <CyberFrame />
+      <div className="relative z-10">
       <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Block history</h2>
       <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
         How each block executed and what it changed — the long view your coach reasons from.
@@ -131,6 +133,7 @@ function BlockTimeline({ blocks }: { blocks: TrendBlock[] }) {
           ))}
         </ol>
       )}
+      </div>
     </section>
   );
 }

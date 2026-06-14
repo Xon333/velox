@@ -47,6 +47,30 @@ export function StatTile({ label, value, arrow }: { label: string; value: string
   );
 }
 
+// Cyberpunk decoration layer (corner brackets + subtle scanlines) to drop inside a
+// `relative` card. Accents show in dark mode only; light mode stays utilitarian.
+// Inspired by nyxui's cyberpunk-card, but static (no JS) to keep the app fast.
+// Place BEFORE the content and wrap content in `relative z-10` so it sits on top.
+export function CyberFrame() {
+  const corner = "pointer-events-none absolute h-3 w-3 border-zinc-300 dark:border-[#00ff88]/70";
+  return (
+    <>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 hidden rounded-lg dark:block"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(to bottom, rgba(0,255,136,0.04) 0px, rgba(0,255,136,0.04) 1px, transparent 1px, transparent 3px)",
+        }}
+      />
+      <span aria-hidden className={`${corner} left-0 top-0 border-l-2 border-t-2`} />
+      <span aria-hidden className={`${corner} right-0 top-0 border-r-2 border-t-2`} />
+      <span aria-hidden className={`${corner} bottom-0 left-0 border-b-2 border-l-2`} />
+      <span aria-hidden className={`${corner} bottom-0 right-0 border-b-2 border-r-2`} />
+    </>
+  );
+}
+
 // Labelled section break (label + rule) for separating page zones.
 export function SectionDivider({ label }: { label: string }) {
   return (

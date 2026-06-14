@@ -19,7 +19,7 @@ import { executionScoreLabel } from "@/lib/execution-score";
 import { TYPE_STYLES } from "@/lib/workout-types";
 import PlanPreview from "./PlanPreview";
 import SyncStatus from "./SyncStatus";
-import { Card, StatTile, SectionDivider } from "./ui";
+import { Card, StatTile, SectionDivider, CyberFrame } from "./ui";
 
 interface AppState {
   configured: boolean;
@@ -655,36 +655,39 @@ function CurrentBlockSection({
   );
   const upcoming = block.days.filter((d) => d.date >= today).length;
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800 dark:[border-top-color:rgba(0,255,136,0.4)]">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Active block</h2>
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-900 dark:text-[#00ff88]/80">
-              {block.lengthWeeks}w
-            </span>
+    <section className="relative rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-[#00ff88]/30 dark:bg-zinc-900 dark:shadow-[0_0_24px_-10px_rgba(0,255,136,0.35)]">
+      <CyberFrame />
+      <div className="relative z-10">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Active block</h2>
+              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-[#00ff88]/10 dark:text-[#00ff88]/90 dark:ring-1 dark:ring-[#00ff88]/30">
+                {block.lengthWeeks}w
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+              {block.startDate} → {block.endDate} ·{" "}
+              {daysRemaining > 0
+                ? `${daysRemaining} days remaining · ${upcoming} sessions left`
+                : "finished"}
+            </p>
           </div>
-          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-            {block.startDate} → {block.endDate} ·{" "}
-            {daysRemaining > 0
-              ? `${daysRemaining} days remaining · ${upcoming} sessions left`
-              : "finished"}
-          </p>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950"
+              title="Delete this block to generate a new one"
+            >
+              Delete block
+            </button>
+          )}
         </div>
-        {onDelete && (
-          <button
-            onClick={onDelete}
-            className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950"
-            title="Delete this block to generate a new one"
-          >
-            Delete block
-          </button>
+        {block.overview && (
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">{block.overview}</p>
         )}
+        <BlockCalendar block={block} scores={scores} />
       </div>
-      {block.overview && (
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">{block.overview}</p>
-      )}
-      <BlockCalendar block={block} scores={scores} />
     </section>
   );
 }

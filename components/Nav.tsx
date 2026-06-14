@@ -106,7 +106,7 @@ export default function Nav() {
         <div className="flex items-center justify-between px-4 py-3">
           <Link
             href="/dashboard"
-            className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-[#00ff88] dark:[text-shadow:0_0_10px_rgba(0,255,136,0.4)]"
+            className="font-[family-name:var(--font-orbitron)] text-sm font-semibold tracking-wide text-zinc-900 dark:text-[#00ff88] dark:[text-shadow:0_0_10px_rgba(0,255,136,0.4)]"
           >
             NodeVelo
           </Link>
@@ -118,7 +118,7 @@ export default function Nav() {
       <aside className="no-print fixed right-0 top-0 z-40 hidden h-full w-44 flex-col border-l border-zinc-200 bg-white/90 backdrop-blur sm:flex dark:border-zinc-700 dark:bg-zinc-900/90">
         <Link
           href="/dashboard"
-          className="px-4 py-5 text-base font-semibold tracking-tight text-zinc-900 dark:text-[#00ff88] dark:[text-shadow:0_0_10px_rgba(0,255,136,0.4)]"
+          className="font-[family-name:var(--font-orbitron)] px-4 py-5 text-base font-semibold tracking-wide text-zinc-900 dark:text-[#00ff88] dark:[text-shadow:0_0_10px_rgba(0,255,136,0.4)]"
         >
           NodeVelo
         </Link>
