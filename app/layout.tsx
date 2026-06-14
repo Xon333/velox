@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Nav from "@/components/Nav";
 
@@ -16,6 +17,13 @@ const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+// Display face for the NodeVelo wordmark only.
+const warriot = localFont({
+  src: "./fonts/WarriotTechItalic.ttf",
+  variable: "--font-warriot",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "NodeVelo",
   description: "AI-powered training block generator on top of Intervals.icu.",
@@ -29,7 +37,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${chakra.variable} ${jetbrains.variable} h-full antialiased`}
+      className={`${chakra.variable} ${jetbrains.variable} ${warriot.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         <Nav />

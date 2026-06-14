@@ -106,9 +106,9 @@ export default function Nav() {
         <div className="flex items-center justify-between px-4 py-3">
           <Link
             href="/dashboard"
-            className="text-base font-bold uppercase tracking-[0.18em] text-zinc-900 dark:text-[#ff49c8] dark:[text-shadow:0_0_10px_rgba(255,73,200,0.45)]"
+            className="font-[family-name:var(--font-warriot)] bg-gradient-to-r from-[#ff49c8] to-[#00d4ff] bg-clip-text text-xl tracking-wide text-transparent dark:[filter:drop-shadow(0_0_8px_rgba(255,73,200,0.35))]"
           >
-            Node<span className="text-[#00d4ff] dark:[text-shadow:0_0_10px_rgba(0,212,255,0.45)]">Velo</span>
+            NodeVelo
           </Link>
           <DarkToggle />
         </div>
@@ -118,9 +118,9 @@ export default function Nav() {
       <aside className="no-print fixed right-0 top-0 z-40 hidden h-full w-44 flex-col border-l border-zinc-200 bg-white/90 backdrop-blur sm:flex dark:border-zinc-700 dark:bg-zinc-900/90">
         <Link
           href="/dashboard"
-          className="px-4 py-5 text-lg font-bold uppercase tracking-[0.18em] text-zinc-900 dark:text-[#ff49c8] dark:[text-shadow:0_0_10px_rgba(255,73,200,0.45)]"
+          className="font-[family-name:var(--font-warriot)] bg-gradient-to-r from-[#ff49c8] to-[#00d4ff] bg-clip-text px-4 py-5 text-2xl tracking-wide text-transparent dark:[filter:drop-shadow(0_0_8px_rgba(255,73,200,0.35))]"
         >
-          Node<span className="text-[#00d4ff] dark:[text-shadow:0_0_10px_rgba(0,212,255,0.45)]">Velo</span>
+          NodeVelo
         </Link>
         <nav className="flex flex-1 flex-col gap-1 px-2">
           {LINKS.map((link) => (

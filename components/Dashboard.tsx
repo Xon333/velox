@@ -45,7 +45,7 @@ function todayIso(): string {
 // ---------- Readiness badge ----------
 
 const READINESS_STYLES: Record<ReadinessSignal["level"], string> = {
-  Build:   "bg-green-50  text-green-800  border-green-200  dark:bg-green-950/60 dark:text-emerald-300 dark:border-green-800",
+  Build:   "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800",
   Hold:    "bg-amber-50  text-amber-800  border-amber-200  dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800",
   Recover: "bg-red-50    text-red-800    border-red-200    dark:bg-red-950/60   dark:text-red-300   dark:border-red-800",
 };
@@ -469,7 +469,7 @@ function GoalsProgress({ athleteMd }: ProfileGoals) {
           <div key={g.goal} className="flex items-baseline justify-between gap-2">
             <span className="text-sm text-zinc-700 dark:text-zinc-300">{g.goal}</span>
             {g.target && (
-              <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+              <span className="shrink-0 rounded-full bg-cyan-50 px-2 py-0.5 text-xs font-medium text-cyan-700 dark:bg-[#00d4ff]/10 dark:text-[#00d4ff] dark:ring-1 dark:ring-[#00d4ff]/30">
                 → {g.target}
               </span>
             )}
@@ -655,7 +655,7 @@ function CurrentBlockSection({
   );
   const upcoming = block.days.filter((d) => d.date >= today).length;
   return (
-    <section className="relative rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-[#00d4ff]/30 dark:bg-zinc-900 dark:shadow-[0_0_24px_-10px_rgba(0,212,255,0.35)]">
+    <section className="relative rounded-lg border-2 border-zinc-300 bg-white px-4 py-4 dark:border-[#00d4ff]/55 dark:bg-zinc-900 dark:shadow-[0_0_28px_-8px_rgba(0,212,255,0.45)]">
       <CyberFrame accent="cyan" />
       <div className="relative z-10">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
