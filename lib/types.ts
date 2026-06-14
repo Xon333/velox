@@ -228,6 +228,23 @@ export interface ComplianceMemory {
   updatedAt: string;
 }
 
+// ---------- Per-ride execution score log (data/score-log.json) ----------
+// Accumulates over time so the trends view can chart execution quality across
+// blocks, even after a block is cleared from current-block.json.
+
+export interface RideScoreEntry {
+  date: string;
+  executionScore: number;
+  plannedType: WorkoutType;
+  compliancePct: number | null;
+  intensityFactor: number | null;
+}
+
+export interface ScoreLog {
+  entries: RideScoreEntry[];
+  updatedAt: string;
+}
+
 // ---------- Rolling baselines (data/rolling-baselines.json) ----------
 
 export interface RollingBaselines {

@@ -1,0 +1,328 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { api, timeAgo } from "@/lib/client-api";
+import type { RollingBaselines, WorkoutType } from "@/lib/types";
+import { TYPE_STYLES } from "@/lib/workout-types";
+
+interface Point {
+  date: string;
+  value: number;
+}
+interface TrendBlock {
+  goal: string;
+  startDate: string;
+  endDate: string;
+  lengthWeeks: number;
+  complianceByType: Partial<Record<WorkoutType, number>> | null;
+  ctlGain: number | null;
+  actualHours: number | null;
+  plannedHours: number | null;
+  nextBlockSeeds: string[] | null;
+}
+interface ComplianceRow {
+  type: string;
+  avgCompliancePct: number | null;
+  sessions: number;
+}
+interface ScoreEntry {
+  date: string;
+  executionScore: number;
+  plannedType: WorkoutType;
+}
+interface TrendsData {
+  paHr: Point[];
+  ctl: Point[];
+  blocks: TrendBlock[];
+  complianceByType: ComplianceRow[];
+  baselines: RollingBaselines;
+  scores: ScoreEntry[];
+  syncedAt: string | null;
+}
+
+// ---------- shared bits ----------
+
+function Sparkline({
+  points,
+  color = "stroke-blue-400 dark:stroke-[#00ff88]/70",
+  height = 52,
+}: {
+  points: Point[];
+  color?: string;
+  height?: number;
+}) {
+  if (points.length < 2) return null;
+  const W = 340;
+  const H = height;
+  const PAD = 6;
+  const vals = points.map((p) => p.value);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = max - min || 1;
+  const toX = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
+  const toY = (v: number) => PAD + (1 - (v - min) / range) * (H - PAD * 2);
+  const d = points.map((p, i) => `${i ? "L" : "M"}${toX(i).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
+      <path d={d} fill="none" strokeWidth="1.5" strokeLinejoin="round" className={color} />
+      <circle cx={toX(points.length - 1)} cy={toY(vals[vals.length - 1])} r={3.5} className="fill-blue-500 dark:fill-[#00ff88]" />
+    </svg>
+  );
+}
+
+function trendDir(points: Point[], higherIsBetter = true): { label: string; cls: string } {
+  if (points.length < 4) return { label: "", cls: "text-zinc-400" };
+  const mid = Math.floor(points.length / 2);
+  const a = points.slice(0, mid).reduce((s, p) => s + p.value, 0) / mid;
+  const b = points.slice(mid).reduce((s, p) => s + p.value, 0) / (points.length - mid);
+  const delta = b - a;
+  const eps = Math.max(0.02, Math.abs(a) * 0.02);
+  if (Math.abs(delta) < eps) return { label: "→ stable", cls: "text-zinc-400" };
+  const improving = higherIsBetter ? delta > 0 : delta < 0;
+  return improving
+    ? { label: delta > 0 ? "↑ improving" : "↓ improving", cls: "text-green-600 dark:text-[#00ff88]" }
+    : { label: delta > 0 ? "↑ declining" : "↓ declining", cls: "text-red-500" };
+}
+
+function Card({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <h2 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">{title}</h2>
+        {hint && <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{hint}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// ---------- sections ----------
+
+function BlockTimeline({ blocks }: { blocks: TrendBlock[] }) {
+  return (
+    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800 dark:[border-top-color:rgba(0,255,136,0.4)]">
+      <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Block history</h2>
+      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+        How each block executed and what it changed — the long view your coach reasons from.
+      </p>
+      {blocks.length === 0 ? (
+        <p className="mt-4 rounded-md bg-zinc-50 px-3 py-6 text-center text-sm text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500">
+          No completed blocks yet. Wrap up a block on the dashboard to start building history.
+        </p>
+      ) : (
+        <ol className="mt-3 space-y-2.5">
+          {blocks.map((b, i) => (
+            <li key={i} className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{b.goal}</span>
+                  <span className="rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                    {b.lengthWeeks}w
+                  </span>
+                </div>
+                {b.ctlGain != null && (
+                  <span
+                    className={`font-mono text-xs font-semibold ${
+                      b.ctlGain > 0 ? "text-green-600 dark:text-[#00ff88]" : b.ctlGain < 0 ? "text-red-500" : "text-zinc-400"
+                    }`}
+                  >
+                    CTL {b.ctlGain > 0 ? "+" : ""}{b.ctlGain}
+                  </span>
+                )}
+              </div>
+              <p className="mt-0.5 font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
+                {b.startDate} → {b.endDate}
+                {b.actualHours != null && b.plannedHours != null && ` · ${b.actualHours}/${b.plannedHours}h`}
+              </p>
+              {b.complianceByType && Object.keys(b.complianceByType).length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {Object.entries(b.complianceByType).map(([type, pct]) => (
+                    <span
+                      key={type}
+                      className="inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-[10px] dark:bg-zinc-800"
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${TYPE_STYLES[type as WorkoutType]?.cell ?? "bg-zinc-400"}`} />
+                      <span className="text-zinc-500 dark:text-zinc-400">{type}</span>
+                      <span
+                        className={`font-mono font-semibold ${
+                          (pct ?? 0) >= 90 ? "text-green-600 dark:text-green-400" : (pct ?? 0) >= 75 ? "text-amber-600 dark:text-amber-400" : "text-red-500"
+                        }`}
+                      >
+                        {pct}%
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {b.nextBlockSeeds && b.nextBlockSeeds.length > 0 && (
+                <p className="mt-1.5 text-[11px] leading-4 text-zinc-500 dark:text-zinc-400">
+                  <span className="font-medium text-zinc-600 dark:text-zinc-300">Learned: </span>
+                  {b.nextBlockSeeds.join(" · ")}
+                </p>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function ScoreBars({ scores }: { scores: ScoreEntry[] }) {
+  const recent = scores.slice(-24);
+  if (recent.length < 2) return null;
+  const avg = Math.round((recent.reduce((s, e) => s + e.executionScore, 0) / recent.length) * 10) / 10;
+  const barColor = (v: number) =>
+    v >= 7 ? "bg-green-400 dark:bg-[#00ff88]/70" : v >= 5 ? "bg-amber-400 dark:bg-amber-500" : "bg-red-400 dark:bg-red-500";
+  return (
+    <div>
+      <div className="flex items-end gap-[3px]" style={{ height: 56 }}>
+        {recent.map((e, i) => (
+          <div
+            key={i}
+            title={`${e.date} · ${e.plannedType} · ${e.executionScore}/10`}
+            className={`min-w-[4px] flex-1 rounded-sm ${barColor(e.executionScore)}`}
+            style={{ height: `${(e.executionScore / 10) * 100}%` }}
+          />
+        ))}
+      </div>
+      <p className="mt-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+        Avg {avg}/10 over last {recent.length} matched sessions · taller = better execution
+      </p>
+    </div>
+  );
+}
+
+function baselineCards(b: RollingBaselines) {
+  const cards: Array<{ label: string; value: string }> = [];
+  if (b.avgCtl90d != null) cards.push({ label: "Avg CTL", value: b.avgCtl90d.toFixed(1) });
+  if (b.avgTss90d != null) cards.push({ label: "Avg TSS / ride", value: String(Math.round(b.avgTss90d)) });
+  if (b.avgDecoupling90d != null) cards.push({ label: "Avg decoupling", value: `${b.avgDecoupling90d.toFixed(1)}%` });
+  if (b.avgCadence90d != null) cards.push({ label: "Avg cadence", value: `${Math.round(b.avgCadence90d)} rpm` });
+  return cards;
+}
+
+// ---------- main ----------
+
+export default function Trends() {
+  const [data, setData] = useState<TrendsData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setData(await api<TrendsData>("/api/trends"));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load trends");
+      }
+    })();
+  }, []);
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+        {error}
+      </div>
+    );
+  }
+  if (!data) return <p className="py-12 text-center text-sm text-zinc-400">Loading…</p>;
+
+  const noData = !data.syncedAt;
+  const paHrTrend = trendDir(data.paHr, true);
+  const ctlTrend = trendDir(data.ctl, true);
+  const cards = baselineCards(data.baselines);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-baseline justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Trends</h1>
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+            What your second brain has learned over time — not a duplicate of intervals.icu.
+          </p>
+        </div>
+        {data.syncedAt && (
+          <span className="text-[11px] text-zinc-400 dark:text-zinc-500">synced {timeAgo(data.syncedAt)}</span>
+        )}
+      </div>
+
+      {noData && (
+        <p className="rounded-lg border border-zinc-200 bg-white px-4 py-6 text-center text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500">
+          No synced data yet. Sync from the dashboard to populate trends.
+        </p>
+      )}
+
+      <BlockTimeline blocks={data.blocks} />
+
+      {data.paHr.length >= 3 && (
+        <Card
+          title="Aerobic efficiency — Pa:HR"
+          hint={`${data.paHr.length} rides · last ~8 weeks`}
+        >
+          <div className="mb-1 flex items-center justify-between">
+            <span className={`text-xs font-medium ${paHrTrend.cls}`}>{paHrTrend.label}</span>
+            <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+              latest {data.paHr[data.paHr.length - 1].value.toFixed(2)}
+            </span>
+          </div>
+          <Sparkline points={data.paHr} />
+          <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+            Power per heartbeat. Rising = more output at the same HR = better aerobic base.
+          </p>
+        </Card>
+      )}
+
+      {data.scores.length >= 2 && (
+        <Card title="Execution quality" hint="per-ride score, accumulating">
+          <ScoreBars scores={data.scores} />
+        </Card>
+      )}
+
+      {data.complianceByType.length > 0 && (
+        <Card title="Compliance by session type" hint="all logged sessions">
+          <div className="space-y-1.5">
+            {data.complianceByType.map((c) => {
+              const pct = c.avgCompliancePct ?? 0;
+              const barCls = pct >= 90 ? "bg-green-400 dark:bg-[#00ff88]/70" : pct >= 75 ? "bg-amber-400 dark:bg-amber-500" : "bg-red-400 dark:bg-red-500";
+              return (
+                <div key={c.type} className="flex items-center gap-2">
+                  <span className="w-20 shrink-0 text-xs text-zinc-600 dark:text-zinc-400">{c.type}</span>
+                  <div className="h-2.5 flex-1 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-900">
+                    <div className={`h-full ${barCls}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                  </div>
+                  <span className="w-8 shrink-0 text-right font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300">{pct}%</span>
+                  <span className="w-12 shrink-0 text-right text-[10px] text-zinc-400 dark:text-zinc-500">{c.sessions}×</span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {data.ctl.length >= 3 && (
+        <Card title="Fitness trajectory — CTL" hint="last ~8 weeks">
+          <div className="mb-1 flex items-center justify-between">
+            <span className={`text-xs font-medium ${ctlTrend.cls}`}>{ctlTrend.label}</span>
+            <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+              now {data.ctl[data.ctl.length - 1].value.toFixed(1)}
+            </span>
+          </div>
+          <Sparkline points={data.ctl} color="stroke-purple-400 dark:stroke-[#00d4ff]/70" />
+        </Card>
+      )}
+
+      {cards.length > 0 && (
+        <Card title="90-day baselines" hint="rolling reference">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {cards.map((c) => (
+              <div key={c.label} className="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+                <p className="text-[10px] uppercase tracking-wide text-zinc-400">{c.label}</p>
+                <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-[#00ff88]">{c.value}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}

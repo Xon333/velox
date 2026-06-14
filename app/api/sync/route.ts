@@ -5,16 +5,19 @@ import {
   readComplianceMemory,
   readCurrentBlock,
   readLastSync,
+  readScoreLog,
   writeTodayAnalysis,
   writeComplianceMemory,
   writeCurrentBlock,
   writeLastSync,
   writeRollingBaselines,
+  writeScoreLog,
   readTodayAnalysis,
 } from "@/lib/data-store";
 import { analyseRide, buildRideAnalysisInput, isAnthropicConfigured } from "@/lib/anthropic-api";
 import { adjustBuffer, weightTrendFromWellness } from "@/lib/nutrition";
 import { computeExecutionScore } from "@/lib/execution-score";
+import { buildRideScores, mergeScoreLog } from "@/lib/score-log";
 import { computeFatigueAlert, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
 import type { ComplianceMemory, TodayAnalysis, WorkoutType } from "@/lib/types";
 
@@ -61,9 +64,26 @@ export async function POST() {
 
     let todayAnalysis: TodayAnalysis | null = null;
 
-    // Always update rolling baselines and compliance memory on sync.
+    // Always update rolling baselines on sync (deterministic, no AI needed).
     const baselines = computeRollingBaselines(lastSync.activities, lastSync.wellness);
     await writeRollingBaselines({ ...baselines, updatedAt: new Date().toISOString() });
+
+    // Accumulate per-ride execution scores for the trends view. Deterministic and
+    // independent of Anthropic — covers every matched planned day of the active block.
+    {
+      const block = await readCurrentBlock();
+      if (block) {
+        const profile = await readAthleteProfile();
+        const fresh = buildRideScores(block, lastSync.activities, profile.performance.ftp);
+        if (fresh.length > 0) {
+          const log = await readScoreLog();
+          await writeScoreLog({
+            entries: mergeScoreLog(log.entries, fresh),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      }
+    }
 
     if (isAnthropicConfigured()) {
       const today = todayIso();

@@ -2,7 +2,7 @@
 // the filesystem is the single source of truth (see README — not Vercel-safe).
 import { promises as fs } from "fs";
 import path from "path";
-import type { AthleteProfile, BlockHistoryEntry, BlockSettings, ComplianceMemory, CurrentBlock, RollingBaselines, SyncData, TodayAnalysis } from "./types";
+import type { AthleteProfile, BlockHistoryEntry, BlockSettings, ComplianceMemory, CurrentBlock, RollingBaselines, ScoreLog, SyncData, TodayAnalysis } from "./types";
 import { DEFAULT_BLOCK_SETTINGS } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -122,4 +122,14 @@ export async function readRollingBaselines(): Promise<RollingBaselines> {
 
 export async function writeRollingBaselines(baselines: RollingBaselines): Promise<void> {
   await writeJson("rolling-baselines.json", baselines);
+}
+
+const DEFAULT_SCORE_LOG: ScoreLog = { entries: [], updatedAt: new Date(0).toISOString() };
+
+export async function readScoreLog(): Promise<ScoreLog> {
+  return readJson<ScoreLog>("score-log.json", DEFAULT_SCORE_LOG);
+}
+
+export async function writeScoreLog(log: ScoreLog): Promise<void> {
+  await writeJson("score-log.json", log);
 }
