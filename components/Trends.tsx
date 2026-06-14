@@ -67,8 +67,8 @@ function trendDir(points: Point[], higherIsBetter = true): { label: string; cls:
 
 function BlockTimeline({ blocks }: { blocks: TrendBlock[] }) {
   return (
-    <section className="relative rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-[#ff49c8]/30 dark:bg-zinc-900 dark:shadow-[0_0_24px_-10px_rgba(255, 73, 200,0.35)]">
-      <CyberFrame />
+    <section className="relative rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-[#00d4ff]/30 dark:bg-zinc-900 dark:shadow-[0_0_24px_-10px_rgba(0,212,255,0.35)]">
+      <CyberFrame accent="cyan" />
       <div className="relative z-10">
       <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Block history</h2>
       <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">

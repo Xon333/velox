@@ -400,7 +400,7 @@ function TodayRideCard({
         <div className="mt-3 flex items-baseline gap-3 rounded bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Advised daily intake</p>
-            <p className="mt-0.5 font-mono text-base font-bold text-zinc-900 dark:text-[#ff49c8] dark:[text-shadow:0_0_8px_rgba(255, 73, 200,0.3)]">
+            <p className="mt-0.5 font-mono text-base font-bold text-zinc-900 dark:text-[#ff49c8] dark:[text-shadow:0_0_8px_rgba(255,73,200,0.3)]">
               {analysis.advisedIntakeKcal.toLocaleString()} kcal
             </p>
           </div>
@@ -655,8 +655,8 @@ function CurrentBlockSection({
   );
   const upcoming = block.days.filter((d) => d.date >= today).length;
   return (
-    <section className="relative rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-[#ff49c8]/30 dark:bg-zinc-900 dark:shadow-[0_0_24px_-10px_rgba(255, 73, 200,0.35)]">
-      <CyberFrame />
+    <section className="relative rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-[#00d4ff]/30 dark:bg-zinc-900 dark:shadow-[0_0_24px_-10px_rgba(0,212,255,0.35)]">
+      <CyberFrame accent="cyan" />
       <div className="relative z-10">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>

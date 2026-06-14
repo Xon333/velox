@@ -20,7 +20,7 @@ export function Card({
   return (
     <section
       className={`rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800 ${
-        accentTop ? "dark:[border-top-color:rgba(255, 73, 200,0.4)]" : ""
+        accentTop ? "dark:[border-top-color:rgba(255,73,200,0.4)]" : ""
       } ${className ?? ""}`}
     >
       {(title || hint) && (
@@ -47,20 +47,31 @@ export function StatTile({ label, value, arrow }: { label: string; value: string
   );
 }
 
-// Cyberpunk decoration layer (corner brackets + subtle scanlines) to drop inside a
-// `relative` card. Accents show in dark mode only; light mode stays utilitarian.
-// Inspired by nyxui's cyberpunk-card, but static (no JS) to keep the app fast.
+// Cyberpunk decoration layer (corner brackets + scanlines + a top data-stream line)
+// to drop inside a `relative` card. Accents show in dark mode only; light mode stays
+// utilitarian. Adapted from nyxui's cyberpunk-card, but static (no JS) to stay fast.
 // Place BEFORE the content and wrap content in `relative z-10` so it sits on top.
-export function CyberFrame() {
-  const corner = "pointer-events-none absolute h-3 w-3 border-zinc-300 dark:border-[#ff49c8]/70";
+export function CyberFrame({ accent = "pink" }: { accent?: "pink" | "cyan" }) {
+  const isCyan = accent === "cyan";
+  // Both literal class strings must exist in source for Tailwind to emit them.
+  const corner = isCyan
+    ? "pointer-events-none absolute h-3 w-3 border-zinc-300 dark:border-[#00d4ff]/70"
+    : "pointer-events-none absolute h-3 w-3 border-zinc-300 dark:border-[#ff49c8]/70";
+  const rgb = isCyan ? "0,212,255" : "255,73,200";
   return (
     <>
+      {/* data-stream top line (cloned from nyxui cyberpunk-card) */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 hidden h-px dark:block"
+        style={{ background: `linear-gradient(to right, transparent, rgba(${rgb},0.85), transparent)` }}
+      />
+      {/* scanlines */}
       <span
         aria-hidden
         className="pointer-events-none absolute inset-0 z-0 hidden rounded-lg dark:block"
         style={{
-          backgroundImage:
-            "repeating-linear-gradient(to bottom, rgba(255, 73, 200,0.04) 0px, rgba(255, 73, 200,0.04) 1px, transparent 1px, transparent 3px)",
+          backgroundImage: `repeating-linear-gradient(to bottom, rgba(${rgb},0.04) 0px, rgba(${rgb},0.04) 1px, transparent 1px, transparent 3px)`,
         }}
       />
       <span aria-hidden className={`${corner} left-0 top-0 border-l-2 border-t-2`} />

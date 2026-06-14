@@ -15,7 +15,7 @@ export default function SyncStatus({ configured, lastSyncedAt, syncing, error, o
     ? "bg-red-500"
     : error
       ? "bg-amber-500"
-      : "bg-green-500 dark:bg-[#ff49c8] dark:[box-shadow:0_0_6px_2px_rgba(255, 73, 200,0.5)]";
+      : "bg-green-500 dark:bg-[#ff49c8] dark:[box-shadow:0_0_6px_2px_rgba(255,73,200,0.5)]";
   const statusText = !configured
     ? "Intervals.icu not configured — set INTERVALS_API_KEY and INTERVALS_ATHLETE_ID in .env.local"
     : error

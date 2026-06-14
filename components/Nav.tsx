@@ -160,7 +160,7 @@ export default function Nav() {
                     : "text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300"
                 }`}
               >
-                <Icon name={link.icon} className={`h-5 w-5 ${active ? "dark:[filter:drop-shadow(0_0_4px_rgba(255, 73, 200,0.5))]" : ""}`} />
+                <Icon name={link.icon} className={`h-5 w-5 ${active ? "dark:[filter:drop-shadow(0_0_4px_rgba(255,73,200,0.5))]" : ""}`} />
                 {link.short}
               </Link>
             );
