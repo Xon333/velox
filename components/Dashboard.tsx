@@ -737,12 +737,12 @@ function RecentDataSummary({ sync }: { sync: SyncData | null }) {
   return (
     <Card title="Training status">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <StatTile label="CTL (fitness)" value={sync.fitness.ctl?.toFixed(1) ?? "—"} arrow={ctlArrow} />
-        <StatTile label="ATL (fatigue)" value={sync.fitness.atl?.toFixed(1) ?? "—"} arrow={atlArrow} />
-        <StatTile label="TSB (form)" value={sync.fitness.tsb?.toFixed(1) ?? "—"} arrow={tsbArrow} />
-        <StatTile label="7-day hours" value={`${hours7.toFixed(1)} h`} />
-        <StatTile label="Weight" value={latestWeight?.weightKg != null ? `${latestWeight.weightKg.toFixed(1)} kg` : "—"} arrow={weightArrow} />
-        <StatTile label="Weight trend" value={weightTrend !== null ? `${weightTrend > 0 ? "+" : ""}${weightTrend.toFixed(1)} kg` : "—"} />
+        <StatTile label="CTL (fitness)" value={sync.fitness.ctl?.toFixed(1) ?? "—"} arrow={ctlArrow} accent="pink" />
+        <StatTile label="ATL (fatigue)" value={sync.fitness.atl?.toFixed(1) ?? "—"} arrow={atlArrow} accent="pink" />
+        <StatTile label="TSB (form)" value={sync.fitness.tsb?.toFixed(1) ?? "—"} arrow={tsbArrow} accent="pink" />
+        <StatTile label="7-day hours" value={`${hours7.toFixed(1)} h`} accent="pink" />
+        <StatTile label="Weight" value={latestWeight?.weightKg != null ? `${latestWeight.weightKg.toFixed(1)} kg` : "—"} arrow={weightArrow} accent="pink" />
+        <StatTile label="Weight trend" value={weightTrend !== null ? `${weightTrend > 0 ? "+" : ""}${weightTrend.toFixed(1)} kg` : "—"} accent="pink" />
       </div>
     </Card>
   );

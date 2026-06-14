@@ -218,7 +218,7 @@ function StatGrid({ items }: { items: Array<{ label: string; value: string }> })
       {items.map(({ label, value }) => (
         <div key={label}>
           <dt className="text-[11px] text-zinc-400 dark:text-zinc-500">{label}</dt>
-          <dd className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-zinc-100">{value || "—"}</dd>
+          <dd className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-[#00d4ff]">{value || "—"}</dd>
         </div>
       ))}
     </dl>

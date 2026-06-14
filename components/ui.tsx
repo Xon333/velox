@@ -35,11 +35,29 @@ export function Card({
 }
 
 // Compact metric chip: muted label, mono value, optional trend arrow.
-export function StatTile({ label, value, arrow }: { label: string; value: string; arrow?: string }) {
+// accent controls the value colour in dark mode: plain (white), pink (primary
+// highlight), or cyan (synced/secondary). Trend arrows are always cyan.
+export function StatTile({
+  label,
+  value,
+  arrow,
+  accent = "plain",
+}: {
+  label: string;
+  value: string;
+  arrow?: string;
+  accent?: "plain" | "pink" | "cyan";
+}) {
+  const valueColor =
+    accent === "pink"
+      ? "text-zinc-800 dark:text-[#ff49c8]"
+      : accent === "cyan"
+        ? "text-zinc-800 dark:text-[#00d4ff]"
+        : "text-zinc-800 dark:text-zinc-100";
   return (
     <div className="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
       <p className="text-[10px] uppercase tracking-wide text-zinc-400">{label}</p>
-      <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+      <p className={`mt-0.5 font-mono text-sm font-semibold ${valueColor}`}>
         {value}
         {arrow ? <span className="ml-0.5 text-[10px] font-normal text-cyan-600 dark:text-[#00d4ff]">{arrow}</span> : null}
       </p>

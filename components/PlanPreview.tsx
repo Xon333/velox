@@ -146,7 +146,7 @@ export default function PlanPreview({
         <button
           onClick={onWrite}
           disabled={writing || written || !intervalsConfigured}
-          className="rounded bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:bg-[#ff49c8] dark:text-zinc-900 dark:hover:brightness-110 dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
+          className="rounded bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:bg-[#ff49c8] dark:text-zinc-900 dark:hover:brightness-110 dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
         >
           {writing ? `Writing ${plan.days.length} events…` : written ? "✓ Written to Intervals.icu" : "Write to Intervals.icu"}
         </button>

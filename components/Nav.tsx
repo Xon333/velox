@@ -106,7 +106,7 @@ export default function Nav() {
         <div className="flex items-center justify-between px-4 py-3">
           <Link
             href="/dashboard"
-            className="font-[family-name:var(--font-warriot)] bg-gradient-to-r from-[#ff49c8] to-[#00d4ff] bg-clip-text text-xl tracking-wide text-transparent dark:[filter:drop-shadow(0_0_8px_rgba(255,73,200,0.35))]"
+            className="font-[family-name:var(--font-warriot)] text-xl tracking-wide text-zinc-900 dark:bg-gradient-to-r dark:from-[#ff49c8] dark:to-[#00d4ff] dark:bg-clip-text dark:text-transparent dark:[filter:drop-shadow(0_0_8px_rgba(255,73,200,0.35))]"
           >
             NodeVelo
           </Link>
@@ -118,7 +118,7 @@ export default function Nav() {
       <aside className="no-print fixed right-0 top-0 z-40 hidden h-full w-44 flex-col border-l border-zinc-200 bg-white/90 backdrop-blur sm:flex dark:border-zinc-700 dark:bg-zinc-900/90">
         <Link
           href="/dashboard"
-          className="font-[family-name:var(--font-warriot)] bg-gradient-to-r from-[#ff49c8] to-[#00d4ff] bg-clip-text px-4 py-5 text-2xl tracking-wide text-transparent dark:[filter:drop-shadow(0_0_8px_rgba(255,73,200,0.35))]"
+          className="font-[family-name:var(--font-warriot)] px-4 py-5 text-2xl tracking-wide text-zinc-900 dark:bg-gradient-to-r dark:from-[#ff49c8] dark:to-[#00d4ff] dark:bg-clip-text dark:text-transparent dark:[filter:drop-shadow(0_0_8px_rgba(255,73,200,0.35))]"
         >
           NodeVelo
         </Link>
