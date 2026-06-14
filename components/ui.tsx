@@ -39,9 +39,9 @@ export function StatTile({ label, value, arrow }: { label: string; value: string
   return (
     <div className="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
       <p className="text-[10px] uppercase tracking-wide text-zinc-400">{label}</p>
-      <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-[#ff49c8]">
+      <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-zinc-100">
         {value}
-        {arrow ? <span className="text-[10px] font-normal opacity-60">{arrow}</span> : null}
+        {arrow ? <span className="ml-0.5 text-[10px] font-normal text-cyan-600 dark:text-[#00d4ff]">{arrow}</span> : null}
       </p>
     </div>
   );
@@ -69,7 +69,7 @@ export function CyberFrame({ accent = "pink" }: { accent?: "pink" | "cyan" }) {
       {/* scanlines */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 hidden rounded-lg dark:block"
+        className="pointer-events-none absolute inset-0 z-0 hidden rounded-none dark:block"
         style={{
           backgroundImage: `repeating-linear-gradient(to bottom, rgba(${rgb},0.04) 0px, rgba(${rgb},0.04) 1px, transparent 1px, transparent 3px)`,
         }}

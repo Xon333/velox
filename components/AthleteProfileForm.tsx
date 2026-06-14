@@ -108,26 +108,16 @@ function WeightSparkline({ points }: { points: WeightPoint[] }) {
         </>
       )}
 
-      {/* Data points + transparent hit areas */}
+      {/* Hover hit areas only — no persistent dots, just the line; a dot appears on hover */}
       {points.map((p, i) => {
         const cx = toX(i);
         const cy = toY(p.weightKg);
         const isHovered = hoveredIdx === i;
-        const isLast = i === points.length - 1;
         return (
           <g key={i}>
-            <circle
-              cx={cx}
-              cy={cy}
-              r={isHovered ? 4.5 : isLast ? 3 : 1.8}
-              className={
-                isHovered || isLast
-                  ? "fill-blue-500 dark:fill-[#ff49c8]"
-                  : "fill-blue-300 dark:fill-zinc-600"
-              }
-              style={{ pointerEvents: "none" }}
-            />
-            {/* Large transparent hit area */}
+            {isHovered && (
+              <circle cx={cx} cy={cy} r={4} className="fill-blue-500 dark:fill-[#ff49c8]" style={{ pointerEvents: "none" }} />
+            )}
             <circle
               cx={cx}
               cy={cy}
@@ -209,11 +199,11 @@ function Section({
 }) {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
         {editHref && (
-          <Link href={editHref} className="text-xs text-blue-600 hover:underline dark:text-blue-400">
-            Edit in Knowledge Base →
+          <Link href={editHref} className="shrink-0 whitespace-nowrap text-xs text-cyan-700 hover:underline dark:text-[#00d4ff]">
+            Edit →
           </Link>
         )}
       </div>
@@ -228,7 +218,7 @@ function StatGrid({ items }: { items: Array<{ label: string; value: string }> })
       {items.map(({ label, value }) => (
         <div key={label}>
           <dt className="text-[11px] text-zinc-400 dark:text-zinc-500">{label}</dt>
-          <dd className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-[#ff49c8]">{value || "—"}</dd>
+          <dd className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-zinc-100">{value || "—"}</dd>
         </div>
       ))}
     </dl>
@@ -297,7 +287,7 @@ export default function AthleteProfileForm() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Athlete profile</h1>
-        <Link href="/knowledge" className="text-xs text-blue-600 hover:underline dark:text-blue-400">
+        <Link href="/knowledge" className="text-xs text-cyan-700 hover:underline dark:text-[#00d4ff]">
           Edit athlete_profile.md →
         </Link>
       </div>
@@ -322,7 +312,7 @@ export default function AthleteProfileForm() {
         {autoSync.syncedAt === null ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             No sync yet —{" "}
-            <Link href="/dashboard" className="text-blue-600 hover:underline dark:text-blue-400">
+            <Link href="/dashboard" className="text-cyan-700 hover:underline dark:text-[#00d4ff]">
               sync from the dashboard
             </Link>.
           </p>
@@ -364,7 +354,7 @@ export default function AthleteProfileForm() {
                   return (
                     <div key={pt.durationSec} className="rounded bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
                       <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{label}</p>
-                      <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-[#ff49c8]">{pt.watts}W</p>
+                      <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-[#00d4ff]">{pt.watts}W</p>
                       {wkg && <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{wkg} W/kg</p>}
                     </div>
                   );

@@ -364,7 +364,7 @@ function TodayRideCard({
           {metrics.map((m) => (
             <div key={m.label} className="rounded bg-zinc-100 px-2.5 py-1.5 dark:bg-zinc-900">
               <p className="text-[10px] text-zinc-400 dark:text-zinc-500">{m.label}</p>
-              <p className={`font-mono text-sm font-semibold text-zinc-800 ${m.highlight ? m.highlight : "dark:text-[#ff49c8]"}`}>
+              <p className={`font-mono text-sm font-semibold text-zinc-800 ${m.highlight ? m.highlight : "dark:text-zinc-100"}`}>
                 {m.value}
               </p>
             </div>
@@ -655,14 +655,14 @@ function CurrentBlockSection({
   );
   const upcoming = block.days.filter((d) => d.date >= today).length;
   return (
-    <section className="relative rounded-lg border-2 border-zinc-300 bg-white px-4 py-4 dark:border-[#00d4ff]/55 dark:bg-zinc-900 dark:shadow-[0_0_28px_-8px_rgba(0,212,255,0.45)]">
+    <section className="relative rounded-none border-2 border-zinc-300 bg-white px-4 py-4 dark:border-[#00d4ff]/55 dark:bg-zinc-900 dark:shadow-[0_0_28px_-8px_rgba(0,212,255,0.45)]">
       <CyberFrame accent="cyan" />
       <div className="relative z-10">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Active block</h2>
-              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-[#ff49c8]/10 dark:text-[#ff49c8]/90 dark:ring-1 dark:ring-[#ff49c8]/30">
+              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-[#00d4ff]/10 dark:text-[#00d4ff] dark:ring-1 dark:ring-[#00d4ff]/30">
                 {block.lengthWeeks}w
               </span>
             </div>

@@ -121,7 +121,7 @@ export default function PlanPreview({
               <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 Week {week}{weekDays[0]?.weekTheme ? ` · ${weekDays[0].weekTheme}` : ""}
               </h3>
-              <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-semibold text-zinc-600 dark:border dark:border-[#ff49c8]/40 dark:bg-[#ff49c8]/8 dark:text-[#ff49c8]">
+              <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-semibold text-zinc-600 dark:border dark:border-[#00d4ff]/40 dark:bg-[#00d4ff]/10 dark:text-[#00d4ff]">
                 {wHours}
               </span>
             </div>
