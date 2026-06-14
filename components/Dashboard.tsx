@@ -167,7 +167,7 @@ function WeeklyDebrief({ sync }: { sync: SyncData }) {
   if (weekActivities.length === 0 && avgHrv === null) return null;
 
   const chip = (label: string, value: string) => (
-    <div key={label} className="rounded-md bg-zinc-50 px-2.5 py-1.5 dark:bg-zinc-900">
+    <div key={label} className="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
       <p className="text-[10px] uppercase tracking-wide text-zinc-400">{label}</p>
       <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-[#00ff88]">{value}</p>
     </div>
@@ -498,7 +498,7 @@ function GoalsProgress({ athleteMd, lastSync }: ProfileGoals) {
 
   return (
     <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-      <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Goals</h2>
+      <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Goals</h2>
       <div className="mt-3 flex flex-col gap-2">
         {athleteMd.goals.map((g) => (
           <div key={g.goal} className="flex items-baseline justify-between gap-2">
@@ -671,7 +671,7 @@ function CurrentBlockSection({
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Active block</h2>
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Active block</h2>
             <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-900 dark:text-[#00ff88]/80">
               {block.lengthWeeks}w
             </span>
@@ -743,7 +743,7 @@ function RecentDataSummary({ sync }: { sync: SyncData | null }) {
 
   const stat = (label: string, value: string, arrow = "") => (
     <div className="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
-      <p className="text-[11px] uppercase tracking-wide text-zinc-400">{label}</p>
+      <p className="text-[10px] uppercase tracking-wide text-zinc-400">{label}</p>
       <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-[#00ff88]">
         {value}
         {arrow && <span className="text-[10px] font-normal opacity-60">{arrow}</span>}
@@ -1007,7 +1007,7 @@ export default function Dashboard() {
     state.currentBlock !== null && state.currentBlock.endDate >= todayIso();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <SyncStatus
         configured={state.configured}
         lastSyncedAt={state.lastSync?.syncedAt ?? null}
@@ -1023,8 +1023,6 @@ export default function Dashboard() {
           loadRamp={state.loadRamp}
         />
       )}
-
-      {state.lastSync && <WeeklyDebrief sync={state.lastSync} />}
 
       {state.todayAnalysis && state.todayAnalysis.activityDate === todayIso() && (
         <TodayRideCard
@@ -1150,11 +1148,18 @@ export default function Dashboard() {
         />
       )}
 
-      {athleteMd && <GoalsProgress athleteMd={athleteMd} lastSync={state.lastSync} />}
+      <div className="flex items-center gap-2 pt-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Review</span>
+        <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+      </div>
+
+      {state.lastSync && <WeeklyDebrief sync={state.lastSync} />}
 
       <RecentDataSummary sync={state.lastSync} />
 
       {state.lastSync && <PaHrChart activities={state.lastSync.activities} />}
+
+      {athleteMd && <GoalsProgress athleteMd={athleteMd} lastSync={state.lastSync} />}
 
       <BlockHistory history={blockHistory} />
     </div>

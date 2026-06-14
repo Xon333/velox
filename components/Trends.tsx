@@ -203,7 +203,7 @@ export default function Trends() {
   const cards = baselineCards(data.baselines);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-baseline justify-between">
         <div>
           <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Trends</h1>
