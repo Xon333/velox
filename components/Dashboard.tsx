@@ -17,6 +17,7 @@ import type {
 import { executionScoreLabel } from "@/lib/execution-score";
 import { TYPE_STYLES } from "@/lib/workout-types";
 import PlanPreview from "./PlanPreview";
+import Sparkline from "./Sparkline";
 import SyncStatus from "./SyncStatus";
 
 interface AppState {
@@ -109,21 +110,6 @@ function PaHrChart({ activities }: { activities: SyncData["activities"] }) {
 
   if (rides.length < 3) return null;
 
-  const W = 340;
-  const H = 52;
-  const PAD = 6;
-  const pahrs = rides.map((r) => r.pahr);
-  const minP = Math.min(...pahrs);
-  const maxP = Math.max(...pahrs);
-  const range = maxP - minP || 0.1;
-
-  const toX = (i: number) => PAD + (i / (rides.length - 1)) * (W - PAD * 2);
-  const toY = (p: number) => PAD + (1 - (p - minP) / range) * (H - PAD * 2);
-
-  const pathD = rides
-    .map((r, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(r.pahr).toFixed(1)}`)
-    .join(" ");
-
   // Trend: compare first half vs second half avg
   const mid = Math.floor(rides.length / 2);
   const firstAvg = rides.slice(0, mid).reduce((s, r) => s + r.pahr, 0) / mid;
@@ -147,18 +133,7 @@ function PaHrChart({ activities }: { activities: SyncData["activities"] }) {
           </span>
         </div>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
-        <path d={pathD} fill="none" strokeWidth="1.5" strokeLinejoin="round" className="stroke-blue-400 dark:stroke-[#00ff88]/70" />
-        {rides.map((r, i) => (
-          <circle
-            key={i}
-            cx={toX(i)}
-            cy={toY(r.pahr)}
-            r={i === rides.length - 1 ? 3.5 : 2}
-            className={i === rides.length - 1 ? "fill-blue-500 dark:fill-[#00ff88]" : "fill-blue-300 dark:fill-zinc-600"}
-          />
-        ))}
-      </svg>
+      <Sparkline points={rides.map((r) => ({ date: r.date, value: r.pahr }))} format={(v) => v.toFixed(2)} />
       <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
         Last {rides.length} rides · higher = more power per heartbeat = better aerobic base
       </p>

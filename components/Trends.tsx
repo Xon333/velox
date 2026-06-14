@@ -4,11 +4,9 @@ import { useEffect, useState } from "react";
 import { api, timeAgo } from "@/lib/client-api";
 import type { RollingBaselines, WorkoutType } from "@/lib/types";
 import { TYPE_STYLES } from "@/lib/workout-types";
+import Sparkline, { type SparkPoint } from "./Sparkline";
 
-interface Point {
-  date: string;
-  value: number;
-}
+type Point = SparkPoint;
 interface TrendBlock {
   goal: string;
   startDate: string;
@@ -41,34 +39,6 @@ interface TrendsData {
 }
 
 // ---------- shared bits ----------
-
-function Sparkline({
-  points,
-  color = "stroke-blue-400 dark:stroke-[#00ff88]/70",
-  height = 52,
-}: {
-  points: Point[];
-  color?: string;
-  height?: number;
-}) {
-  if (points.length < 2) return null;
-  const W = 340;
-  const H = height;
-  const PAD = 6;
-  const vals = points.map((p) => p.value);
-  const min = Math.min(...vals);
-  const max = Math.max(...vals);
-  const range = max - min || 1;
-  const toX = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
-  const toY = (v: number) => PAD + (1 - (v - min) / range) * (H - PAD * 2);
-  const d = points.map((p, i) => `${i ? "L" : "M"}${toX(i).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
-      <path d={d} fill="none" strokeWidth="1.5" strokeLinejoin="round" className={color} />
-      <circle cx={toX(points.length - 1)} cy={toY(vals[vals.length - 1])} r={3.5} className="fill-blue-500 dark:fill-[#00ff88]" />
-    </svg>
-  );
-}
 
 function trendDir(points: Point[], higherIsBetter = true): { label: string; cls: string } {
   if (points.length < 4) return { label: "", cls: "text-zinc-400" };
@@ -265,7 +235,7 @@ export default function Trends() {
               latest {data.paHr[data.paHr.length - 1].value.toFixed(2)}
             </span>
           </div>
-          <Sparkline points={data.paHr} />
+          <Sparkline points={data.paHr} format={(v) => v.toFixed(2)} />
           <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
             Power per heartbeat. Rising = more output at the same HR = better aerobic base.
           </p>
@@ -307,7 +277,12 @@ export default function Trends() {
               now {data.ctl[data.ctl.length - 1].value.toFixed(1)}
             </span>
           </div>
-          <Sparkline points={data.ctl} color="stroke-purple-400 dark:stroke-[#00d4ff]/70" />
+          <Sparkline
+            points={data.ctl}
+            format={(v) => v.toFixed(1)}
+            strokeClass="stroke-purple-400 dark:stroke-[#00d4ff]/70"
+            dotClass="fill-purple-500 dark:fill-[#00d4ff]"
+          />
         </Card>
       )}
 
