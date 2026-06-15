@@ -4,6 +4,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { AthleteProfile, BlockHistoryEntry, BlockSettings, ComplianceMemory, CurrentBlock, RollingBaselines, ScoreLog, SyncData, TodayAnalysis } from "./types";
 import { DEFAULT_BLOCK_SETTINGS } from "./types";
+import { readMdPerformance } from "./kb-loader";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -48,7 +49,14 @@ async function writeJson(file: string, value: unknown): Promise<void> {
 }
 
 export async function readAthleteProfile(): Promise<AthleteProfile> {
-  return readJson<AthleteProfile>("athlete.json", DEFAULT_PROFILE);
+  const profile = await readJson<AthleteProfile>("athlete.json", DEFAULT_PROFILE);
+  // athlete_profile.md is the athlete-edited source of truth for FTP/HR — overlay its
+  // values so IF/execution scoring, trends and generation all agree with the markdown.
+  const md = await readMdPerformance();
+  if (md.ftp !== undefined && md.ftp > 0) profile.performance.ftp = md.ftp;
+  if (md.thresholdHr !== undefined && md.thresholdHr > 0) profile.performance.thresholdHr = md.thresholdHr;
+  if (md.maxHr !== undefined && md.maxHr > 0) profile.performance.maxHr = md.maxHr;
+  return profile;
 }
 
 export async function writeAthleteProfile(profile: AthleteProfile): Promise<void> {

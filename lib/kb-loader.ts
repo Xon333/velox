@@ -99,6 +99,27 @@ export async function parseAthleteMd(): Promise<AthleteMdSnapshot> {
   };
 }
 
+// Numeric performance values parsed from athlete_profile.md — the athlete-edited
+// source of truth. Used to keep athlete.json's FTP/HR consistent with the markdown
+// (e.g. so Intensity Factor uses the same FTP the athlete sees and generation uses).
+// Returns only the fields that parse cleanly; missing/garbled values are omitted.
+export async function readMdPerformance(): Promise<{ ftp?: number; thresholdHr?: number; maxHr?: number }> {
+  const { performanceData } = await parseAthleteMd();
+  const firstInt = (val: string | undefined): number | undefined => {
+    const m = val?.match(/\d+/);
+    return m ? parseInt(m[0], 10) : undefined;
+  };
+  const findValue = (pred: (key: string) => boolean): string | undefined => {
+    const key = Object.keys(performanceData).find((k) => pred(k.trim().toLowerCase()));
+    return key ? performanceData[key] : undefined;
+  };
+  return {
+    ftp: firstInt(findValue((k) => k === "ftp")),
+    thresholdHr: firstInt(findValue((k) => k.includes("threshold") && k.includes("hr"))),
+    maxHr: firstInt(findValue((k) => k.includes("max") && k.includes("hr"))),
+  };
+}
+
 const KB_DIR = path.join(process.cwd(), "knowledge-base");
 
 // Concatenation order required by the spec; bikefit is optional.
