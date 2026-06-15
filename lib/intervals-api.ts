@@ -94,25 +94,33 @@ function localDate(value: unknown): string {
 
 // ---------- reads ----------
 
-// Per-sample heart-rate stream for one activity, so HR can be re-bucketed into the
-// athlete's own zones. Best-effort: returns [] on any failure (caller falls back).
-export async function fetchHrStream(activityId: string): Promise<number[]> {
+// Per-sample stream for one activity (e.g. "watts" or "heartrate"), so the metric can
+// be re-bucketed into the athlete's own zones. Best-effort: [] on any failure.
+async function fetchActivityStream(activityId: string, type: string): Promise<number[]> {
   if (!activityId) return [];
   try {
-    const data = await icuFetch(`/activity/${encodeURIComponent(activityId)}/streams?types=heartrate`);
+    const data = await icuFetch(`/activity/${encodeURIComponent(activityId)}/streams?types=${type}`);
     let raw: unknown = null;
     if (Array.isArray(data)) {
-      const hr = data.find((s) => asRecord(s).type === "heartrate");
-      raw = hr ? asRecord(hr).data : null;
+      const s = data.find((entry) => asRecord(entry).type === type);
+      raw = s ? asRecord(s).data : null;
     } else {
       const rec = asRecord(data);
-      raw = asRecord(rec.heartrate).data ?? rec.heartrate;
+      raw = asRecord(rec[type]).data ?? rec[type];
     }
     if (!Array.isArray(raw)) return [];
     return raw.map((v) => (typeof v === "number" && Number.isFinite(v) ? v : 0));
   } catch {
     return [];
   }
+}
+
+export function fetchHrStream(activityId: string): Promise<number[]> {
+  return fetchActivityStream(activityId, "heartrate");
+}
+
+export function fetchPowerStream(activityId: string): Promise<number[]> {
+  return fetchActivityStream(activityId, "watts");
 }
 
 export async function fetchActivities(oldest: string, newest: string): Promise<ActivitySummary[]> {

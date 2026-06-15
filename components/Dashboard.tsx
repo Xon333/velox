@@ -231,7 +231,7 @@ function RetroSection({
 
 // ---------- Zone distribution mini-bars ----------
 
-function ZoneBars({ times, label }: { times: number[]; label: string }) {
+function ZoneBars({ times, label, secondary }: { times: number[]; label: string; secondary?: boolean }) {
   const total = times.reduce((s, t) => s + t, 0);
   if (total === 0) return null;
   const pcts = times.map((t) => Math.round((t / total) * 100));
@@ -245,9 +245,9 @@ function ZoneBars({ times, label }: { times: number[]; label: string }) {
     "bg-red-900 dark:bg-red-900",
   ];
   return (
-    <div>
+    <div className={secondary ? "opacity-90" : undefined}>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">{label}</p>
-      <div className="flex h-3 w-full overflow-hidden rounded gap-px">
+      <div className={`flex w-full overflow-hidden rounded gap-px ${secondary ? "h-1.5" : "h-3.5"}`}>
         {pcts.map((pct, i) =>
           pct >= 1 ? (
             <div
@@ -392,12 +392,13 @@ function TodayRideCard({
         </div>
       )}
 
-      {/* Zone distribution. HR bars use the athlete's own zones (re-bucketed from the
-          HR stream against athlete_profile.md), not Intervals' differing boundaries. */}
+      {/* Zone distribution — power is primary, HR secondary. Both are re-bucketed from
+          the raw streams against the athlete's own md zones (Intervals' power zones are
+          often absent and its HR boundaries differ). */}
       {(analysis.powerZoneTimes || analysis.hrZoneTimes) && (
         <div className="mt-3 space-y-2.5">
-          {analysis.powerZoneTimes && <ZoneBars times={analysis.powerZoneTimes} label="Power zones" />}
-          {analysis.hrZoneTimes && <ZoneBars times={analysis.hrZoneTimes} label="HR zones (your zones)" />}
+          {analysis.powerZoneTimes && <ZoneBars times={analysis.powerZoneTimes} label="Time in power zones" />}
+          {analysis.hrZoneTimes && <ZoneBars times={analysis.hrZoneTimes} label="HR zones · secondary" secondary />}
         </div>
       )}
 

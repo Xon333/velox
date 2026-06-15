@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { fetchHrStream, isIntervalsConfigured, runFullSync, IntervalsApiError } from "@/lib/intervals-api";
-import { readMdHrZones } from "@/lib/kb-loader";
-import { bucketHrZones } from "@/lib/hr-zones";
+import { fetchHrStream, fetchPowerStream, isIntervalsConfigured, runFullSync, IntervalsApiError } from "@/lib/intervals-api";
+import { readMdHrZones, readMdPowerZones } from "@/lib/kb-loader";
+import { bucketZones } from "@/lib/zones";
 import {
   readAthleteProfile,
   readComplianceMemory,
@@ -139,19 +139,25 @@ export async function POST() {
           const advisedBaseKcal = profile.nutrition.baseCalories;
           const advisedIntakeKcal = Math.round(advisedBaseKcal + rideFuelKcal + bufferApplied);
 
-          // Re-bucket HR into the athlete's OWN zones (from athlete_profile.md) instead
-          // of Intervals' icu_hr_zone_times, whose boundaries can differ. Best-effort:
-          // falls back to Intervals' zones if the stream or md zones are unavailable.
+          // Re-bucket power & HR into the athlete's OWN zones (from athlete_profile.md).
+          // Intervals' power zones are often null and its HR boundaries can differ, so we
+          // compute time-in-zone from the raw streams. Best-effort: fall back to whatever
+          // Intervals provided if a stream or the md zones are unavailable.
+          let powerZoneTimes = todayActivity.powerZoneTimes;
           let hrZoneTimes = todayActivity.hrZoneTimes;
-          if (todayActivity.avgHr !== null) {
-            const mdZones = await readMdHrZones();
-            if (mdZones.length > 0) {
-              const stream = await fetchHrStream(todayActivity.id);
-              if (stream.length > 0) {
-                const bucketed = bucketHrZones(stream, mdZones);
-                if (bucketed.some((t) => t > 0)) hrZoneTimes = bucketed;
-              }
-            }
+          const [mdPowerZones, mdHrZones, powerStream, hrStream] = await Promise.all([
+            readMdPowerZones(),
+            readMdHrZones(),
+            todayActivity.avgWatts !== null ? fetchPowerStream(todayActivity.id) : Promise.resolve<number[]>([]),
+            todayActivity.avgHr !== null ? fetchHrStream(todayActivity.id) : Promise.resolve<number[]>([]),
+          ]);
+          if (mdPowerZones.length > 0 && powerStream.length > 0) {
+            const b = bucketZones(powerStream, mdPowerZones);
+            if (b.some((t) => t > 0)) powerZoneTimes = b;
+          }
+          if (mdHrZones.length > 0 && hrStream.length > 0) {
+            const b = bucketZones(hrStream, mdHrZones);
+            if (b.some((t) => t > 0)) hrZoneTimes = b;
           }
 
           const input = buildRideAnalysisInput(
@@ -160,6 +166,7 @@ export async function POST() {
             ftp,
             profile.performance.thresholdHr
           );
+          input.powerZoneTimes = powerZoneTimes;
           input.hrZoneTimes = hrZoneTimes;
           const coachNote = await analyseRide(input);
 
@@ -187,7 +194,7 @@ export async function POST() {
             advisedBufferKcal: bufferApplied,
             advisedRideFuelKcal: rideFuelKcal,
             activityDescription: todayActivity.description,
-            powerZoneTimes: todayActivity.powerZoneTimes,
+            powerZoneTimes,
             hrZoneTimes,
             executionScore,
             coachNote,

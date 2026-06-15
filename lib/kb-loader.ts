@@ -4,7 +4,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import type { AthleteProfile } from "./types";
-import type { HrZone } from "./hr-zones";
+import type { Zone } from "./zones";
 
 // ---------- athlete_profile.md parser ----------
 
@@ -121,14 +121,14 @@ export async function readMdPerformance(): Promise<{ ftp?: number; thresholdHr?:
   };
 }
 
-// The athlete's HR zones parsed from athlete_profile.md's TRAINING ZONES table.
-// Handles "< 120 BPM", "120–152 BPM" (en-dash or hyphen), "> 194 BPM"; skips rows
-// with no HR range (e.g. a neuromuscular "Max" row). Ordered low→high.
-export async function readMdHrZones(): Promise<HrZone[]> {
+// Parse one column ("power" or "hr") of athlete_profile.md's TRAINING ZONES table
+// into ordered zones. Handles "< 170W", "170–216W" (en-dash or hyphen), "> 432W";
+// skips rows with no range (e.g. a "Max" HR cell). Ordered low→high.
+async function parseMdZones(field: "power" | "hr"): Promise<Zone[]> {
   const { trainingZones } = await parseAthleteMd();
-  const out: HrZone[] = [];
+  const out: Zone[] = [];
   for (const z of trainingZones) {
-    const s = z.hr ?? "";
+    const s = z[field] ?? "";
     const ints = (s.match(/\d+/g) ?? []).map(Number);
     if (ints.length === 0) continue;
     let lo: number;
@@ -149,6 +149,14 @@ export async function readMdHrZones(): Promise<HrZone[]> {
     out.push({ name: `${z.zone} ${z.name}`.trim(), lo, hi });
   }
   return out;
+}
+
+export async function readMdHrZones(): Promise<Zone[]> {
+  return parseMdZones("hr");
+}
+
+export async function readMdPowerZones(): Promise<Zone[]> {
+  return parseMdZones("power");
 }
 
 const KB_DIR = path.join(process.cwd(), "knowledge-base");
