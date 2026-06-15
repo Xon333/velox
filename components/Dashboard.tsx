@@ -277,12 +277,14 @@ function TodayRideCard({
   notePosting,
   notePosted,
   bare,
+  hideCoachNote,
 }: {
   analysis: TodayAnalysis;
   onPostNote?: () => void;
   notePosting?: boolean;
   notePosted?: boolean;
   bare?: boolean;
+  hideCoachNote?: boolean; // rendered separately (e.g. in the trend-pulse column)
 }) {
   const plannedStyle = analysis.plannedType
     ? TYPE_STYLES[analysis.plannedType as keyof typeof TYPE_STYLES] ?? TYPE_STYLES.Z2
@@ -472,7 +474,7 @@ function TodayRideCard({
       )}
 
       {/* Coach note */}
-      {(analysis.coachNote ?? (analysis as unknown as { analysis?: string }).analysis) && (
+      {!hideCoachNote && (analysis.coachNote ?? (analysis as unknown as { analysis?: string }).analysis) && (
         <div className="mt-3 border-l-2 border-zinc-300 pl-3 dark:border-[#ff49c8]/30">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Coach note</p>
           <p className="mt-0.5 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
@@ -1091,7 +1093,8 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
             )}
           </Zone>
 
-          {/* Session & fuel as the wide focus; trend pulse stacks vertically beside it */}
+          {/* Session & fuel as the wide focus; trend pulse + coach note fill the column
+              beside it (the coach note moves here so the session card needn't scroll). */}
           <div className="grid gap-3 lg:grid-cols-[1.7fr_1fr]">
             <Zone rank={2} title="Today — session & fuel" hero>
               {state.todayAnalysis && state.todayAnalysis.activityDate === todayIso() ? (
@@ -1101,15 +1104,23 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
                   notePosting={notePosting}
                   notePosted={notePosted}
                   bare
+                  hideCoachNote
                 />
               ) : (
                 <PlannedToday block={state.currentBlock} />
               )}
             </Zone>
 
-            <Zone rank={3} title="Trend pulse — am I improving?" hint="opens Trends">
-              <TrendPulse vertical />
-            </Zone>
+            <div className="flex flex-col gap-3">
+              <Zone rank={3} title="Trend pulse — am I improving?" hint="opens Trends">
+                <TrendPulse vertical />
+              </Zone>
+              {state.todayAnalysis?.activityDate === todayIso() && state.todayAnalysis.coachNote && (
+                <Card title="Coach note">
+                  <p className="text-xs leading-5 text-zinc-600 dark:text-zinc-300">{state.todayAnalysis.coachNote}</p>
+                </Card>
+              )}
+            </div>
           </div>
         </>
       )}
