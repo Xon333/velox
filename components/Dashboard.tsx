@@ -318,10 +318,12 @@ function TodayRideCard({
 
   const body = (
     <>
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Today's ride</h2>
-        <span className="text-xs text-zinc-400 dark:text-zinc-500">{analysis.activityDate}</span>
-      </div>
+      {!bare && (
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Today's ride</h2>
+          <span className="text-xs text-zinc-400 dark:text-zinc-500">{analysis.activityDate}</span>
+        </div>
+      )}
 
       {/* Planned vs Actual */}
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
