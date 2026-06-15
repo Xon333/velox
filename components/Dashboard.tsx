@@ -1111,12 +1111,12 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
               )}
             </Zone>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex min-h-0 flex-col gap-3">
               <Zone rank={3} title="Trend pulse — am I improving?" hint="opens Trends">
                 <TrendPulse vertical />
               </Zone>
               {state.todayAnalysis?.activityDate === todayIso() && state.todayAnalysis.coachNote && (
-                <Zone title="Coach note" hero accent="pink">
+                <Zone title="Coach note" hero accent="pink" fill>
                   <p className="text-xs leading-5 text-zinc-600 dark:text-zinc-300">{state.todayAnalysis.coachNote}</p>
                 </Zone>
               )}
