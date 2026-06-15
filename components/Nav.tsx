@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { timeAgo } from "@/lib/client-api";
+import { useSync } from "./SyncProvider";
 
 type IconName = "today" | "plan" | "trends" | "profile" | "settings" | "knowledge";
 
@@ -101,6 +103,44 @@ function DarkToggle() {
   );
 }
 
+// Sync control, shared from SyncProvider so it can live in the nav (freeing page space).
+// `compact` is the mobile icon-only variant; the rail variant shows status + last-synced.
+function SyncControl({ compact }: { compact?: boolean }) {
+  const { state, syncing, syncError, doSync } = useSync();
+  if (!state?.configured) return null;
+
+  if (compact) {
+    return (
+      <button
+        onClick={() => void doSync()}
+        disabled={syncing}
+        aria-label="Sync Intervals.icu"
+        title="Sync Intervals.icu"
+        className="rounded-md px-2 py-1.5 text-base text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+      >
+        <span className={`inline-block ${syncing ? "animate-spin" : ""}`}>⟳</span>
+      </button>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => void doSync()}
+        disabled={syncing}
+        className="flex w-full items-center justify-center gap-2 rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-zinc-700 disabled:opacity-60 dark:border dark:border-[#ff49c8]/50 dark:bg-transparent dark:text-[#ff49c8] dark:hover:bg-[#ff49c8]/10"
+      >
+        <span className={`inline-block ${syncing ? "animate-spin" : ""}`}>⟳</span>
+        {syncing ? "Syncing…" : "Sync"}
+      </button>
+      <p className="mt-1 text-center text-[10px] text-zinc-400 dark:text-zinc-500">
+        {state.lastSync?.syncedAt ? `synced ${timeAgo(state.lastSync.syncedAt)}` : "never synced"}
+      </p>
+      {syncError && <p className="mt-0.5 text-center text-[10px] text-red-500">{syncError}</p>}
+    </div>
+  );
+}
+
 export default function Nav() {
   const pathname = usePathname();
   const isActive = (href: string) => pathname.startsWith(href);
@@ -116,7 +156,10 @@ export default function Nav() {
           >
             NodeVelo
           </Link>
-          <DarkToggle />
+          <div className="flex items-center gap-1">
+            <SyncControl compact />
+            <DarkToggle />
+          </div>
         </div>
       </header>
 
@@ -145,7 +188,8 @@ export default function Nav() {
             </Link>
           ))}
         </nav>
-        <div className="border-t border-zinc-200 px-3 py-4 dark:border-zinc-700">
+        <div className="space-y-2 border-t border-zinc-200 px-3 py-3 dark:border-zinc-700">
+          <SyncControl />
           <DarkToggle />
         </div>
       </aside>

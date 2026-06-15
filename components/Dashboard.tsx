@@ -4,12 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isStale, nextMonday } from "@/lib/client-api";
 import type { AthleteMdSnapshot } from "@/lib/kb-loader";
 import type {
+  AcwrResult,
   BlockHistoryEntry,
   CurrentBlock,
   FatigueAlert,
   GeneratedPlan,
-  AcwrResult,
-  IntensityDistribution,
   LoadRampAlert,
   ReadinessSignal,
   RideScoreEntry,
@@ -21,23 +20,9 @@ import { executionScoreLabel } from "@/lib/execution-score";
 import { TYPE_STYLES } from "@/lib/workout-types";
 import PlanPreview from "./PlanPreview";
 import RideTrace from "./RideTrace";
-import SyncStatus from "./SyncStatus";
 import TrendPulse from "./TrendPulse";
+import { useSync } from "./SyncProvider";
 import { Card, StatTile, CyberFrame, Zone } from "./ui";
-
-interface AppState {
-  configured: boolean;
-  anthropicConfigured: boolean;
-  lastSync: SyncData | null;
-  currentBlock: CurrentBlock | null;
-  todayAnalysis: TodayAnalysis | null;
-  readiness: ReadinessSignal | null;
-  fatigueAlert: FatigueAlert | null;
-  loadRamp: LoadRampAlert | null;
-  acwr: AcwrResult | null;
-  polarization: IntensityDistribution | null;
-  scores: RideScoreEntry[];
-}
 
 function todayIso(): string {
   const d = new Date();
@@ -866,10 +851,9 @@ function PlannedToday({ block }: { block: CurrentBlock | null }) {
 // ---------- Dashboard ----------
 
 export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }) {
-  const [state, setState] = useState<AppState | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
+  // Sync state is shared via SyncProvider so the nav-rail sync control and the page
+  // views stay in lock-step. Page-specific state (below) stays local.
+  const { state, setState, loadError, doSync } = useSync();
 
   const [lengthWeeks, setLengthWeeks] = useState<2 | 4>(4);
   const [goal, setGoal] = useState("");
@@ -900,42 +884,6 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
 
   const autoSyncDone = useRef(false);
 
-  const doSync = useCallback(async () => {
-    setSyncing(true);
-    setSyncError(null);
-    try {
-      const result = await api<{
-        lastSync: SyncData;
-        todayAnalysis: TodayAnalysis | null;
-        readiness: ReadinessSignal | null;
-        fatigueAlert: FatigueAlert | null;
-        loadRamp: LoadRampAlert | null;
-        acwr: AcwrResult | null;
-        polarization: IntensityDistribution | null;
-        scores: RideScoreEntry[];
-      }>("/api/sync", { method: "POST" });
-      setState((s) =>
-        s
-          ? {
-              ...s,
-              lastSync: result.lastSync,
-              todayAnalysis: result.todayAnalysis,
-              readiness: result.readiness,
-              fatigueAlert: result.fatigueAlert,
-              loadRamp: result.loadRamp,
-              acwr: result.acwr,
-              polarization: result.polarization,
-              scores: result.scores,
-            }
-          : s
-      );
-    } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "Sync failed");
-    } finally {
-      setSyncing(false);
-    }
-  }, []);
-
   const loadBlockHistory = useCallback(async () => {
     try {
       const h = await api<BlockHistoryEntry[]>("/api/history");
@@ -945,53 +893,40 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
     }
   }, []);
 
+  // Plan-only data: goal/weakpoint prefill + block history (Today doesn't need them).
   useEffect(() => {
+    if (mode !== "plan") return;
     let cancelled = false;
     (async () => {
       try {
-        const appState = await api<AppState>("/api/sync");
-        if (cancelled) return;
-        setState(appState);
-
-        // athleteMd (goal/weakpoint prefill) and block history are only used by the
-        // Plan view — skip those fetches on Today so the command view loads lighter.
-        if (mode === "plan") {
-          try {
-            const { athleteMd: md } = await api<{ athleteMd: AthleteMdSnapshot }>("/api/profile");
-            if (!cancelled) {
-              setAthleteMd(md);
-              if (md.goals.length > 0) {
-                setGoal(md.goals.map((g) => g.goal + (g.target ? ` → ${g.target}` : "")).join("\n"));
-              }
-              if (md.weakpoints.length > 0) {
-                setWeakpointsText(md.weakpoints.map((w) => w.weakpoint).join("\n"));
-              }
-            }
-          } catch {
-            // profile prefill is best-effort
+        const { athleteMd: md } = await api<{ athleteMd: AthleteMdSnapshot }>("/api/profile");
+        if (!cancelled) {
+          setAthleteMd(md);
+          if (md.goals.length > 0) {
+            setGoal(md.goals.map((g) => g.goal + (g.target ? ` → ${g.target}` : "")).join("\n"));
           }
-
-          void loadBlockHistory();
+          if (md.weakpoints.length > 0) {
+            setWeakpointsText(md.weakpoints.map((w) => w.weakpoint).join("\n"));
+          }
         }
-
-        // Auto-sync lives on Today (where sync UI is); Plan just reads cached data.
-        if (
-          mode === "today" &&
-          appState.configured &&
-          isStale(appState.lastSync?.syncedAt ?? null) &&
-          !autoSyncDone.current
-        ) {
-          autoSyncDone.current = true;
-          void doSync();
-        }
-      } catch (err) {
-        if (!cancelled) setLoadError(err instanceof Error ? err.message : "Failed to load");
+      } catch {
+        // profile prefill is best-effort
       }
+      void loadBlockHistory();
     })();
     return () => {
       cancelled = true;
     };
-  }, [doSync, loadBlockHistory, mode]);
+  }, [mode, loadBlockHistory]);
+
+  // Auto-sync once on Today when the cached data is stale.
+  useEffect(() => {
+    if (mode !== "today" || !state || autoSyncDone.current) return;
+    if (state.configured && isStale(state.lastSync?.syncedAt ?? null)) {
+      autoSyncDone.current = true;
+      void doSync();
+    }
+  }, [mode, state, doSync]);
 
   useEffect(() => {
     if (!generating) return;
@@ -1119,13 +1054,6 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
     <div className="space-y-3">
       {mode === "today" && (
         <>
-          <SyncStatus
-            configured={state.configured}
-            lastSyncedAt={state.lastSync?.syncedAt ?? null}
-            syncing={syncing}
-            error={syncError}
-            onSync={doSync}
-          />
           <Zone rank={1} title="Readiness — can I go hard?">
             {state.readiness || state.fatigueAlert?.triggered || state.loadRamp?.triggered ? (
               <ReadinessBadge
