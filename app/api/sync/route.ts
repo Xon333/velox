@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { fetchHrStream, fetchPowerStream, isIntervalsConfigured, runFullSync, IntervalsApiError } from "@/lib/intervals-api";
+import { fetchHrStream, fetchIntervals, fetchPowerStream, isIntervalsConfigured, runFullSync, IntervalsApiError } from "@/lib/intervals-api";
 import { readMdHrZones, readMdPowerZones } from "@/lib/kb-loader";
 import { bucketZones } from "@/lib/zones";
+import { matchPrescription } from "@/lib/interval-match";
+import { buildRideTrace } from "@/lib/trace";
 import {
   readAthleteProfile,
   readComplianceMemory,
@@ -21,7 +23,7 @@ import { adjustBuffer, weightTrendFromWellness } from "@/lib/nutrition";
 import { computeExecutionScore } from "@/lib/execution-score";
 import { buildRideScores, mergeScoreLog } from "@/lib/score-log";
 import { computeFatigueAlert, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
-import type { ComplianceMemory, TodayAnalysis, WorkoutType } from "@/lib/types";
+import type { ComplianceMemory, ExecutedInterval, TodayAnalysis, WorkoutType } from "@/lib/types";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -160,6 +162,17 @@ export async function POST() {
             if (b.some((t) => t > 0)) hrZoneTimes = b;
           }
 
+          // Compare the coach's prescription against the intervals curated in
+          // Intervals.icu, and build the power-trace (downsampled streams + work bands).
+          const prescription = plannedDay?.prescription ?? [];
+          let intervalComparison = null;
+          let executed: ExecutedInterval[] = [];
+          if (prescription.length > 0) {
+            executed = await fetchIntervals(todayActivity.id);
+            intervalComparison = matchPrescription(prescription, executed);
+          }
+          const trace = buildRideTrace(powerStream, hrStream, executed, prescription[0]?.targetWatts ?? null);
+
           const input = buildRideAnalysisInput(
             todayActivity,
             plannedDay ? { name: plannedDay.name, type: plannedDay.type, durationMin: plannedDay.durationMin } : null,
@@ -168,6 +181,7 @@ export async function POST() {
           );
           input.powerZoneTimes = powerZoneTimes;
           input.hrZoneTimes = hrZoneTimes;
+          input.intervalComparison = intervalComparison;
           const coachNote = await analyseRide(input);
 
           todayAnalysis = {
@@ -198,6 +212,8 @@ export async function POST() {
             hrZoneTimes,
             executionScore,
             coachNote,
+            intervalComparison,
+            trace,
           };
           await writeTodayAnalysis(todayAnalysis);
 

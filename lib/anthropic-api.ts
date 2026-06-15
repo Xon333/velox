@@ -1,6 +1,6 @@
 // Anthropic API client + prompt assembly for training block generation.
 import Anthropic from "@anthropic-ai/sdk";
-import type { ActivitySummary, AthleteProfile, BlockParams, BlockSettings, SyncData, TodayAnalysis } from "./types";
+import type { ActivitySummary, AthleteProfile, BlockParams, BlockSettings, IntervalComparison, SyncData, TodayAnalysis } from "./types";
 import { DEFAULT_BLOCK_SETTINGS } from "./types";
 import { weightTrendFromWellness } from "./nutrition";
 
@@ -291,12 +291,19 @@ export interface RideAnalysisInput {
   elevationGain: number | null;
   powerZoneTimes: number[] | null;
   hrZoneTimes: number[] | null;
+  intervalComparison: IntervalComparison | null;
   plannedName: string | null;
   plannedType: string | null;
   plannedDurationMin: number | null;
   plannedWorkoutText: string | null;
   athleteFtp: number;
   athleteThresholdHr: number;
+}
+
+function fmtIntervals(c: IntervalComparison | null): string | null {
+  if (!c || c.reps.length === 0) return null;
+  const execs = c.reps.map((r) => `${r.actualWatts}W (${r.adherencePct}%)`).join(", ");
+  return `Intervals: prescribed ${c.prescribedLabels.join(" + ")} → executed ${execs}; ${c.completed}/${c.total} reps done, avg ${c.avgAdherencePct}% of target.`;
 }
 
 function fmtZones(times: number[], prefix: string): string | null {
@@ -349,7 +356,8 @@ export async function analyseRide(input: RideAnalysisInput): Promise<string> {
   if (input.avgCadence !== null) effortParts.push(`Cadence ${Math.round(input.avgCadence)} rpm`);
   const effortLine = effortParts.length > 0 ? `Effort: ${effortParts.join(" · ")}` : null;
 
-  // Zone distributions
+  // Interval adherence (the primary, power-centric comparison) + zone distributions
+  const intervalLine = fmtIntervals(input.intervalComparison);
   const powerZoneLine = input.powerZoneTimes ? fmtZones(input.powerZoneTimes, "Power zones") : null;
   const hrZoneLine = input.hrZoneTimes ? fmtZones(input.hrZoneTimes, "HR zones") : null;
 
@@ -358,10 +366,11 @@ export async function analyseRide(input: RideAnalysisInput): Promise<string> {
     : null;
 
   const prompt = [
-    "You are a cycling coach. Review today's ride vs the plan in 2–3 sentences. Be direct: execution quality, any notable deviation, and one concrete takeaway for next session. Use the zone distribution and decoupling data to assess aerobic execution quality. If the athlete left a note, factor it in. No greeting, no fluff.",
+    "You are a cycling coach. Review today's ride vs the plan in 2–3 sentences. Power is the primary lens: if interval adherence is given, lead with how execution matched the prescribed power targets. Use HR and decoupling only to judge aerobic efficiency. Be direct: execution quality, any notable deviation, and one concrete takeaway for next session. If the athlete left a note, factor it in. No greeting, no fluff, and do not restate the prescription verbatim.",
     "",
     planned,
     header,
+    intervalLine,
     powerLine,
     hrLine,
     effortLine,
@@ -411,6 +420,7 @@ export function buildRideAnalysisInput(
     elevationGain: activity.elevationGain,
     powerZoneTimes: activity.powerZoneTimes,
     hrZoneTimes: activity.hrZoneTimes,
+    intervalComparison: null, // set by the sync route after fetching Intervals' intervals
     plannedName: planned?.name ?? null,
     plannedType: planned?.type ?? null,
     plannedDurationMin: planned?.durationMin ?? null,

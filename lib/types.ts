@@ -140,6 +140,32 @@ export interface PrescribedInterval {
   label: string; // "2×20m @ 288W"
 }
 
+// One executed effort from Intervals.icu (where the athlete curates interval detection).
+export interface ExecutedInterval {
+  type: string; // "WORK" | "RECOVERY" | ...
+  durationSec: number;
+  avgWatts: number | null;
+  npWatts: number | null;
+  avgHr: number | null;
+  startIndex: number | null; // index into the activity's sample stream
+  endIndex: number | null;
+}
+
+// Prescription vs execution, rep-by-rep, with a roll-up — the "second brain" comparison.
+export interface IntervalAdherence {
+  targetWatts: number;
+  actualWatts: number;
+  durationSec: number;
+  adherencePct: number; // actualWatts / targetWatts * 100
+}
+export interface IntervalComparison {
+  prescribedLabels: string[];
+  reps: IntervalAdherence[];
+  completed: number; // executed work reps matched
+  total: number; // prescribed reps
+  avgAdherencePct: number;
+}
+
 export interface CurrentBlockDay {
   date: string;
   name: string;
@@ -299,6 +325,16 @@ export interface TodayAnalysis {
   hrZoneTimes: number[] | null;
   executionScore: number | null; // 1-10 deterministic quality score
   coachNote: string; // Claude 2-3 sentence narrative
+  intervalComparison: IntervalComparison | null; // prescription vs execution
+  trace: RideTrace | null; // downsampled streams + interval bands for the power chart
+}
+
+// Downsampled streams + executed-interval bands powering the ride power-trace chart.
+export interface RideTrace {
+  power: number[]; // downsampled watts
+  hr: number[]; // downsampled bpm (same length as power)
+  bands: Array<{ start: number; end: number }>; // work-interval spans as 0..1 fractions
+  targetWatts: number | null; // dominant prescribed target, for the dashed line
 }
 
 // ---------- Write-back ----------
