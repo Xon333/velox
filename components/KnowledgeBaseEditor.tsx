@@ -7,6 +7,18 @@ type SaveState = { state: "idle" | "saving" | "saved" } | { state: "error"; mess
 type Kind = "kb" | "retro";
 type Selection = { name: string; kind: Kind };
 
+// Per-file guidance shown above the editor so it's obvious what each file owns — and, for the
+// athlete profile, which fields are manual vs. synced from Intervals.icu (edited elsewhere).
+const FILE_HINTS: Record<string, { text: string; accent?: boolean }> = {
+  "athlete_profile.md": {
+    text: "Manual input — your durable context (personal data, all-time PRs, weakpoints, goals, notes). FTP, training zones, body weight, the 84-day power curve and fitness (CTL/ATL/TSB) are synced from Intervals.icu and edited on the Profile page, not here.",
+    accent: true,
+  },
+  "cycling_database.md": { text: "Reference knowledge, injected into every generation prompt." },
+  "training_knowledge.md": { text: "Reference knowledge, injected into every generation prompt." },
+  "nutrition_knowledge.md": { text: "Reference knowledge, injected into every generation prompt." },
+};
+
 export default function KnowledgeBaseEditor() {
   const [files, setFiles] = useState<string[] | null>(null);
   const [retros, setRetros] = useState<string[]>([]);
@@ -122,6 +134,17 @@ export default function KnowledgeBaseEditor() {
         <div className="min-w-0 flex-1">
           {selected ? (
             <>
+              {!isRetro && FILE_HINTS[selected.name] && (
+                <div
+                  className={`mb-2 rounded-md border px-3 py-2 text-xs leading-5 ${
+                    FILE_HINTS[selected.name].accent
+                      ? "border-cyan-200 bg-cyan-50 text-cyan-900 dark:border-[#00d4ff]/40 dark:bg-[#00d4ff]/10 dark:text-[#7fe7ff]"
+                      : "border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
+                  }`}
+                >
+                  {FILE_HINTS[selected.name].text}
+                </div>
+              )}
               <textarea
                 value={content}
                 onChange={(e) => {
