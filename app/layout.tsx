@@ -41,8 +41,8 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         <Nav />
-        {/* Reserve space for the fixed right rail on desktop; bottom bar on mobile */}
-        <div className="sm:pr-44">
+        {/* Reserve space for the fixed left rail on desktop; bottom bar on mobile */}
+        <div className="sm:pl-44">
           <main className="mx-auto w-full max-w-5xl px-4 py-5 pb-24 sm:py-8 sm:pb-8">{children}</main>
         </div>
       </body>

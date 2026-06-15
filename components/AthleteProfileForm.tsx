@@ -312,8 +312,8 @@ export default function AthleteProfileForm() {
         {autoSync.syncedAt === null ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             No sync yet —{" "}
-            <Link href="/dashboard" className="text-cyan-700 hover:underline dark:text-[#00d4ff]">
-              sync from the dashboard
+            <Link href="/today" className="text-cyan-700 hover:underline dark:text-[#00d4ff]">
+              sync from Today
             </Link>.
           </p>
         ) : (

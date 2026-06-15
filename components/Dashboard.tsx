@@ -19,7 +19,8 @@ import { executionScoreLabel } from "@/lib/execution-score";
 import { TYPE_STYLES } from "@/lib/workout-types";
 import PlanPreview from "./PlanPreview";
 import SyncStatus from "./SyncStatus";
-import { Card, StatTile, SectionDivider, CyberFrame } from "./ui";
+import TrendPulse from "./TrendPulse";
+import { Card, StatTile, CyberFrame, Zone } from "./ui";
 
 interface AppState {
   configured: boolean;
@@ -278,11 +279,13 @@ function TodayRideCard({
   onPostNote,
   notePosting,
   notePosted,
+  bare,
 }: {
   analysis: TodayAnalysis;
   onPostNote?: () => void;
   notePosting?: boolean;
   notePosted?: boolean;
+  bare?: boolean;
 }) {
   const plannedStyle = analysis.plannedType
     ? TYPE_STYLES[analysis.plannedType as keyof typeof TYPE_STYLES] ?? TYPE_STYLES.Z2
@@ -313,8 +316,8 @@ function TodayRideCard({
   if (analysis.activityRpe != null)
     metrics.push({ label: "RPE", value: `${analysis.activityRpe}/10` });
 
-  return (
-    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
+  const body = (
+    <>
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Today's ride</h2>
         <span className="text-xs text-zinc-400 dark:text-zinc-500">{analysis.activityDate}</span>
@@ -446,6 +449,12 @@ function TodayRideCard({
           </button>
         )}
       </div>
+    </>
+  );
+  if (bare) return body;
+  return (
+    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
+      {body}
     </section>
   );
 }
@@ -701,7 +710,7 @@ function trendArrow(current: number | null, prev: number | null, higherIsBetter 
   return delta > 0 ? (higherIsBetter ? " ↑" : " ↓") : (higherIsBetter ? " ↓" : " ↑");
 }
 
-function RecentDataSummary({ sync }: { sync: SyncData | null }) {
+function RecentDataSummary({ sync, bare }: { sync: SyncData | null; bare?: boolean }) {
   if (!sync) return null;
   const today = todayIso();
   const cutoff7 = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
@@ -734,23 +743,55 @@ function RecentDataSummary({ sync }: { sync: SyncData | null }) {
       : null;
   const weightArrow = weightTrend !== null ? (weightTrend > 0.1 ? " ↑" : weightTrend < -0.1 ? " ↓" : " →") : "";
 
+  const tiles = (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <StatTile label="CTL (fitness)" value={sync.fitness.ctl?.toFixed(1) ?? "—"} arrow={ctlArrow} accent="pink" />
+      <StatTile label="ATL (fatigue)" value={sync.fitness.atl?.toFixed(1) ?? "—"} arrow={atlArrow} accent="pink" />
+      <StatTile label="TSB (form)" value={sync.fitness.tsb?.toFixed(1) ?? "—"} arrow={tsbArrow} accent="pink" />
+      <StatTile label="7-day hours" value={`${hours7.toFixed(1)} h`} accent="pink" />
+      <StatTile label="Weight" value={latestWeight?.weightKg != null ? `${latestWeight.weightKg.toFixed(1)} kg` : "—"} arrow={weightArrow} accent="pink" />
+      <StatTile label="Weight trend" value={weightTrend !== null ? `${weightTrend > 0 ? "+" : ""}${weightTrend.toFixed(1)} kg` : "—"} accent="pink" />
+    </div>
+  );
+  if (bare) return tiles;
+  return <Card title="Training status">{tiles}</Card>;
+}
+
+// ---------- Today's planned session (Zone 2 fallback before a ride is logged) ----------
+
+function PlannedToday({ block }: { block: CurrentBlock | null }) {
+  const today = todayIso();
+  const day = block?.days.find((d) => d.date === today) ?? null;
+  if (!day || day.type === "Rest") {
+    return (
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        {day?.type === "Rest" ? "Rest day — recover." : "No session planned for today."}
+      </p>
+    );
+  }
+  const style = TYPE_STYLES[day.type];
   return (
-    <Card title="Training status">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <StatTile label="CTL (fitness)" value={sync.fitness.ctl?.toFixed(1) ?? "—"} arrow={ctlArrow} accent="pink" />
-        <StatTile label="ATL (fatigue)" value={sync.fitness.atl?.toFixed(1) ?? "—"} arrow={atlArrow} accent="pink" />
-        <StatTile label="TSB (form)" value={sync.fitness.tsb?.toFixed(1) ?? "—"} arrow={tsbArrow} accent="pink" />
-        <StatTile label="7-day hours" value={`${hours7.toFixed(1)} h`} accent="pink" />
-        <StatTile label="Weight" value={latestWeight?.weightKg != null ? `${latestWeight.weightKg.toFixed(1)} kg` : "—"} arrow={weightArrow} accent="pink" />
-        <StatTile label="Weight trend" value={weightTrend !== null ? `${weightTrend > 0 ? "+" : ""}${weightTrend.toFixed(1)} kg` : "—"} accent="pink" />
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className={`h-2 w-2 shrink-0 rounded-full ${style.cell}`} />
+          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{day.name}</span>
+        </div>
+        <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+          {day.type}
+          {day.durationMin > 0 ? ` · ${day.durationMin} min` : ""}
+        </span>
       </div>
-    </Card>
+      <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+        Ride it, then sync to see your execution score and fuel.
+      </p>
+    </div>
   );
 }
 
 // ---------- Dashboard ----------
 
-export default function Dashboard() {
+export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }) {
   const [state, setState] = useState<AppState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -1000,23 +1041,47 @@ export default function Dashboard() {
         onSync={doSync}
       />
 
-      {(state.readiness || state.fatigueAlert?.triggered || state.loadRamp?.triggered) && (
-        <ReadinessBadge
-          readiness={state.readiness}
-          fatigueAlert={state.fatigueAlert}
-          loadRamp={state.loadRamp}
-        />
+      {mode === "today" && (
+        <>
+          <Zone rank={1} title="Readiness — can I go hard?">
+            {state.readiness || state.fatigueAlert?.triggered || state.loadRamp?.triggered ? (
+              <ReadinessBadge
+                readiness={state.readiness}
+                fatigueAlert={state.fatigueAlert}
+                loadRamp={state.loadRamp}
+              />
+            ) : (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Sync to compute today&apos;s readiness.</p>
+            )}
+            {state.lastSync && (
+              <div className="mt-2">
+                <RecentDataSummary sync={state.lastSync} bare />
+              </div>
+            )}
+          </Zone>
+
+          <Zone rank={2} title="Today — session & fuel" hero>
+            {state.todayAnalysis && state.todayAnalysis.activityDate === todayIso() ? (
+              <TodayRideCard
+                analysis={state.todayAnalysis}
+                onPostNote={state.configured ? postNote : undefined}
+                notePosting={notePosting}
+                notePosted={notePosted}
+                bare
+              />
+            ) : (
+              <PlannedToday block={state.currentBlock} />
+            )}
+          </Zone>
+
+          <Zone rank={3} title="Trend pulse — am I improving?" hint="opens Trends">
+            <TrendPulse />
+          </Zone>
+        </>
       )}
 
-      {state.todayAnalysis && state.todayAnalysis.activityDate === todayIso() && (
-        <TodayRideCard
-          analysis={state.todayAnalysis}
-          onPostNote={state.configured ? postNote : undefined}
-          notePosting={notePosting}
-          notePosted={notePosted}
-        />
-      )}
-
+      {mode === "plan" && (
+        <>
       <RetroSection
         block={state.currentBlock}
         generating={retroGenerating}
@@ -1026,12 +1091,6 @@ export default function Dashboard() {
       />
 
       {!retroResult && <CurrentBlockSection block={state.currentBlock} onDelete={deleteBlock} scores={state.scores} />}
-
-      <SectionDivider label="Review" />
-
-      {state.lastSync && <WeeklyDebrief sync={state.lastSync} />}
-
-      <RecentDataSummary sync={state.lastSync} />
 
       {athleteMd && <GoalsProgress athleteMd={athleteMd} />}
 
@@ -1140,7 +1199,11 @@ export default function Dashboard() {
         />
       )}
 
+      {state.lastSync && <WeeklyDebrief sync={state.lastSync} />}
+
       <BlockHistory history={blockHistory} />
+        </>
+      )}
     </div>
   );
 }

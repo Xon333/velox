@@ -4,10 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type IconName = "dashboard" | "trends" | "profile" | "settings" | "knowledge";
+type IconName = "today" | "plan" | "trends" | "profile" | "settings" | "knowledge";
 
 const LINKS: { href: string; label: string; short: string; icon: IconName }[] = [
-  { href: "/dashboard", label: "Dashboard", short: "Home", icon: "dashboard" },
+  { href: "/today", label: "Today", short: "Today", icon: "today" },
+  { href: "/plan", label: "Plan", short: "Plan", icon: "plan" },
   { href: "/trends", label: "Trends", short: "Trends", icon: "trends" },
   { href: "/profile", label: "Profile", short: "Profile", icon: "profile" },
   { href: "/settings", label: "Settings", short: "Settings", icon: "settings" },
@@ -25,13 +26,18 @@ function Icon({ name, className = "h-5 w-5" }: { name: IconName; className?: str
     strokeLinejoin: "round" as const,
   };
   switch (name) {
-    case "dashboard":
+    case "today":
       return (
         <svg {...common}>
-          <rect x="3" y="3" width="7" height="9" rx="1" />
-          <rect x="14" y="3" width="7" height="5" rx="1" />
-          <rect x="14" y="12" width="7" height="9" rx="1" />
-          <rect x="3" y="16" width="7" height="5" rx="1" />
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="1.6" />
+        </svg>
+      );
+    case "plan":
+      return (
+        <svg {...common}>
+          <rect x="3" y="4" width="18" height="17" rx="2" />
+          <path d="M3 9h18M8 2v4M16 2v4" />
         </svg>
       );
     case "trends":
@@ -105,7 +111,7 @@ export default function Nav() {
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur sm:hidden dark:border-zinc-700 dark:bg-zinc-900/90">
         <div className="flex items-center justify-between px-4 py-3">
           <Link
-            href="/dashboard"
+            href="/today"
             className="font-[family-name:var(--font-warriot)] text-xl tracking-wide text-zinc-900 dark:bg-gradient-to-r dark:from-[#ff49c8] dark:to-[#00d4ff] dark:bg-clip-text dark:text-transparent dark:[filter:drop-shadow(0_0_8px_rgba(255,73,200,0.35))]"
           >
             NodeVelo
@@ -115,9 +121,9 @@ export default function Nav() {
       </header>
 
       {/* Desktop: vertical nav rail pinned to the right edge */}
-      <aside className="no-print fixed right-0 top-0 z-40 hidden h-full w-44 flex-col border-l border-zinc-200 bg-white/90 backdrop-blur sm:flex dark:border-zinc-700 dark:bg-zinc-900/90">
+      <aside className="no-print fixed left-0 top-0 z-40 hidden h-full w-44 flex-col border-r border-zinc-200 bg-white/90 backdrop-blur sm:flex dark:border-zinc-700 dark:bg-zinc-900/90">
         <Link
-          href="/dashboard"
+          href="/today"
           className="font-[family-name:var(--font-warriot)] px-4 py-5 text-2xl tracking-wide text-zinc-900 dark:bg-gradient-to-r dark:from-[#ff49c8] dark:to-[#00d4ff] dark:bg-clip-text dark:text-transparent dark:[filter:drop-shadow(0_0_8px_rgba(255,73,200,0.35))]"
         >
           NodeVelo
