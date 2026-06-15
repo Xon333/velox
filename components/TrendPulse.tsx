@@ -30,7 +30,7 @@ function delta(points: number[]): "up" | "down" | "flat" | undefined {
 
 // The Today view's "trend pulse" — four compact tiles answering "am I improving?"
 // at a glance. Reuses the server-computed trends so the numbers match the Trends page.
-export default function TrendPulse() {
+export default function TrendPulse({ vertical }: { vertical?: boolean }) {
   const router = useRouter();
   const [data, setData] = useState<TrendsResp | null>(null);
 
@@ -66,7 +66,7 @@ export default function TrendPulse() {
   const compAvg = comp.length ? Math.round(comp.reduce((s, v) => s + v, 0) / comp.length) : null;
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className={`grid gap-2 ${vertical ? "grid-cols-2 lg:grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}>
       <TrendTile label="EF (NP/HR)" value={ef.length ? ef[ef.length - 1].toFixed(2) : "—"} points={ef} delta={delta(ef)} onClick={go} />
       <TrendTile label="CTL" value={ctl.length ? ctl[ctl.length - 1].toFixed(0) : "—"} points={ctl} delta={delta(ctl)} onClick={go} />
       <TrendTile label="Execution" value={exec.length ? `${exec[exec.length - 1].toFixed(1)}/10` : "—"} points={exec} delta={delta(exec)} onClick={go} />

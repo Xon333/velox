@@ -1091,23 +1091,26 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
             )}
           </Zone>
 
-          <Zone rank={2} title="Today — session & fuel" hero>
-            {state.todayAnalysis && state.todayAnalysis.activityDate === todayIso() ? (
-              <TodayRideCard
-                analysis={state.todayAnalysis}
-                onPostNote={state.configured ? postNote : undefined}
-                notePosting={notePosting}
-                notePosted={notePosted}
-                bare
-              />
-            ) : (
-              <PlannedToday block={state.currentBlock} />
-            )}
-          </Zone>
+          {/* Session & fuel as the wide focus; trend pulse stacks vertically beside it */}
+          <div className="grid gap-3 lg:grid-cols-[1.7fr_1fr]">
+            <Zone rank={2} title="Today — session & fuel" hero>
+              {state.todayAnalysis && state.todayAnalysis.activityDate === todayIso() ? (
+                <TodayRideCard
+                  analysis={state.todayAnalysis}
+                  onPostNote={state.configured ? postNote : undefined}
+                  notePosting={notePosting}
+                  notePosted={notePosted}
+                  bare
+                />
+              ) : (
+                <PlannedToday block={state.currentBlock} />
+              )}
+            </Zone>
 
-          <Zone rank={3} title="Trend pulse — am I improving?" hint="opens Trends">
-            <TrendPulse />
-          </Zone>
+            <Zone rank={3} title="Trend pulse — am I improving?" hint="opens Trends">
+              <TrendPulse vertical />
+            </Zone>
+          </div>
         </>
       )}
 
@@ -1123,7 +1126,13 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
 
       {!retroResult && <CurrentBlockSection block={state.currentBlock} onDelete={deleteBlock} scores={state.scores} />}
 
-      {athleteMd && <GoalsProgress athleteMd={athleteMd} />}
+      {/* Goals + this-week side by side, just under the active block */}
+      {(athleteMd || state.lastSync) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {athleteMd && <GoalsProgress athleteMd={athleteMd} />}
+          {state.lastSync && <WeeklyDebrief sync={state.lastSync} />}
+        </div>
+      )}
 
       {/* Block generation form — kept at the bottom, under goals */}
       <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
@@ -1229,8 +1238,6 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
           }}
         />
       )}
-
-      {state.lastSync && <WeeklyDebrief sync={state.lastSync} />}
 
       <BlockHistory history={blockHistory} />
         </>
