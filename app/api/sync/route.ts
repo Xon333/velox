@@ -126,13 +126,6 @@ export async function POST() {
               ? Math.round((todayActivity.normalizedPower / todayActivity.avgWatts) * 100) / 100
               : null;
 
-          const executionScore = computeExecutionScore({
-            compliancePct,
-            intensityFactor,
-            plannedType: plannedDay?.type ?? null,
-            decoupling: todayActivity.decoupling,
-            variabilityIndex,
-          });
 
           // Advised daily intake using real ride kJ (1 kJ ≈ 1 kcal for cyclists)
           const weightTrend = weightTrendFromWellness(lastSync.wellness) ?? 0;
@@ -172,6 +165,18 @@ export async function POST() {
             intervalComparison = matchPrescription(prescription, executed);
           }
           const trace = buildRideTrace(powerStream, hrStream, executed, prescription[0]?.targetWatts ?? null);
+
+          // Execution score: on interval days the power-target adherence is the primary
+          // execution signal; duration compliance is used otherwise. RPE adds effort.
+          const executionScore = computeExecutionScore({
+            compliancePct,
+            intensityFactor,
+            plannedType: plannedDay?.type ?? null,
+            decoupling: todayActivity.decoupling,
+            variabilityIndex,
+            adherencePct: intervalComparison?.avgAdherencePct ?? null,
+            rpe: todayActivity.rpe,
+          });
 
           const input = buildRideAnalysisInput(
             todayActivity,

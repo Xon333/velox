@@ -84,6 +84,44 @@ describe("computeExecutionScore", () => {
     expect(sandbagged).toBeLessThan(proper);
   });
 
+  it("uses interval adherence as the execution signal on interval days", () => {
+    const onTarget = computeExecutionScore({
+      ...base,
+      intensityFactor: 1.0,
+      plannedType: "VO2max",
+      decoupling: 5,
+      adherencePct: 100,
+    })!;
+    const wellUnder = computeExecutionScore({
+      ...base,
+      intensityFactor: 1.0,
+      plannedType: "VO2max",
+      decoupling: 5,
+      adherencePct: 78,
+    })!;
+    expect(onTarget).toBeGreaterThan(wellUnder);
+  });
+
+  it("penalises a ride that felt much harder than the power warranted (RPE)", () => {
+    const aligned = computeExecutionScore({
+      ...base,
+      compliancePct: 100,
+      intensityFactor: 0.7,
+      plannedType: "Z2",
+      decoupling: 3,
+      rpe: 7,
+    })!;
+    const struggled = computeExecutionScore({
+      ...base,
+      compliancePct: 100,
+      intensityFactor: 0.7,
+      plannedType: "Z2",
+      decoupling: 3,
+      rpe: 10,
+    })!;
+    expect(struggled).toBeLessThan(aligned);
+  });
+
   it("clamps the worst case to 1", () => {
     const score = computeExecutionScore({
       ...base,

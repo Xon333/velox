@@ -1,7 +1,7 @@
 // Deterministic 1-10 ride execution quality score.
-// Based on: duration compliance, intensity appropriateness, aerobic decoupling,
-// and pacing smoothness (variability index). No AI — computable from fields
-// already in TodayAnalysis.
+// Based on: interval-target adherence (when an interval workout was prescribed) or
+// duration compliance, intensity appropriateness, effort (RPE vs intensity), aerobic
+// decoupling, and pacing smoothness (variability index). No AI.
 
 export interface ExecutionScoreInput {
   compliancePct: number | null;
@@ -9,18 +9,31 @@ export interface ExecutionScoreInput {
   plannedType: string | null;
   decoupling: number | null;
   variabilityIndex: number | null; // NP / avg power; ~1.0 = perfectly steady
+  adherencePct?: number | null; // avg interval power vs prescribed target (interval days)
+  rpe?: number | null; // perceived exertion 1-10
 }
 
 export function computeExecutionScore(input: ExecutionScoreInput): number | null {
   const { compliancePct, intensityFactor, plannedType, decoupling, variabilityIndex } = input;
+  const adherencePct = input.adherencePct ?? null;
+  const rpe = input.rpe ?? null;
 
   // Need at least one meaningful signal to produce a score.
-  if (compliancePct === null && intensityFactor === null && decoupling === null) return null;
+  if (compliancePct === null && intensityFactor === null && decoupling === null && adherencePct === null) return null;
 
   let score = 5; // baseline
 
-  // --- Duration compliance (±2) ---
-  if (compliancePct !== null) {
+  // --- Execution: interval-target adherence (±2) takes precedence over duration when
+  // an interval workout was prescribed; hitting the watts matters more than ride length.
+  if (adherencePct !== null) {
+    const a = adherencePct;
+    if (a >= 95 && a <= 106) score += 2; // nailed the targets
+    else if ((a >= 90 && a < 95) || (a > 106 && a <= 112)) score += 1;
+    else if (a >= 85 && a < 90) score += 0;
+    else if (a >= 80 && a < 85) score -= 1;
+    else score -= 2; // well under target, or blew past it (won't recover well)
+  } else if (compliancePct !== null) {
+    // --- Duration compliance (±2) for steady/endurance rides ---
     if (compliancePct >= 95) score += 2;
     else if (compliancePct >= 85) score += 1;
     else if (compliancePct >= 70) score += 0;
@@ -88,6 +101,16 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
         else if (vi >= 1.15) score -= 1;
         break;
     }
+  }
+
+  // --- Effort: RPE vs intensity (±1) ---
+  // Expected RPE ≈ IF×10. If it felt much harder than the power warrants, that's a
+  // fatigue/struggle flag (−1); strong output at controlled RPE is a good day (+1).
+  if (rpe !== null && intensityFactor !== null) {
+    const expected = Math.max(1, Math.min(10, intensityFactor * 10));
+    const gap = rpe - expected;
+    if (gap >= 2.5) score -= 1;
+    else if (gap <= -2 && intensityFactor >= 0.85) score += 1;
   }
 
   return Math.min(10, Math.max(1, Math.round(score)));
