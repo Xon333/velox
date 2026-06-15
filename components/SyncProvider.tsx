@@ -26,6 +26,7 @@ export interface AppState {
   acwr: AcwrResult | null;
   polarization: IntensityDistribution | null;
   scores: RideScoreEntry[];
+  autoSyncOnOpen: boolean;
 }
 
 interface SyncContextValue {

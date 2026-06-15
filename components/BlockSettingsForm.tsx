@@ -22,6 +22,39 @@ function Field({
   );
 }
 
+function ToggleRow({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      role="switch"
+      aria-checked={checked}
+      className="flex w-full items-center justify-between gap-4 rounded-md border border-zinc-200 px-3 py-2.5 text-left transition-colors hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600"
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-zinc-800 dark:text-zinc-200">{label}</span>
+        {hint && <span className="mt-0.5 block text-xs text-zinc-400 dark:text-zinc-500">{hint}</span>}
+      </span>
+      <span
+        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+          checked ? "bg-zinc-900 dark:bg-[#00d4ff]" : "bg-zinc-300 dark:bg-zinc-600"
+        }`}
+      >
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${checked ? "left-4" : "left-0.5"}`} />
+      </span>
+    </button>
+  );
+}
+
 function NumberInput({
   value,
   min,
@@ -222,6 +255,26 @@ export default function BlockSettingsForm() {
             ))}
           </div>
         </Field>
+      </section>
+
+      {/* Platform behavior */}
+      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-800">
+        <h2 className="mb-1 text-sm font-semibold text-zinc-800 dark:text-zinc-200">Platform behavior</h2>
+        <p className="mb-3 text-xs text-zinc-400 dark:text-zinc-500">How Nodevelo handles syncing and write-back.</p>
+        <div className="space-y-2">
+          <ToggleRow
+            label="Auto-sync on open"
+            hint="When you open Today and the data is stale, pull from Intervals.icu automatically."
+            checked={settings.autoSyncOnOpen}
+            onChange={(v) => set("autoSyncOnOpen", v)}
+          />
+          <ToggleRow
+            label="Auto-post coach note to Intervals.icu"
+            hint="After each analysis, write the coach note back to your Intervals.icu calendar automatically."
+            checked={settings.autoPostCoachNote}
+            onChange={(v) => set("autoPostCoachNote", v)}
+          />
+        </div>
       </section>
 
       {/* Save */}

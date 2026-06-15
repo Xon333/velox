@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { fetchHrStream, fetchIntervals, fetchPowerStream, isIntervalsConfigured, runFullSync, IntervalsApiError } from "@/lib/intervals-api";
+import { createEvent, fetchHrStream, fetchIntervals, fetchPowerStream, isIntervalsConfigured, runFullSync, IntervalsApiError } from "@/lib/intervals-api";
 import { readMdHrZones, readMdPowerZones } from "@/lib/kb-loader";
 import { bucketZones } from "@/lib/zones";
 import { matchPrescription } from "@/lib/interval-match";
 import { buildRideTrace } from "@/lib/trace";
 import {
   readAthleteProfile,
+  readBlockSettings,
   readComplianceMemory,
   readCurrentBlock,
   readLastSync,
@@ -31,12 +32,13 @@ function todayIso(): string {
 
 // GET returns the cached app state; it never hits Intervals.icu.
 export async function GET() {
-  const [lastSync, currentBlock, todayAnalysis, scoreLog, profile] = await Promise.all([
+  const [lastSync, currentBlock, todayAnalysis, scoreLog, profile, settings] = await Promise.all([
     readLastSync(),
     readCurrentBlock(),
     readTodayAnalysis(),
     readScoreLog(),
     readAthleteProfile(),
+    readBlockSettings(),
   ]);
   const readiness = lastSync
     ? computeReadiness(lastSync.fitness, lastSync.wellness)
@@ -57,6 +59,7 @@ export async function GET() {
     acwr,
     polarization,
     scores: scoreLog.entries,
+    autoSyncOnOpen: settings.autoSyncOnOpen,
   });
 }
 
@@ -226,6 +229,20 @@ export async function POST() {
             trace,
           };
           await writeTodayAnalysis(todayAnalysis);
+
+          // Auto-post the coach note to Intervals.icu if the athlete opted in.
+          if (coachNote) {
+            const settings = await readBlockSettings();
+            if (settings.autoPostCoachNote) {
+              const scoreLine = executionScore !== null ? `\nExecution score: ${executionScore}/10` : "";
+              await createEvent({
+                category: "NOTE",
+                start_date_local: `${today}T00:00:00`,
+                name: "Coach analysis",
+                description: `[Nodevelo coach] ${todayActivity.name}${scoreLine}\n\n${coachNote.trim()}`,
+              }).catch(() => {}); // best-effort
+            }
+          }
 
           // Update compliance memory for the planned type.
           if (plannedDay && compliancePct !== null) {

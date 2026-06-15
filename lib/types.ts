@@ -213,6 +213,9 @@ export interface BlockSettings {
   longRideDurationMinutes: number; // minimum long ride duration
   restDaysPerWeek: number;
   polarisedApproach: boolean; // true = polarised (80/20), false = sweet spot
+  // Platform behaviour
+  autoSyncOnOpen: boolean; // auto-sync the Today view when cached data is stale
+  autoPostCoachNote: boolean; // auto-post the coach note to Intervals.icu on each sync
   updatedAt: string;
 }
 
@@ -225,6 +228,8 @@ export const DEFAULT_BLOCK_SETTINGS: BlockSettings = {
   longRideDurationMinutes: 180,
   restDaysPerWeek: 1,
   polarisedApproach: true,
+  autoSyncOnOpen: true,
+  autoPostCoachNote: false,
   updatedAt: new Date(0).toISOString(),
 };
 

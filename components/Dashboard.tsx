@@ -922,7 +922,7 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
   // Auto-sync once on Today when the cached data is stale.
   useEffect(() => {
     if (mode !== "today" || !state || autoSyncDone.current) return;
-    if (state.configured && isStale(state.lastSync?.syncedAt ?? null)) {
+    if (state.autoSyncOnOpen && state.configured && isStale(state.lastSync?.syncedAt ?? null)) {
       autoSyncDone.current = true;
       void doSync();
     }

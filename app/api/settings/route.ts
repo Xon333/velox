@@ -39,6 +39,8 @@ export async function PUT(req: Request) {
     longRideDurationMinutes: num("longRideDurationMinutes", 60, 480),
     restDaysPerWeek: num("restDaysPerWeek", 0, 3),
     polarisedApproach: typeof b.polarisedApproach === "boolean" ? b.polarisedApproach : current.polarisedApproach,
+    autoSyncOnOpen: typeof b.autoSyncOnOpen === "boolean" ? b.autoSyncOnOpen : current.autoSyncOnOpen,
+    autoPostCoachNote: typeof b.autoPostCoachNote === "boolean" ? b.autoPostCoachNote : current.autoPostCoachNote,
     updatedAt: new Date().toISOString(),
   };
 
