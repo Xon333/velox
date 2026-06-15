@@ -281,7 +281,11 @@ function latestFitness(wellness: WellnessEntry[]): FitnessMetrics {
   };
 }
 
-const SYNC_WINDOW_DAYS = 56; // 8 weeks
+// 26 weeks (~6 months). Wide enough for a meaningful CTL trajectory (CTL has a 42-day
+// time constant), to make the "90-day" rolling baselines honest, and to give the second
+// brain multiple blocks of trend history. Cost is one larger activities/wellness JSON list
+// per sync — no extra per-activity stream calls — so app performance is unaffected.
+export const SYNC_WINDOW_DAYS = 182;
 
 export async function runFullSync(): Promise<SyncData> {
   const newest = new Date().toISOString().slice(0, 10);

@@ -36,6 +36,12 @@ interface EnergyRow {
   intakeKcal: number | null;
   weightKg: number | null;
 }
+interface RecentSnapshot {
+  latestWeightKg: number | null;
+  weightTrend7Day: number | null;
+  avgRpe7Day: number | null;
+  lastKcalConsumed: number | null;
+}
 interface TrendsData {
   ef: Point[];
   ctl: Point[];
@@ -45,6 +51,7 @@ interface TrendsData {
   baselines: RollingBaselines;
   scores: ScoreEntry[];
   insights: Insight[];
+  recent: RecentSnapshot | null;
   syncedAt: string | null;
 }
 
@@ -255,7 +262,32 @@ export default function Trends() {
         </p>
       )}
 
-      <BlockTimeline blocks={data.blocks} />
+      {data.recent &&
+        (data.recent.latestWeightKg != null ||
+          data.recent.avgRpe7Day != null ||
+          data.recent.lastKcalConsumed != null) && (
+          <Card title="Last 7 days" hint="recent snapshot">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <StatTile
+                label="Latest weight"
+                value={data.recent.latestWeightKg != null ? `${data.recent.latestWeightKg.toFixed(1)} kg` : "—"}
+              />
+              <StatTile
+                label="7-day trend"
+                value={
+                  data.recent.weightTrend7Day != null
+                    ? `${data.recent.weightTrend7Day > 0 ? "+" : ""}${data.recent.weightTrend7Day.toFixed(1)} kg`
+                    : "—"
+                }
+              />
+              <StatTile label="Avg RPE" value={data.recent.avgRpe7Day != null ? `${data.recent.avgRpe7Day}/10` : "—"} />
+              <StatTile
+                label="Last intake"
+                value={data.recent.lastKcalConsumed != null ? `${data.recent.lastKcalConsumed} kcal` : "—"}
+              />
+            </div>
+          </Card>
+        )}
 
       {data.insights.length > 0 && (
         <Card title="Coach insights" hint="learned from your execution history">
@@ -286,24 +318,75 @@ export default function Trends() {
         </Card>
       )}
 
-      {data.ef.length >= 3 && (
-        <Card
-          title="Pw:HR — power-to-heart-rate"
-          hint={`${data.ef.length} endurance rides · ≥45 min`}
-        >
-          <div className="mb-1 flex items-center justify-between">
-            <span className={`text-xs font-medium ${efTrend.cls}`}>{efTrend.label}</span>
-            <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
-              latest {data.ef[data.ef.length - 1].value.toFixed(2)}
-            </span>
-          </div>
-          <Sparkline points={data.ef} format={(v) => v.toFixed(2)} />
-          <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
-            Power-to-HR ratio pulled from Intervals.icu, on steady endurance rides. Rising = more output at the same HR = better aerobic base.
-          </p>
-        </Card>
+      {/* Fitness pair — aerobic efficiency vs. fitness trajectory, side by side to correlate */}
+      {(data.ef.length >= 3 || data.ctl.length >= 3) && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {data.ef.length >= 3 && (
+            <Card title="Pw:HR — power-to-heart-rate" hint={`${data.ef.length} rides · ≥45 min`}>
+              <div className="mb-1 flex items-center justify-between">
+                <span className={`text-xs font-medium ${efTrend.cls}`}>{efTrend.label}</span>
+                <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                  latest {data.ef[data.ef.length - 1].value.toFixed(2)}
+                </span>
+              </div>
+              <Sparkline points={data.ef} format={(v) => v.toFixed(2)} />
+              <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+                Power-to-HR on steady endurance rides. Rising = more output at the same HR = better aerobic base.
+              </p>
+            </Card>
+          )}
+          {data.ctl.length >= 3 && (
+            <Card title="Fitness trajectory — CTL" hint="last ~6 months">
+              <div className="mb-1 flex items-center justify-between">
+                <span className={`text-xs font-medium ${ctlTrend.cls}`}>{ctlTrend.label}</span>
+                <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                  now {data.ctl[data.ctl.length - 1].value.toFixed(1)}
+                </span>
+              </div>
+              <Sparkline
+                points={data.ctl}
+                format={(v) => v.toFixed(1)}
+                strokeClass="stroke-purple-400 dark:stroke-[#00d4ff]/70"
+                dotClass="fill-purple-500 dark:fill-[#00d4ff]"
+                tipTextClass="fill-zinc-800 dark:fill-[#00d4ff]"
+              />
+            </Card>
+          )}
+        </div>
       )}
 
+      {/* Execution pair — per-ride quality vs. compliance by type, side by side */}
+      {(data.scores.length >= 2 || data.complianceByType.length > 0) && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {data.scores.length >= 2 && (
+            <Card title="Execution quality" hint="per-ride score, accumulating">
+              <ScoreBars scores={data.scores} />
+            </Card>
+          )}
+          {data.complianceByType.length > 0 && (
+            <Card title="Compliance by session type" hint="all logged sessions">
+              <div className="space-y-1.5">
+                {data.complianceByType.map((c) => {
+                  const pct = c.avgCompliancePct ?? 0;
+                  const barCls = pct >= 90 ? "bg-green-400 dark:bg-emerald-500/70" : pct >= 75 ? "bg-amber-400 dark:bg-amber-500" : "bg-red-400 dark:bg-red-500";
+                  return (
+                    <div key={c.type} className="flex items-center gap-2">
+                      <span className="w-20 shrink-0 text-xs text-zinc-600 dark:text-zinc-400">{c.type}</span>
+                      <div className="h-2.5 flex-1 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-900">
+                        <div className={`h-full ${barCls}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                      </div>
+                      <span className="w-8 shrink-0 text-right font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300">{pct}%</span>
+                      <span className="w-12 shrink-0 text-right text-[10px] text-zinc-400 dark:text-zinc-500">{c.sessions}×</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Fueling & weight — kept wide; it carries three weekly series */}
       {energyHasData && (
         <Card title="Fueling & weight" hint="weekly · tap to isolate">
           <MultiSparkline series={energySeries} />
@@ -313,52 +396,8 @@ export default function Trends() {
         </Card>
       )}
 
-      {data.scores.length >= 2 && (
-        <Card title="Execution quality" hint="per-ride score, accumulating">
-          <ScoreBars scores={data.scores} />
-        </Card>
-      )}
-
-      {data.complianceByType.length > 0 && (
-        <Card title="Compliance by session type" hint="all logged sessions">
-          <div className="space-y-1.5">
-            {data.complianceByType.map((c) => {
-              const pct = c.avgCompliancePct ?? 0;
-              const barCls = pct >= 90 ? "bg-green-400 dark:bg-emerald-500/70" : pct >= 75 ? "bg-amber-400 dark:bg-amber-500" : "bg-red-400 dark:bg-red-500";
-              return (
-                <div key={c.type} className="flex items-center gap-2">
-                  <span className="w-20 shrink-0 text-xs text-zinc-600 dark:text-zinc-400">{c.type}</span>
-                  <div className="h-2.5 flex-1 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-900">
-                    <div className={`h-full ${barCls}`} style={{ width: `${Math.min(100, pct)}%` }} />
-                  </div>
-                  <span className="w-8 shrink-0 text-right font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300">{pct}%</span>
-                  <span className="w-12 shrink-0 text-right text-[10px] text-zinc-400 dark:text-zinc-500">{c.sessions}×</span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
-
-      {data.ctl.length >= 3 && (
-        <Card title="Fitness trajectory — CTL" hint="last ~8 weeks">
-          <div className="mb-1 flex items-center justify-between">
-            <span className={`text-xs font-medium ${ctlTrend.cls}`}>{ctlTrend.label}</span>
-            <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
-              now {data.ctl[data.ctl.length - 1].value.toFixed(1)}
-            </span>
-          </div>
-          <Sparkline
-            points={data.ctl}
-            format={(v) => v.toFixed(1)}
-            strokeClass="stroke-purple-400 dark:stroke-[#00d4ff]/70"
-            dotClass="fill-purple-500 dark:fill-[#00d4ff]"
-          />
-        </Card>
-      )}
-
       {cards.length > 0 && (
-        <Card title="Recent baselines" hint="last ~8 weeks">
+        <Card title="Recent baselines" hint="rolling 90 days">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {cards.map((c) => (
               <StatTile key={c.label} label={c.label} value={c.value} />
@@ -366,6 +405,9 @@ export default function Trends() {
           </div>
         </Card>
       )}
+
+      {/* Block history — the long archive, at the bottom */}
+      <BlockTimeline blocks={data.blocks} />
     </div>
   );
 }

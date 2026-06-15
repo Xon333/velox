@@ -7,6 +7,7 @@ import {
   readScoreLog,
 } from "@/lib/data-store";
 import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
+import { weightTrendFromWellness } from "@/lib/nutrition";
 
 // GET assembles the long-term, second-brain-derived trends. It deliberately does
 // NOT reproduce intervals.icu's raw PMC/power-curve charts — only signals that
@@ -130,6 +131,30 @@ export async function GET() {
   // Learned coaching insights from the execution history (the "second brain").
   const insights = deriveInsights(buildAthleteModel(scoreLog.entries));
 
+  // Recent-7-day snapshot — the live-data intent relocated from the Profile page, where it
+  // sits with the rest of the long-term tracking.
+  const cutoff7 = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+  const recentRpes = (sync?.activities ?? [])
+    .filter((a) => a.date >= cutoff7 && a.rpe !== null)
+    .map((a) => a.rpe as number);
+  const lastKcal = (sync?.wellness ?? [])
+    .filter((w) => w.kcalConsumed !== null)
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  const latestWeight = (sync?.wellness ?? [])
+    .filter((w) => w.weightKg !== null)
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  const recent = sync
+    ? {
+        latestWeightKg: latestWeight?.weightKg ?? null,
+        weightTrend7Day: weightTrendFromWellness(sync.wellness),
+        avgRpe7Day:
+          recentRpes.length > 0
+            ? Math.round((recentRpes.reduce((a, b) => a + b, 0) / recentRpes.length) * 10) / 10
+            : null,
+        lastKcalConsumed: lastKcal?.kcalConsumed ?? null,
+      }
+    : null;
+
   return NextResponse.json({
     ef,
     ctl,
@@ -139,6 +164,7 @@ export async function GET() {
     baselines,
     scores: scoreLog.entries,
     insights,
+    recent,
     syncedAt: sync?.syncedAt ?? null,
   });
 }

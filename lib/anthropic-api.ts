@@ -117,18 +117,24 @@ export function buildAthleteDataSection(
     return lines.join("\n");
   }
 
+  // The sync cache now holds ~6 months for trends, but the prompt's "current form" summary
+  // should stay recent — restrict it to the last 8 weeks so the weekly average and intensity
+  // mix reflect what the athlete is doing now, not a six-month blend.
+  const recentCutoff = addDays(new Date().toISOString().slice(0, 10), -56);
+  const recent = sync.activities.filter((a) => a.date >= recentCutoff);
+
   // 8-week summary
-  const totalHours = sync.activities.reduce((s, a) => s + a.movingTimeSec, 0) / 3600;
+  const totalHours = recent.reduce((s, a) => s + a.movingTimeSec, 0) / 3600;
   lines.push(
     "",
-    `Last 8 weeks: ${sync.activities.length} activities, ${totalHours.toFixed(1)} h total (${(totalHours / 8).toFixed(1)} h/week average).`
+    `Last 8 weeks: ${recent.length} activities, ${totalHours.toFixed(1)} h total (${(totalHours / 8).toFixed(1)} h/week average).`
   );
 
   // Intensity distribution proxy from average power vs FTP.
   let easy = 0;
   let moderate = 0;
   let hard = 0;
-  for (const a of sync.activities) {
+  for (const a of recent) {
     if (a.avgWatts === null || p.ftp <= 0) continue;
     const intensity = a.avgWatts / p.ftp;
     const h = a.movingTimeSec / 3600;
@@ -143,7 +149,7 @@ export function buildAthleteDataSection(
     );
   }
 
-  const keySessions = [...sync.activities]
+  const keySessions = [...recent]
     .filter((a) => a.trainingLoad !== null)
     .sort((a, b) => (b.trainingLoad ?? 0) - (a.trainingLoad ?? 0))
     .slice(0, 3);

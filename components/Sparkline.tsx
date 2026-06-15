@@ -16,12 +16,14 @@ export default function Sparkline({
   format = (v: number) => v.toFixed(2),
   strokeClass = "stroke-blue-400 dark:stroke-[#ff49c8]/70",
   dotClass = "fill-blue-500 dark:fill-[#ff49c8]",
+  tipTextClass = "fill-zinc-800 dark:fill-[#ff49c8]",
 }: {
   points: SparkPoint[];
   chartHeight?: number;
   format?: (v: number) => string;
   strokeClass?: string;
   dotClass?: string;
+  tipTextClass?: string;
 }) {
   const [idx, setIdx] = useState<number | null>(null);
   if (points.length < 2) return null;
@@ -70,7 +72,7 @@ export default function Sparkline({
           <circle cx={hx} cy={toY(hp.value)} r={4} className={dotClass} />
           <rect x={tipX} y={1} width={TIP_W} height={TIP - 5} rx={3} className="fill-zinc-100 dark:fill-zinc-900" fillOpacity={0.97} />
           <rect x={tipX} y={1} width={TIP_W} height={TIP - 5} rx={3} fill="none" strokeWidth={0.5} className="stroke-zinc-300 dark:stroke-[#ff49c8]/30" />
-          <text x={tipX + TIP_W / 2} y={10} textAnchor="middle" fontSize={9} fontWeight="600" fontFamily="monospace" className="fill-zinc-800 dark:fill-[#ff49c8]">
+          <text x={tipX + TIP_W / 2} y={10} textAnchor="middle" fontSize={9} fontWeight="600" fontFamily="monospace" className={tipTextClass}>
             {format(hp.value)}
           </text>
           <text x={tipX + TIP_W / 2} y={18.5} textAnchor="middle" fontSize={7.5} fontFamily="monospace" className="fill-zinc-500 dark:fill-zinc-400">

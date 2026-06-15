@@ -9,6 +9,7 @@ import type {
   CurrentBlock,
   FatigueAlert,
   GeneratedPlan,
+  IntensityDistribution,
   LoadRampAlert,
   ReadinessSignal,
   RideScoreEntry,
@@ -48,10 +49,15 @@ const ACWR_COLOR: Record<AcwrResult["level"], string> = {
   danger: "text-red-600 dark:text-red-400",
 };
 
-// One-line explanation shown on hover over an alert/readiness bracket.
-function MetricTip({ text }: { text: string }) {
+// One-line explanation shown on hover over an alert/readiness bracket. `align` flips the
+// tooltip to the right edge so it doesn't clip when the anchor sits near the card's right.
+function MetricTip({ text, align = "left" }: { text: string; align?: "left" | "right" }) {
   return (
-    <span className="pointer-events-none absolute left-0 top-full z-30 mt-1 w-64 max-w-[80vw] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] font-normal normal-case leading-snug text-zinc-600 opacity-0 shadow-md transition-opacity duration-100 group-hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+    <span
+      className={`pointer-events-none absolute ${
+        align === "right" ? "right-0" : "left-0"
+      } top-full z-30 mt-1 w-64 max-w-[80vw] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] font-normal normal-case leading-snug text-zinc-600 opacity-0 shadow-md transition-opacity duration-100 group-hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300`}
+    >
       {text}
     </span>
   );
@@ -144,10 +150,18 @@ function WeeklyDebrief({ sync }: { sync: SyncData }) {
       <div className="flex flex-wrap gap-2">
         <StatTile label="Hours" value={`${weekHours.toFixed(1)} h`} />
         {weekTss > 0 && <StatTile label="TSS" value={String(Math.round(weekTss))} />}
-        {topSession && <StatTile label="Top session" value={`${topSession.name.slice(0, 18)} · ${topSession.trainingLoad} TSS`} />}
         {avgHrv !== null && <StatTile label="Avg HRV" value={String(avgHrv)} />}
         {avgSleep !== null && <StatTile label="Avg sleep" value={`${avgSleep} h`} />}
       </div>
+      {topSession && (
+        <div className="mt-2 rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+          <p className="text-[10px] uppercase tracking-wide text-zinc-400">Top session</p>
+          <p className="mt-0.5 text-sm font-medium leading-snug text-zinc-800 dark:text-zinc-100">{topSession.name}</p>
+          {topSession.trainingLoad != null && (
+            <p className="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">{topSession.trainingLoad} TSS</p>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
@@ -597,7 +611,7 @@ function BlockCalendar({ block, scores }: { block: CurrentBlock; scores: RideSco
   );
 
   return (
-    <div className="mt-3 space-y-1.5">
+    <div className="mt-3 space-y-1">
       {weeks.map((week, i) => {
         const mins = weeklyMinutes[i];
         const h = Math.floor(mins / 60);
@@ -616,7 +630,7 @@ function BlockCalendar({ block, scores }: { block: CurrentBlock; scores: RideSco
                 return (
                   <div key={day.date} className="group relative flex-1">
                     <div
-                      className={`flex h-9 w-full items-center justify-center rounded text-[10px] font-medium ${TYPE_STYLES[day.type].cell} ${
+                      className={`flex h-7 w-full items-center justify-center rounded text-[10px] font-medium ${TYPE_STYLES[day.type].cell} ${
                         day.type === "Rest" ? "text-zinc-600" : "text-white"
                       } ${day.date === today ? "ring-2 ring-zinc-900 ring-offset-1 dark:ring-[#ff49c8] dark:ring-offset-zinc-800" : ""} ${
                         completed ? "font-bold ring-1 ring-inset ring-white/60 dark:ring-black/30" : ""
@@ -670,7 +684,7 @@ function BlockCalendar({ block, scores }: { block: CurrentBlock; scores: RideSco
           </div>
         );
       })}
-      <div className="flex flex-wrap gap-3 pt-1 pl-12">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 pt-2 pl-12">
         {(["Z2", "Recovery", "Threshold", "VO2max", "SIT", "Strength", "Rest"] as const).map(
           (t) => (
             <span key={t} className="flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -754,7 +768,17 @@ function trendArrow(current: number | null, prev: number | null, higherIsBetter 
   return delta > 0 ? (higherIsBetter ? " ↑" : " ↓") : (higherIsBetter ? " ↓" : " ↑");
 }
 
-function RecentDataSummary({ sync, bare }: { sync: SyncData | null; bare?: boolean }) {
+function RecentDataSummary({
+  sync,
+  acwr,
+  polarization,
+  bare,
+}: {
+  sync: SyncData | null;
+  acwr?: AcwrResult | null;
+  polarization?: IntensityDistribution | null;
+  bare?: boolean;
+}) {
   if (!sync) return null;
   const today = todayIso();
   const cutoff7 = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
@@ -774,27 +798,43 @@ function RecentDataSummary({ sync, bare }: { sync: SyncData | null; bare?: boole
   const tsbPrev = week2Ago?.ctl != null && week2Ago?.atl != null ? week2Ago.ctl - week2Ago.atl : null;
   const tsbArrow = trendArrow(tsbNow, tsbPrev, true); // rising form (fresher) is "up"
 
-  const weighIns = sync.wellness
-    .filter((w) => w.weightKg !== null)
-    .sort((a, b) => b.date.localeCompare(a.date));
-  const latestWeight = weighIns[0];
-  const weekAgo = weighIns.find(
-    (w) => (Date.parse(latestWeight?.date ?? today) - Date.parse(w.date)) / 86_400_000 >= 4
-  );
-  const weightTrend =
-    latestWeight?.weightKg != null && weekAgo?.weightKg != null
-      ? Math.round((latestWeight.weightKg - weekAgo.weightKg) * 10) / 10
-      : null;
-  const weightArrow = weightTrend !== null ? (weightTrend > 0.1 ? " ↑" : weightTrend < -0.1 ? " ↓" : " →") : "";
-
+  // Weight / weight-trend deliberately live on the Trends page now; the freed slots here
+  // surface ACWR and polarization — the load-and-balance signals that belong with readiness.
   const tiles = (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
       <StatTile label="CTL (fitness)" value={sync.fitness.ctl?.toFixed(1) ?? "—"} arrow={ctlArrow} accent="pink" />
       <StatTile label="ATL (fatigue)" value={sync.fitness.atl?.toFixed(1) ?? "—"} arrow={atlArrow} accent="pink" />
       <StatTile label="TSB (form)" value={sync.fitness.tsb?.toFixed(1) ?? "—"} arrow={tsbArrow} accent="pink" />
       <StatTile label="7-day hours" value={`${hours7.toFixed(1)} h`} accent="pink" />
-      <StatTile label="Weight" value={latestWeight?.weightKg != null ? `${latestWeight.weightKg.toFixed(1)} kg` : "—"} arrow={weightArrow} accent="pink" />
-      <StatTile label="Weight trend" value={weightTrend !== null ? `${weightTrend > 0 ? "+" : ""}${weightTrend.toFixed(1)} kg` : "—"} accent="pink" />
+      {acwr && (
+        <div className="group relative rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+          <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-400">
+            <span className="cursor-help underline decoration-dotted underline-offset-2">ACWR</span>
+            <MetricTip
+              text={`Acute:chronic workload ratio — your last 7 days of load (${acwr.acute} TSS/day) vs the last 28 (${acwr.chronic} TSS/day). 0.8–1.3 is the safe progression band; >1.5 is a spike with raised injury risk. You're at ${acwr.ratio.toFixed(2)} (${acwr.level}).`}
+            />
+          </p>
+          <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+            {acwr.ratio.toFixed(2)}
+            <span className={`ml-1 text-[10px] font-normal ${ACWR_COLOR[acwr.level]}`}>{acwr.level}</span>
+          </p>
+        </div>
+      )}
+      {polarization && (
+        <div className="group relative rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+          <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-400">
+            <span className="cursor-help underline decoration-dotted underline-offset-2">Polarization</span>
+            <MetricTip
+              align="right"
+              text="Share of training time spent easy / moderate / hard (by ride power vs FTP) over the last 7 days. ~80% easy is the endurance-base target — most of your time should be in the first number."
+            />
+          </p>
+          <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+            {polarization.easyPct}/{polarization.moderatePct}/{polarization.hardPct}
+            <span className="ml-1 text-[10px] font-normal text-zinc-400 dark:text-zinc-500">e/m/h</span>
+          </p>
+        </div>
+      )}
     </div>
   );
   if (bare) return tiles;
@@ -879,6 +919,10 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
 
   const [notePosting, setNotePosting] = useState(false);
   const [notePosted, setNotePosted] = useState(false);
+
+  // When a block is already active the generator collapses to a thin bar so it stops
+  // cutting the Plan page in half; it expands on demand (and is always open with no block).
+  const [genOpen, setGenOpen] = useState(false);
 
   const autoSyncDone = useRef(false);
 
@@ -1064,31 +1108,12 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
             )}
             {state.lastSync && (
               <div className="mt-2">
-                <RecentDataSummary sync={state.lastSync} bare />
-              </div>
-            )}
-            {(state.acwr || state.polarization) && (
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
-                {state.acwr && (
-                  <span className="group relative flex items-center gap-1.5">
-                    <span className="cursor-help uppercase tracking-wide text-zinc-400 underline decoration-dotted underline-offset-2">ACWR</span>
-                    <span className="font-mono font-semibold text-zinc-800 dark:text-zinc-100">{state.acwr.ratio.toFixed(2)}</span>
-                    <span className={ACWR_COLOR[state.acwr.level]}>{state.acwr.level}</span>
-                    <MetricTip
-                      text={`Acute:chronic workload ratio — your last 7 days of load (${state.acwr.acute} TSS/day) vs the last 28 (${state.acwr.chronic} TSS/day). 0.8–1.3 is the safe progression band; >1.5 is a spike with raised injury risk. You're at ${state.acwr.ratio.toFixed(2)} (${state.acwr.level}).`}
-                    />
-                  </span>
-                )}
-                {state.polarization && (
-                  <span className="group relative flex items-center gap-1.5">
-                    <span className="cursor-help uppercase tracking-wide text-zinc-400 underline decoration-dotted underline-offset-2">Polarization</span>
-                    <span className="font-mono text-zinc-700 dark:text-zinc-300">
-                      {state.polarization.easyPct}/{state.polarization.moderatePct}/{state.polarization.hardPct}
-                    </span>
-                    <span className="text-zinc-400 dark:text-zinc-500">easy/mod/hard, 7d</span>
-                    <MetricTip text="Share of training time spent easy / moderate / hard (by ride power vs FTP) over the last 7 days. ~80% easy is the endurance-base target — most of your time should be in the first number." />
-                  </span>
-                )}
+                <RecentDataSummary
+                  sync={state.lastSync}
+                  acwr={state.acwr}
+                  polarization={state.polarization}
+                  bare
+                />
               </div>
             )}
           </Zone>
@@ -1150,9 +1175,30 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
         </div>
       )}
 
-      {/* Block generation form — kept at the bottom, under goals */}
+      {/* Block generation — collapses to a thin bar when a block is active so it no longer
+          cuts the page in half; always open when there's no block to generate against. */}
       <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-        <div className="flex flex-wrap items-center gap-3">
+        {hasActiveBlock && !genOpen ? (
+          <button
+            onClick={() => setGenOpen(true)}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Generate next block</span>
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">Plan the next 2–4 weeks →</span>
+          </button>
+        ) : (
+          <>
+            {hasActiveBlock && (
+              <div className="mb-3 flex justify-end">
+                <button
+                  onClick={() => setGenOpen(false)}
+                  className="text-xs text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
+                >
+                  Collapse
+                </button>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={generate}
             disabled={generating || !state.anthropicConfigured}
@@ -1238,7 +1284,9 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
               className="mt-1.5 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:placeholder-zinc-500 dark:focus:border-zinc-400"
             />
           </div>
-        </div>
+            </div>
+          </>
+        )}
       </section>
 
       {plan && (

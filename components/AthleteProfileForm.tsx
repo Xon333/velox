@@ -60,154 +60,6 @@ const POWER_CURVE_LABELS: Record<number, string> = {
   120: "2 min", 300: "5 min", 1200: "20 min", 1800: "30 min", 3600: "60 min",
 };
 
-// Intensity ramp (cool→hot) for the training-zone dots — quick visual scanning.
-const ZONE_DOT = ["bg-blue-400", "bg-green-400", "bg-yellow-400", "bg-orange-400", "bg-red-400", "bg-red-600", "bg-red-900"];
-
-// ---------- Weight sparkline ----------
-
-function WeightSparkline({ points, goalWeight }: { points: WeightPoint[]; goalWeight?: number | null }) {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-
-  if (points.length < 2) return null;
-
-  const W = 280;
-  const H = 46;   // chart area
-  const TIP = 28; // tooltip strip at top
-  const PAD = 4;
-  const TOTAL = H + TIP;
-
-  const weights = points.map((p) => p.weightKg);
-  const minW = Math.min(...weights);
-  const maxW = Math.max(...weights);
-  // Include the goal in the vertical range so the goal line is on-chart.
-  const lo = goalWeight != null ? Math.min(minW, goalWeight) : minW;
-  const hi = goalWeight != null ? Math.max(maxW, goalWeight) : maxW;
-  const range = hi - lo || 0.5;
-
-  const toX = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
-  const toY = (w: number) => TIP + PAD + (1 - (w - lo) / range) * (H - PAD * 2);
-
-  const pathD = points
-    .map((p, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(p.weightKg).toFixed(1)}`)
-    .join(" ");
-
-  const hp = hoveredIdx !== null ? points[hoveredIdx] : null;
-  const hx = hoveredIdx !== null ? toX(hoveredIdx) : 0;
-  const hy = hp ? toY(hp.weightKg) : 0;
-  const goalY = goalWeight != null ? toY(goalWeight) : null;
-
-  // Tooltip rect clamped to SVG bounds
-  const TIP_W = 86;
-  const tipRx = hp ? Math.max(0, Math.min(hx - TIP_W / 2, W - TIP_W)) : 0;
-
-  return (
-    <div>
-    <svg viewBox={`0 0 ${W} ${TOTAL}`} className="w-full overflow-visible" style={{ height: TOTAL }}>
-      {/* Goal-weight reference line (range/labels now live below the chart, not over it) */}
-      {goalY !== null && (
-        <line x1={PAD} y1={goalY} x2={W - PAD} y2={goalY} strokeWidth={1} strokeDasharray="3 3" className="stroke-emerald-400/70 dark:stroke-emerald-500/60" />
-      )}
-
-      {/* Chart line */}
-      <path
-        d={pathD}
-        fill="none"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-        className="stroke-blue-500 dark:stroke-[#ff49c8]"
-      />
-
-      {/* Hover hit areas only — no persistent dots, just the line; a dot appears on hover */}
-      {points.map((p, i) => {
-        const cx = toX(i);
-        const cy = toY(p.weightKg);
-        const isHovered = hoveredIdx === i;
-        return (
-          <g key={i}>
-            {isHovered && (
-              <circle cx={cx} cy={cy} r={4} className="fill-blue-500 dark:fill-[#ff49c8]" style={{ pointerEvents: "none" }} />
-            )}
-            <circle
-              cx={cx}
-              cy={cy}
-              r={10}
-              fill="transparent"
-              className="cursor-crosshair"
-              onMouseEnter={() => setHoveredIdx(i)}
-              onMouseLeave={() => setHoveredIdx(null)}
-            />
-          </g>
-        );
-      })}
-
-      {/* Hover tooltip */}
-      {hp && (
-        <g style={{ pointerEvents: "none" }}>
-          {/* Dashed vertical guide */}
-          <line
-            x1={hx} y1={TIP - 2}
-            x2={hx} y2={hy - 6}
-            strokeWidth={1}
-            strokeDasharray="2 2"
-            className="stroke-zinc-300 dark:stroke-[#ff49c8]/35"
-          />
-          {/* Tooltip bg */}
-          <rect
-            x={tipRx} y={1}
-            width={TIP_W} height={TIP - 4}
-            rx={3}
-            className="fill-zinc-100 dark:fill-zinc-900"
-            fillOpacity={0.97}
-          />
-          {/* Border line on tooltip rect */}
-          <rect
-            x={tipRx} y={1}
-            width={TIP_W} height={TIP - 4}
-            rx={3}
-            fill="none"
-            strokeWidth={0.5}
-            className="stroke-zinc-300 dark:stroke-[#ff49c8]/30"
-          />
-          {/* Weight value */}
-          <text
-            x={tipRx + TIP_W / 2} y={11}
-            textAnchor="middle"
-            fontSize={9}
-            fontWeight="600"
-            fontFamily="monospace"
-            className="fill-zinc-800 dark:fill-[#ff49c8]"
-          >
-            {hp.weightKg.toFixed(1)} kg
-          </text>
-          {/* Date */}
-          <text
-            x={tipRx + TIP_W / 2} y={20}
-            textAnchor="middle"
-            fontSize={7.5}
-            fontFamily="monospace"
-            className="fill-zinc-500 dark:fill-zinc-400"
-          >
-            {hp.date}
-          </text>
-        </g>
-      )}
-    </svg>
-      <div className="mt-1 flex items-center justify-between px-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">
-        <span>
-          Low <span className="font-mono font-medium text-zinc-700 dark:text-zinc-200">{minW.toFixed(1)}</span> · High{" "}
-          <span className="font-mono font-medium text-zinc-700 dark:text-zinc-200">{maxW.toFixed(1)}</span> kg
-        </span>
-        {goalWeight != null && (
-          <span className="flex items-center gap-1">
-            <span className="h-1.5 w-3 rounded-full bg-emerald-400/70" />
-            Goal <span className="font-mono font-medium text-zinc-700 dark:text-zinc-200">{goalWeight.toFixed(1)}</span>
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ---------- Shared helpers ----------
 
 function Section({
@@ -234,18 +86,6 @@ function Section({
   );
 }
 
-function StatGrid({ items }: { items: Array<{ label: string; value: string }> }) {
-  return (
-    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
-      {items.map(({ label, value }) => (
-        <div key={label}>
-          <dt className="text-[11px] text-zinc-400 dark:text-zinc-500">{label}</dt>
-          <dd className="mt-0.5 font-mono text-sm font-semibold text-zinc-800 dark:text-[#00d4ff]">{value || "—"}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
 
 // ---------- Main component ----------
 
@@ -303,7 +143,7 @@ export default function AthleteProfileForm() {
   }
   if (!data) return <p className="py-12 text-center text-sm text-zinc-400">Loading…</p>;
 
-  const { athleteMd, autoSync, bufferStatus, syncedPowerCurve, latestWeightKg, weightHistory } = data;
+  const { athleteMd, autoSync, bufferStatus, syncedPowerCurve, latestWeightKg } = data;
 
   return (
     <div className="space-y-4">
@@ -340,39 +180,7 @@ export default function AthleteProfileForm() {
         </div>
       )}
 
-      {/* 1. Live data from Intervals.icu — top priority */}
-      <Section title="Live data from Intervals.icu">
-        {autoSync.syncedAt === null ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            No sync yet —{" "}
-            <Link href="/today" className="text-cyan-700 hover:underline dark:text-[#00d4ff]">
-              sync from Today
-            </Link>.
-          </p>
-        ) : (
-          <>
-            <StatGrid items={[
-              { label: "Latest weight", value: autoSync.latestWeightKg != null ? `${autoSync.latestWeightKg.toFixed(1)} kg` : "—" },
-              { label: "7-day trend", value: autoSync.weightTrend7Day != null ? `${autoSync.weightTrend7Day > 0 ? "+" : ""}${autoSync.weightTrend7Day.toFixed(1)} kg` : "—" },
-              { label: "Avg RPE (7d)", value: autoSync.avgRpe7Day != null ? `${autoSync.avgRpe7Day}/10` : "—" },
-              { label: "Last intake", value: autoSync.lastKcalConsumed != null ? `${autoSync.lastKcalConsumed} kcal` : "—" },
-            ]} />
-            {weightHistory.length >= 3 && (
-              <div className="mt-4">
-                <p className="mb-1 text-[10px] text-zinc-400 dark:text-zinc-500">
-                  Weight — last {weightHistory.length} entries
-                </p>
-                <div className="rounded bg-zinc-50 px-2 py-1.5 dark:bg-zinc-900">
-                  <WeightSparkline points={weightHistory} goalWeight={data.nutrition.targetWeightKg} />
-                </div>
-              </div>
-            )}
-          </>
-        )}
-        <p className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">Synced {timeAgo(autoSync.syncedAt)}.</p>
-      </Section>
-
-      {/* 2. Power PRs — from sync or manual */}
+      {/* Power PRs — from sync or manual */}
       {(syncedPowerCurve.length > 0 || athleteMd.powerProfile.length > 0) && (
         <Section title="Power PRs" editHref={syncedPowerCurve.length > 0 ? undefined : "/knowledge"}>
           {syncedPowerCurve.length > 0 ? (
@@ -455,43 +263,7 @@ export default function AthleteProfileForm() {
         </div>
       )}
 
-      {/* 4. Training zones — synced from Intervals.icu (no manual edit) */}
-      {athleteMd.trainingZones.length > 0 && (
-        <Section title="Training zones">
-          <p className="mb-2 text-[11px] text-zinc-400 dark:text-zinc-500">
-            Synced from Intervals.icu, anchored to your current FTP{data.physiologySource === "manual" ? " (seeded; awaiting first sport-settings sync)" : ""}.
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-zinc-400 dark:text-zinc-500">
-                  <th className="pb-1 pr-3 font-medium">Zone</th>
-                  <th className="pb-1 pr-3 font-medium">Name</th>
-                  <th className="pb-1 pr-3 font-medium">Power</th>
-                  <th className="pb-1 font-medium">HR</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700">
-                {athleteMd.trainingZones.map((z, i) => (
-                  <tr key={z.zone}>
-                    <td className="py-1.5 pr-3 font-semibold text-zinc-800 dark:text-zinc-200">
-                      <span className="flex items-center gap-1.5">
-                        <span className={`h-2 w-2 shrink-0 rounded-sm ${ZONE_DOT[i] ?? "bg-zinc-400"}`} />
-                        {z.zone}
-                      </span>
-                    </td>
-                    <td className="py-1.5 pr-3 text-zinc-600 dark:text-zinc-300">{z.name}</td>
-                    <td className="py-1.5 pr-3 font-mono text-zinc-500 dark:text-zinc-400">{z.power}</td>
-                    <td className="py-1.5 font-mono text-zinc-500 dark:text-zinc-400">{z.hr}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
-      )}
-
-      {/* 5. Nutrition formula — bottom */}
+      {/* Nutrition formula — bottom */}
       <Section title="Nutrition formula">
         <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
           Drives the deterministic formula that pre-computes daily targets for every generated session.
