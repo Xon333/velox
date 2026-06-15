@@ -1,0 +1,62 @@
+// Parse a planned day's workout (Intervals.icu step syntax) into the structured work
+// intervals the coach prescribed — the "second brain" intent that execution is judged
+// against. Only deliberate efforts (≥ sweet-spot) are kept; warmups, recovery valves
+// and endurance steps are ignored, so an endurance ride yields an empty prescription.
+
+import type { PrescribedInterval } from "./types";
+
+const WORK_THRESHOLD_PCT = 80;
+
+// Seconds from the duration token(s) preceding the power %: 12m, 30s, 1h, 1h30m, 5', 30".
+function durationToSec(head: string): number {
+  let sec = 0;
+  const h = head.match(/(\d+)\s*h/i);
+  if (h) sec += Number(h[1]) * 3600;
+  const m = head.match(/(\d+)\s*(?:m|')/i);
+  if (m) sec += Number(m[1]) * 60;
+  const s = head.match(/(\d+)\s*(?:s|")/i);
+  if (s) sec += Number(s[1]);
+  return sec;
+}
+
+// One "- …" step → its duration and power %. Ramps ("50-70%") use the upper bound.
+function parseStep(line: string): { durationSec: number; pct: number } | null {
+  const pm = line.match(/(\d+)\s*(?:-\s*(\d+))?\s*%/);
+  if (!pm) return null;
+  const pct = pm[2] ? Math.max(Number(pm[1]), Number(pm[2])) : Number(pm[1]);
+  const durationSec = durationToSec(line.slice(0, pm.index));
+  if (durationSec <= 0) return null;
+  return { durationSec, pct };
+}
+
+export function parsePrescription(workoutText: string, ftp: number): PrescribedInterval[] {
+  if (!workoutText) return [];
+  const out: PrescribedInterval[] = [];
+  let currentReps = 1;
+  for (const raw of workoutText.split("\n")) {
+    const line = raw.trim();
+    if (line === "") {
+      currentReps = 1; // blank line ends a repeat block
+      continue;
+    }
+    if (!line.startsWith("-")) {
+      // Section label; "Main Set 4x" / "4x" sets the repeat count, others reset it.
+      const rx = line.match(/(\d+)\s*x/i);
+      currentReps = rx ? Math.max(1, Number(rx[1])) : 1;
+      continue;
+    }
+    const step = parseStep(line);
+    if (!step || step.pct < WORK_THRESHOLD_PCT) continue;
+    const targetWatts = ftp > 0 ? Math.round((step.pct / 100) * ftp) : 0;
+    const mins = Math.round(step.durationSec / 60);
+    const durLabel = mins >= 1 ? `${mins}m` : `${step.durationSec}s`;
+    out.push({
+      reps: currentReps,
+      durationSec: step.durationSec,
+      targetPctFtp: step.pct,
+      targetWatts,
+      label: `${currentReps > 1 ? `${currentReps}×` : ""}${durLabel} @ ${targetWatts}W`,
+    });
+  }
+  return out;
+}

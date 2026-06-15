@@ -786,7 +786,20 @@ function PlannedToday({ block }: { block: CurrentBlock | null }) {
           {day.durationMin > 0 ? ` · ${day.durationMin} min` : ""}
         </span>
       </div>
-      <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+      {day.prescription && day.prescription.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Prescribed</span>
+          {day.prescription.map((iv, i) => (
+            <span
+              key={i}
+              className="rounded bg-zinc-100 px-2 py-0.5 font-mono text-[11px] text-zinc-700 dark:bg-[#00d4ff]/10 dark:text-[#00d4ff] dark:ring-1 dark:ring-[#00d4ff]/30"
+            >
+              {iv.label}
+            </span>
+          ))}
+        </div>
+      )}
+      <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
         Ride it, then sync to see your execution score and fuel.
       </p>
     </div>

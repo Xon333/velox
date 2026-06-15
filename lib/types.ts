@@ -130,11 +130,23 @@ export interface GeneratedPlan {
 
 // ---------- Active block (data/current-block.json) ----------
 
+// A prescribed work effort parsed from a planned day's workout — the coach's intent,
+// captured structurally so execution can be compared against it (e.g. "2×20 @ 288W").
+export interface PrescribedInterval {
+  reps: number;
+  durationSec: number;
+  targetPctFtp: number;
+  targetWatts: number; // resolved via FTP at generation time
+  label: string; // "2×20m @ 288W"
+}
+
 export interface CurrentBlockDay {
   date: string;
   name: string;
   type: WorkoutType;
   durationMin: number;
+  workoutText?: string; // Intervals.icu step syntax — the coach's prescription
+  prescription?: PrescribedInterval[]; // structured work intervals parsed from workoutText
 }
 
 export interface CurrentBlock {

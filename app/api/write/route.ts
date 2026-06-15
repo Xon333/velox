@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createEvent, isIntervalsConfigured } from "@/lib/intervals-api";
-import { appendBlockHistory, readComplianceMemory, readCurrentBlock, writeComplianceMemory, writeCurrentBlock } from "@/lib/data-store";
+import { appendBlockHistory, readAthleteProfile, readComplianceMemory, readCurrentBlock, writeComplianceMemory, writeCurrentBlock } from "@/lib/data-store";
 import { planDayToEvent } from "@/lib/plan-parser";
+import { parsePrescription } from "@/lib/prescription";
 import type { CurrentBlock, GeneratedPlan, PlannedDay, WorkoutType, WriteResult } from "@/lib/types";
 import { WORKOUT_TYPES } from "@/lib/types";
 
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
     }
 
     const dates = plan.days.map((d) => d.date).sort();
+    const ftp = (await readAthleteProfile()).performance.ftp;
     currentBlock = {
       goal: plan.blockParams.goal,
       lengthWeeks: plan.blockParams.lengthWeeks,
@@ -89,12 +91,18 @@ export async function POST(req: Request) {
       endDate: dates[dates.length - 1],
       overview: plan.overview,
       createdAt: new Date().toISOString(),
-      days: plan.days.map((d) => ({
-        date: d.date,
-        name: d.name,
-        type: d.type,
-        durationMin: d.durationMin,
-      })),
+      days: plan.days.map((d) => {
+        // Capture the coach's prescription structurally so execution can be compared.
+        const prescription = parsePrescription(d.workoutText, ftp);
+        return {
+          date: d.date,
+          name: d.name,
+          type: d.type,
+          durationMin: d.durationMin,
+          ...(d.workoutText ? { workoutText: d.workoutText } : {}),
+          ...(prescription.length > 0 ? { prescription } : {}),
+        };
+      }),
     };
     await writeCurrentBlock(currentBlock);
 
