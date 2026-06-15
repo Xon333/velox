@@ -106,11 +106,14 @@ export async function POST() {
       );
 
       if (todayActivity) {
-        const [currentBlock, profile] = await Promise.all([
+        const [currentBlock, profile, priorAnalysis] = await Promise.all([
           readCurrentBlock(),
           readAthleteProfile(),
+          readTodayAnalysis(),
         ]);
         const plannedDay = currentBlock?.days.find((d) => d.date === today) ?? null;
+        // Only auto-post once per day — true until today's note has already been analysed.
+        const firstAnalysisToday = priorAnalysis?.activityDate !== today;
 
         try {
           const actualMin = Math.round(todayActivity.movingTimeSec / 60);
@@ -230,8 +233,8 @@ export async function POST() {
           };
           await writeTodayAnalysis(todayAnalysis);
 
-          // Auto-post the coach note to Intervals.icu if the athlete opted in.
-          if (coachNote) {
+          // Auto-post the coach note to Intervals.icu if the athlete opted in (once/day).
+          if (coachNote && firstAnalysisToday) {
             const settings = await readBlockSettings();
             if (settings.autoPostCoachNote) {
               const scoreLine = executionScore !== null ? `\nExecution score: ${executionScore}/10` : "";
