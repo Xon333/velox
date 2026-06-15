@@ -7,8 +7,9 @@ import {
   generateTrainingBlock,
   isAnthropicConfigured,
 } from "@/lib/anthropic-api";
-import { readAthleteProfile, readBlockSettings, readComplianceMemory, readLastSync } from "@/lib/data-store";
+import { readAthleteProfile, readBlockSettings, readComplianceMemory, readLastSync, readScoreLog } from "@/lib/data-store";
 import { latestRetrospectiveSeeds, loadKnowledgeBaseContext } from "@/lib/kb-loader";
+import { buildAthleteModel, deriveInsights, insightsToPromptBlock } from "@/lib/athlete-model";
 import {
   buildNutritionReferenceRows,
   nutritionTableMarkdown,
@@ -59,13 +60,14 @@ export async function POST(req: Request) {
 
   try {
     // Knowledge base is read fresh every call so manager edits apply immediately.
-    const [profile, sync, kbContext, blockSettings, complianceMemory, retroSeeds] = await Promise.all([
+    const [profile, sync, kbContext, blockSettings, complianceMemory, retroSeeds, scoreLog] = await Promise.all([
       readAthleteProfile(),
       readLastSync(),
       loadKnowledgeBaseContext(),
       readBlockSettings(),
       readComplianceMemory(),
       latestRetrospectiveSeeds(),
+      readScoreLog(),
     ]);
 
     const weightTrend = (sync ? weightTrendFromWellness(sync.wellness) : null) ?? 0;
@@ -106,8 +108,12 @@ export async function POST(req: Request) {
       ? `\nPREVIOUS BLOCK PRIORITIES (carry forward into planning)\n${retroSeeds.map((s) => `- ${s}`).join("\n")}`
       : "";
 
+    // Learned patterns: the athlete model turns the execution history into concrete
+    // directives (weak types, declining trends, ready-to-progress) for this block.
+    const insightsContext = insightsToPromptBlock(deriveInsights(buildAthleteModel(scoreLog.entries)));
+
     const system = buildSystemPrompt(
-      kbContext + complianceContext + seedsContext,
+      kbContext + complianceContext + seedsContext + insightsContext,
       buildAthleteDataSection(profile, sync),
       blockParams
     );

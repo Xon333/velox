@@ -294,6 +294,31 @@ export interface RideScoreEntry {
   intensityFactor: number | null;
 }
 
+// ---------- Athlete model (the learning "second brain") ----------
+
+// Recency-weighted (EWMA) performance per workout type, derived from the score log.
+export interface AthleteTypeStat {
+  type: WorkoutType;
+  n: number;
+  execEwma: number; // EWMA of execution score (1-10)
+  complianceEwma: number; // EWMA of duration compliance %
+  trend: "up" | "down" | "flat";
+}
+export interface AthleteModel {
+  byType: AthleteTypeStat[];
+  overallExecEwma: number;
+  overallTrend: "up" | "down" | "flat";
+  sampleSize: number;
+}
+// A derived coaching observation, surfaced to the athlete and fed into generation.
+export interface Insight {
+  dimension: string; // "VO2max", "Overall", ...
+  severity: "good" | "watch" | "alert";
+  title: string;
+  evidence: string;
+  suggestion: string;
+}
+
 export interface ScoreLog {
   entries: RideScoreEntry[];
   updatedAt: string;

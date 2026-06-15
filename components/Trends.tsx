@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, timeAgo } from "@/lib/client-api";
-import type { RollingBaselines, WorkoutType } from "@/lib/types";
+import type { Insight, RollingBaselines, WorkoutType } from "@/lib/types";
 import { TYPE_STYLES } from "@/lib/workout-types";
 import Sparkline, { type SparkPoint } from "./Sparkline";
 import MultiSparkline, { type MultiSeries } from "./MultiSparkline";
@@ -44,6 +44,7 @@ interface TrendsData {
   complianceByType: ComplianceRow[];
   baselines: RollingBaselines;
   scores: ScoreEntry[];
+  insights: Insight[];
   syncedAt: string | null;
 }
 
@@ -255,6 +256,35 @@ export default function Trends() {
       )}
 
       <BlockTimeline blocks={data.blocks} />
+
+      {data.insights.length > 0 && (
+        <Card title="Coach insights" hint="learned from your execution history">
+          <ul className="space-y-1.5">
+            {data.insights.map((ins, i) => {
+              const dot =
+                ins.severity === "alert"
+                  ? "bg-red-500"
+                  : ins.severity === "watch"
+                  ? "bg-amber-500"
+                  : "bg-green-500";
+              return (
+                <li key={i} className="flex items-start gap-2 rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+                  <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-100">{ins.title}</p>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {ins.evidence} <span className="text-zinc-700 dark:text-zinc-300">→ {ins.suggestion}</span>
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+            These also steer the next block you generate.
+          </p>
+        </Card>
+      )}
 
       {data.ef.length >= 3 && (
         <Card

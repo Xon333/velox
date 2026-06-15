@@ -6,6 +6,7 @@ import {
   readRollingBaselines,
   readScoreLog,
 } from "@/lib/data-store";
+import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
 
 // GET assembles the long-term, second-brain-derived trends. It deliberately does
 // NOT reproduce intervals.icu's raw PMC/power-curve charts — only signals that
@@ -123,6 +124,9 @@ export async function GET() {
     .map(([type, a]) => ({ type, avgCompliancePct: Math.round(a.sum / a.n), sessions: a.n }))
     .sort((a, b) => b.sessions - a.sessions);
 
+  // Learned coaching insights from the execution history (the "second brain").
+  const insights = deriveInsights(buildAthleteModel(scoreLog.entries));
+
   return NextResponse.json({
     ef,
     ctl,
@@ -131,6 +135,7 @@ export async function GET() {
     complianceByType,
     baselines,
     scores: scoreLog.entries,
+    insights,
     syncedAt: sync?.syncedAt ?? null,
   });
 }
