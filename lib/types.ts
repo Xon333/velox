@@ -281,19 +281,6 @@ export interface LoadRampAlert {
   reason: string | null;
 }
 
-// ---------- Compliance memory (data/compliance-memory.json) ----------
-
-export interface ComplianceEntry {
-  sessions: number;
-  avgCompliancePct: number;
-  recentCompliancePct: number | null; // last 28 days
-  highComplianceWorkouts: Array<{ date: string; name: string; workoutText: string }>;
-}
-
-export interface ComplianceMemory {
-  byType: Partial<Record<WorkoutType, ComplianceEntry>>;
-  updatedAt: string;
-}
 
 // ---------- Per-ride execution score log (data/score-log.json) ----------
 // Accumulates over time so the trends view can chart execution quality across

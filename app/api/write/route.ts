@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createEvent, isIntervalsConfigured } from "@/lib/intervals-api";
-import { appendBlockHistory, readAthleteProfile, readComplianceMemory, readCurrentBlock, readInterventionLog, readLastSync, readScoreLog, writeComplianceMemory, writeCurrentBlock, writeInterventionLog } from "@/lib/data-store";
+import { appendBlockHistory, readAthleteProfile, readCurrentBlock, readInterventionLog, readLastSync, readScoreLog, writeCurrentBlock, writeInterventionLog } from "@/lib/data-store";
 import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
 import { buildInterventions, mergeInterventions } from "@/lib/intervention";
 import { planDayToEvent } from "@/lib/plan-parser";
 import { parsePrescription } from "@/lib/prescription";
-import type { CurrentBlock, GeneratedPlan, PlannedDay, WorkoutType, WriteResult } from "@/lib/types";
+import type { CurrentBlock, GeneratedPlan, PlannedDay, WriteResult } from "@/lib/types";
 import { WORKOUT_TYPES } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -107,35 +107,6 @@ export async function POST(req: Request) {
       }),
     };
     await writeCurrentBlock(currentBlock);
-
-    // Seed workout library: store workoutText for each planned day into compliance memory
-    // so future blocks can reuse high-quality sessions once compliance is confirmed.
-    try {
-      const memory = await readComplianceMemory();
-      for (const day of plan.days as PlannedDay[]) {
-        if (!day.workoutText || day.type === "Rest" || day.durationMin === 0) continue;
-        const type = day.type as WorkoutType;
-        const entry = memory.byType[type] ?? {
-          sessions: 0,
-          avgCompliancePct: 0,
-          recentCompliancePct: null,
-          highComplianceWorkouts: [],
-        };
-        // Add to library (cap at 5 per type; deduplicate by name).
-        const existing = entry.highComplianceWorkouts ?? [];
-        if (!existing.some((w) => w.name === day.name)) {
-          entry.highComplianceWorkouts = [
-            { date: day.date, name: day.name, workoutText: day.workoutText },
-            ...existing,
-          ].slice(0, 5);
-        }
-        memory.byType[type] = entry;
-      }
-      memory.updatedAt = new Date().toISOString();
-      await writeComplianceMemory(memory);
-    } catch {
-      // Non-critical.
-    }
 
     // Record the insights that drove this block as interventions, with a baseline snapshot,
     // to be validated after a horizon (the learning loop). Best-effort.

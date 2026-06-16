@@ -160,11 +160,3 @@ export function deriveInsights(model: AthleteModel): Insight[] {
 
   return out.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]).slice(0, 5);
 }
-
-// Compact directive block for the block-generation prompt — turns patterns into
-// concrete planning guidance rather than raw stats.
-export function insightsToPromptBlock(insights: Insight[]): string {
-  if (insights.length === 0) return "";
-  const lines = insights.map((i) => `- ${i.title}: ${i.evidence} → ${i.suggestion}`);
-  return `\nLEARNED PATTERNS (from execution history — apply these when shaping the block)\n${lines.join("\n")}`;
-}

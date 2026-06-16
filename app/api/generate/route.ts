@@ -7,11 +7,12 @@ import {
   generateTrainingBlock,
   isAnthropicConfigured,
 } from "@/lib/anthropic-api";
-import { readAthleteProfile, readBlockSettings, readComplianceMemory, readInterventionLog, readLastSync, readScoreLog } from "@/lib/data-store";
+import { readAthleteProfile, readBlockSettings, readInterventionLog, readLastSync, readScoreLog } from "@/lib/data-store";
 import { latestRetrospectiveSeeds, loadKnowledgeBaseContext } from "@/lib/kb-loader";
 import { readPhysiology, resolveHrZones, resolvePowerZones } from "@/lib/physiology";
-import { buildAthleteModel, deriveInsights, insightsToPromptBlock } from "@/lib/athlete-model";
-import { summariseValidation, validationToPromptBlock } from "@/lib/intervention";
+import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
+import { summariseValidation } from "@/lib/intervention";
+import { synthesizeCoachingDirectives } from "@/lib/synthesis";
 import type { Zone } from "@/lib/zones";
 import {
   buildNutritionReferenceRows,
@@ -63,12 +64,11 @@ export async function POST(req: Request) {
 
   try {
     // Knowledge base is read fresh every call so manager edits apply immediately.
-    const [profile, sync, kbContext, blockSettings, complianceMemory, retroSeeds, scoreLog, physStore, interventionLog] = await Promise.all([
+    const [profile, sync, kbContext, blockSettings, retroSeeds, scoreLog, physStore, interventionLog] = await Promise.all([
       readAthleteProfile(),
       readLastSync(),
       loadKnowledgeBaseContext(),
       readBlockSettings(),
-      readComplianceMemory(),
       latestRetrospectiveSeeds(),
       readScoreLog(),
       readPhysiology(),
@@ -95,31 +95,19 @@ export async function POST(req: Request) {
 
     const weeks = blockDates(blockParams.startDate, blockParams.lengthWeeks);
 
-    // Compliance annotations for types with ≥3 sessions of history.
-    const complianceLines: string[] = [];
-    for (const [type, entry] of Object.entries(complianceMemory.byType)) {
-      if (!entry || entry.sessions < 3) continue;
-      const pct = entry.avgCompliancePct;
-      if (pct < 80) complianceLines.push(`- ${type}: ${pct}% avg compliance (${entry.sessions} sessions) — athlete consistently under-delivers; reduce frequency or duration`);
-      else if (pct >= 95) complianceLines.push(`- ${type}: ${pct}% avg compliance — athlete executes these well`);
-    }
-    const complianceContext = complianceLines.length
-      ? `\nCOMPLIANCE HISTORY (from logged sessions)\n${complianceLines.join("\n")}`
-      : "";
-
     // Seeds from the latest block retrospective markdown (athlete-editable in the
     // Knowledge Base). Edits to next_block_seeds flow directly into this block.
     const seedsContext = retroSeeds.length
       ? `\nPREVIOUS BLOCK PRIORITIES (carry forward into planning)\n${retroSeeds.map((s) => `- ${s}`).join("\n")}`
       : "";
 
-    // Learned patterns: the athlete model turns the execution history into concrete
-    // directives (weak types, declining trends, ready-to-progress) for this block.
-    const insightsContext = insightsToPromptBlock(deriveInsights(buildAthleteModel(scoreLog.entries)));
-
-    // Validation track record — which past coaching nudges actually moved the needle. Lets
-    // the model trust validated dimensions and reconsider refuted ones (closed loop).
-    const validationContext = validationToPromptBlock(summariseValidation(interventionLog));
+    // ONE synthesised coaching block: the athlete model's ranked insights (weak/under-
+    // delivering/trending types, off-plan drift) folded together with each dimension's
+    // validation track record — instead of three overlapping context blocks.
+    const directivesContext = synthesizeCoachingDirectives(
+      deriveInsights(buildAthleteModel(scoreLog.entries)),
+      summariseValidation(interventionLog)
+    );
 
     // Live training zones from the physiology store, rendered for the prompt (these used to
     // live in athlete_profile.md but are now synced from Intervals.icu).
@@ -139,7 +127,7 @@ export async function POST(req: Request) {
     }
 
     const system = buildSystemPrompt(
-      kbContext + complianceContext + seedsContext + insightsContext + validationContext,
+      kbContext + seedsContext + directivesContext,
       buildAthleteDataSection(profile, sync, zonesText),
       blockParams
     );

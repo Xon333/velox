@@ -187,14 +187,3 @@ export function summariseValidation(log: InterventionLog): ValidationSummary {
   });
   return { byDimension, evaluated, pending };
 }
-
-// Compact directive block for the generation prompt — tells the model which past nudges
-// actually worked, so it can lean into what's validated and reconsider what's been refuted.
-export function validationToPromptBlock(summary: ValidationSummary): string {
-  if (summary.evaluated === 0) return "";
-  const lines = summary.byDimension
-    .filter((d) => d.hitRate !== null)
-    .map((d) => `- ${d.dimension}: past nudges worked ${Math.round((d.hitRate as number) * 100)}% of the time (${d.validated} validated / ${d.refuted} refuted)`);
-  if (lines.length === 0) return "";
-  return `\nINTERVENTION TRACK RECORD (which past coaching changes actually moved the needle — trust the validated dimensions, rethink the refuted)\n${lines.join("\n")}`;
-}

@@ -8,14 +8,12 @@ import {
   readAthleteProfile,
   readBlockHistory,
   readBlockSettings,
-  readComplianceMemory,
   readCurrentBlock,
   readInterventionLog,
   readLastSync,
   readScoreLog,
   writeInterventionLog,
   writeTodayAnalysis,
-  writeComplianceMemory,
   writeCurrentBlock,
   writeLastSync,
   writeRollingBaselines,
@@ -30,7 +28,7 @@ import { computeExecutionScore, resolveCompliance } from "@/lib/execution-score"
 import { buildRideScores, mergeScoreLog } from "@/lib/score-log";
 import { computeAcwr, computeFatigueAlert, computeIntensityDistribution, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
 import { resolveAcwrBands } from "@/lib/calibration";
-import type { ComplianceMemory, ExecutedInterval, TodayAnalysis, WorkoutType } from "@/lib/types";
+import type { ExecutedInterval, TodayAnalysis } from "@/lib/types";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -324,10 +322,6 @@ export async function POST() {
             }
           }
 
-          // Update compliance memory for the planned type (execution-capped value).
-          if (plannedDay && resolvedCompliancePct !== null) {
-            await updateComplianceMemory(plannedDay.type as WorkoutType, resolvedCompliancePct, today);
-          }
         } catch {
           // Analysis is best-effort — don't fail the whole sync.
         }
@@ -345,39 +339,6 @@ export async function POST() {
     const status = err instanceof IntervalsApiError && err.status === 401 ? 401 : 502;
     const message = err instanceof Error ? err.message : "Sync failed";
     return NextResponse.json({ error: message }, { status });
-  }
-}
-
-async function updateComplianceMemory(
-  type: WorkoutType,
-  compliancePct: number,
-  _date: string
-): Promise<void> {
-  try {
-    const memory = await readComplianceMemory();
-    const entry = memory.byType[type] ?? {
-      sessions: 0,
-      avgCompliancePct: 0,
-      recentCompliancePct: null,
-      highComplianceWorkouts: [],
-    };
-    const newCount = entry.sessions + 1;
-    const newAvg = Math.round((entry.avgCompliancePct * entry.sessions + compliancePct) / newCount);
-    const updated: ComplianceMemory = {
-      byType: {
-        ...memory.byType,
-        [type]: {
-          ...entry,
-          sessions: newCount,
-          avgCompliancePct: newAvg,
-          recentCompliancePct: compliancePct,
-        },
-      },
-      updatedAt: new Date().toISOString(),
-    };
-    await writeComplianceMemory(updated);
-  } catch {
-    // Non-critical, best-effort.
   }
 }
 
