@@ -172,15 +172,19 @@ export interface ExecutedInterval {
 export interface IntervalAdherence {
   targetWatts: number;
   actualWatts: number;
-  durationSec: number;
-  adherencePct: number; // actualWatts / targetWatts * 100
+  durationSec: number; // executed duration
+  targetDurationSec: number; // prescribed duration
+  adherencePct: number; // actualWatts / targetWatts * 100 (power only)
+  durationPct: number; // executed / prescribed duration * 100
 }
 export interface IntervalComparison {
   prescribedLabels: string[];
   reps: IntervalAdherence[];
-  completed: number; // executed work reps matched
+  completed: number; // reps that hit ≥90% of the prescribed duration (truly finished)
   total: number; // prescribed reps
-  avgAdherencePct: number;
+  avgAdherencePct: number; // avg power adherence across reps
+  avgDurationPct: number; // avg duration completion across reps
+  effectiveAdherencePct: number; // power × duration completion — what execution scoring uses
 }
 
 export interface CurrentBlockDay {

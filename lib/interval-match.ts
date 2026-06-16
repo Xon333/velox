@@ -29,23 +29,37 @@ export function matchPrescription(
   const n = Math.min(flat.length, work.length);
   for (let i = 0; i < n; i++) {
     const target = flat[i].targetWatts;
+    const targetDur = flat[i].durationSec;
     const actual = Math.round(power(work[i]));
+    const actualDur = work[i].durationSec;
     reps.push({
       targetWatts: target,
       actualWatts: actual,
-      durationSec: work[i].durationSec,
+      durationSec: actualDur,
+      targetDurationSec: targetDur,
       adherencePct: target > 0 ? Math.round((actual / target) * 100) : 0,
+      durationPct: targetDur > 0 ? Math.round((actualDur / targetDur) * 100) : 100,
     });
   }
 
-  const avgAdherencePct =
-    reps.length > 0 ? Math.round(reps.reduce((s, r) => s + r.adherencePct, 0) / reps.length) : 0;
+  const avg = (xs: number[]) => (xs.length > 0 ? Math.round(xs.reduce((s, v) => s + v, 0) / xs.length) : 0);
+  const avgAdherencePct = avg(reps.map((r) => r.adherencePct));
+  const avgDurationPct = avg(reps.map((r) => r.durationPct));
+  // Effective execution = power adherence scaled by how much of the prescribed duration was
+  // actually held (capped at 100% so an over-long rep isn't credited as extra). A rep nailed
+  // on watts but cut short is NOT a fully-executed rep — this is what scoring keys on.
+  const effectiveAdherencePct = avg(
+    reps.map((r) => Math.round(r.adherencePct * Math.min(1, r.durationPct / 100)))
+  );
 
   return {
     prescribedLabels: prescription.map((p) => p.label),
     reps,
-    completed: reps.length,
+    // Only reps that held ≥90% of the prescribed duration count as completed.
+    completed: reps.filter((r) => r.durationPct >= 90).length,
     total: flat.length,
     avgAdherencePct,
+    avgDurationPct,
+    effectiveAdherencePct,
   };
 }

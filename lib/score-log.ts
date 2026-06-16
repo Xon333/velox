@@ -4,7 +4,7 @@
 // on intrinsic quality (decoupling, pacing) against an inferred type. Each entry records the
 // FTP it used so the immutable ledger never re-shifts when FTP later changes.
 
-import { computeExecutionScore } from "./execution-score";
+import { computeExecutionScore, resolveCompliance } from "./execution-score";
 import { inferWorkoutType } from "./ride-classify";
 import type { ActivitySummary, BehaviourSummary, CurrentBlock, CurrentBlockDay, RideScoreEntry } from "./types";
 
@@ -52,9 +52,9 @@ export function buildRideScores(
     let entry: RideScoreEntry | null = null;
 
     if (planned) {
-      const compliancePct = planned.durationMin > 0 ? Math.round((actualMin / planned.durationMin) * 100) : null;
+      const durationCompliancePct = planned.durationMin > 0 ? Math.round((actualMin / planned.durationMin) * 100) : null;
       const executionScore = computeExecutionScore({
-        compliancePct,
+        compliancePct: durationCompliancePct,
         intensityFactor,
         plannedType: planned.type,
         decoupling: act.decoupling,
@@ -68,7 +68,8 @@ export function buildRideScores(
           inferredType: planned.type,
           planned: true,
           legacy: false,
-          compliancePct,
+          // Capped by execution so a poorly-executed session never reads as fully compliant.
+          compliancePct: resolveCompliance(durationCompliancePct, executionScore),
           intensityFactor,
           ftpUsed: ftp,
           durationMin: actualMin,

@@ -137,10 +137,14 @@ export function computeAcwr(
   return { acute: Math.round(acute), chronic: Math.round(chronic), ratio, level };
 }
 
-// Polarization check: share of training TIME spent easy / moderate / hard over the
-// window, by ride-average power vs FTP. ~80% easy is the endurance-base target.
+// Polarization check: share of training TIME spent easy / moderate / hard over the window.
+// Uses true time-in-zone from Intervals (Z1–2 easy, Z3 moderate, Z4+ hard) so a threshold
+// session with a long Z2 warm-up still registers its hard work — bucketing a whole ride by
+// its AVERAGE power hides the intensity (the average drifts down into "easy"). Falls back to
+// average power only for rides with no per-zone data (e.g. no power meter). ~80% easy is the
+// endurance-base target.
 export function computeIntensityDistribution(
-  activities: Array<{ date: string; movingTimeSec: number; avgWatts: number | null }>,
+  activities: Array<{ date: string; movingTimeSec: number; avgWatts: number | null; powerZoneTimes?: number[] | null }>,
   ftp: number,
   days = 7
 ): IntensityDistribution | null {
@@ -151,11 +155,18 @@ export function computeIntensityDistribution(
   let moderate = 0;
   let hard = 0;
   for (const a of activities) {
-    if (a.date < from || a.date > today || a.avgWatts === null || a.movingTimeSec <= 0) continue;
-    const r = a.avgWatts / ftp;
-    if (r < 0.75) easy += a.movingTimeSec;
-    else if (r < 0.9) moderate += a.movingTimeSec;
-    else hard += a.movingTimeSec;
+    if (a.date < from || a.date > today) continue;
+    const z = a.powerZoneTimes;
+    if (z && z.length >= 4 && z.some((t) => t > 0)) {
+      easy += (z[0] ?? 0) + (z[1] ?? 0);
+      moderate += z[2] ?? 0;
+      hard += (z[3] ?? 0) + (z[4] ?? 0) + (z[5] ?? 0) + (z[6] ?? 0);
+    } else if (a.avgWatts !== null && a.movingTimeSec > 0) {
+      const r = a.avgWatts / ftp;
+      if (r < 0.75) easy += a.movingTimeSec;
+      else if (r < 0.9) moderate += a.movingTimeSec;
+      else hard += a.movingTimeSec;
+    }
   }
   const total = easy + moderate + hard;
   if (total === 0) return null;

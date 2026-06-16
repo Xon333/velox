@@ -41,6 +41,16 @@ describe("matchPrescription", () => {
     expect(c!.total).toBe(3);
   });
 
+  it("accounts for duration: reps nailed on watts but cut short aren't 'completed'", () => {
+    // 2×20m @ 274W, but rep 1 held only 14:00 and rep 2 only 10:00.
+    const c = matchPrescription([presc(2, 274)], [ex("WORK", 275, 840), ex("WORK", 258, 600)]);
+    expect(c!.reps.map((r) => r.durationPct)).toEqual([70, 50]);
+    expect(c!.avgAdherencePct).toBe(97); // power adherence alone still looks strong…
+    expect(c!.completed).toBe(0); // …but neither rep held ≥90% of the prescribed duration
+    expect(c!.avgDurationPct).toBe(60);
+    expect(c!.effectiveAdherencePct).toBeLessThan(c!.avgAdherencePct); // duration drags execution down
+  });
+
   it("returns null with no prescription", () => {
     expect(matchPrescription([], [ex("WORK", 290)])).toBeNull();
   });

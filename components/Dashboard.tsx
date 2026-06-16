@@ -436,22 +436,38 @@ function TodayRideCard({
                     </span>
                   ))}
                 </div>
-                <span className="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-                  {analysis.intervalComparison.completed}/{analysis.intervalComparison.total} · {analysis.intervalComparison.avgAdherencePct}%
+                <span
+                  className="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-200"
+                  title="reps that held ≥90% of prescribed duration · power × duration completion"
+                >
+                  {analysis.intervalComparison.completed}/{analysis.intervalComparison.total} · {analysis.intervalComparison.effectiveAdherencePct}%
                 </span>
               </div>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {analysis.intervalComparison.reps.map((r, i) => {
-                  const cls =
-                    r.adherencePct >= 97
+                  const band = (pct: number) =>
+                    pct >= 97
                       ? "text-green-700 dark:text-green-400"
-                      : r.adherencePct >= 90
+                      : pct >= 90
                       ? "text-amber-700 dark:text-amber-400"
                       : "text-red-600 dark:text-red-400";
+                  const durBand =
+                    r.durationPct >= 90
+                      ? "text-green-700 dark:text-green-400"
+                      : r.durationPct >= 60
+                      ? "text-amber-700 dark:text-amber-400"
+                      : "text-red-600 dark:text-red-400";
+                  const mins = Math.floor(r.durationSec / 60);
+                  const secs = String(Math.round(r.durationSec % 60)).padStart(2, "0");
                   return (
-                    <span key={i} className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
+                    <span
+                      key={i}
+                      title={`held ${r.durationPct}% of the prescribed ${Math.round(r.targetDurationSec / 60)} min`}
+                      className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] dark:bg-zinc-800"
+                    >
                       <span className="text-zinc-700 dark:text-zinc-200">{r.actualWatts}W</span>{" "}
-                      <span className={cls}>{r.adherencePct}%</span>
+                      <span className={band(r.adherencePct)}>{r.adherencePct}%</span>{" "}
+                      <span className={durBand}>{mins}:{secs}</span>
                     </span>
                   );
                 })}

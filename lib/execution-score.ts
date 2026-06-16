@@ -128,3 +128,17 @@ export function executionScoreLabel(score: number): string {
   if (score >= 3) return "Below target";
   return "Poor";
 }
+
+// Compliance and execution are distinct axes — compliance is macro ("did you complete the
+// prescribed session?"), execution is granular quality (1–10). But they are not independent
+// when execution is poor: a session executed below "adequate" (5/10) was not truly carried
+// out, so its compliance is capped by execution. This is the trust guarantee — 100%
+// compliance can never sit next to a 1/10 execution. Above adequate the axes stand alone.
+// Deterministic and defensive: null-safe, clamps negatives, caps overshoot at 100%.
+export function resolveCompliance(durationCompliancePct: number | null, executionScore: number | null): number | null {
+  if (durationCompliancePct === null) return null;
+  const dur = Math.max(0, durationCompliancePct);
+  if (executionScore === null) return Math.min(dur, 100);
+  const ceiling = executionScore >= 5 ? 100 : Math.round(executionScore * 18); // 1→18 … 4→72
+  return Math.min(dur, ceiling);
+}

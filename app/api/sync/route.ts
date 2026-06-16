@@ -26,7 +26,7 @@ import { analyseRide, buildRideAnalysisInput, isAnthropicConfigured } from "@/li
 import { buildAthleteModel } from "@/lib/athlete-model";
 import { validateInterventions } from "@/lib/intervention";
 import { adjustBuffer, weightTrendFromWellness } from "@/lib/nutrition";
-import { computeExecutionScore } from "@/lib/execution-score";
+import { computeExecutionScore, resolveCompliance } from "@/lib/execution-score";
 import { buildRideScores, mergeScoreLog } from "@/lib/score-log";
 import { computeAcwr, computeFatigueAlert, computeIntensityDistribution, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
 import type { ComplianceMemory, ExecutedInterval, TodayAnalysis, WorkoutType } from "@/lib/types";
@@ -238,9 +238,14 @@ export async function POST() {
             plannedType: plannedDay?.type ?? null,
             decoupling: todayActivity.decoupling,
             variabilityIndex,
-            adherencePct: intervalComparison?.avgAdherencePct ?? null,
+            // Duration-aware: a rep nailed on watts but cut short scores lower than a full one.
+            adherencePct: intervalComparison?.effectiveAdherencePct ?? null,
             rpe: todayActivity.rpe,
           });
+
+          // Compliance is the macro "did you complete the session" number, but capped by
+          // execution so it can never contradict a poor execution (the trust guarantee).
+          const resolvedCompliancePct = resolveCompliance(compliancePct, executionScore);
 
           const input = buildRideAnalysisInput(
             todayActivity,
@@ -270,7 +275,7 @@ export async function POST() {
             plannedName: plannedDay?.name ?? null,
             plannedType: plannedDay?.type ?? null,
             plannedDurationMin: plannedDay?.durationMin ?? null,
-            compliancePct,
+            compliancePct: resolvedCompliancePct,
             intensityFactor,
             advisedIntakeKcal,
             advisedBaseKcal,
@@ -286,6 +291,24 @@ export async function POST() {
           };
           await writeTodayAnalysis(todayAnalysis);
 
+          // Keep the ledger's entry for today consistent with this richer, interval-aware
+          // analysis. buildRideScores can't see interval bails (it doesn't fetch per-ride
+          // intervals); this can — so today's execution + capped compliance match across the
+          // Today card, the Plan calendar, the trend pulse, and Trends.
+          try {
+            if (executionScore !== null) {
+              const log = await readScoreLog();
+              const patched = log.entries.map((e) =>
+                e.date === today && !e.legacy
+                  ? { ...e, executionScore, compliancePct: resolvedCompliancePct }
+                  : e
+              );
+              await writeScoreLog({ entries: patched, updatedAt: new Date().toISOString() });
+            }
+          } catch {
+            // Best-effort — the ledger already has a coarse entry from buildRideScores.
+          }
+
           // Auto-post the coach note to Intervals.icu if the athlete opted in (once/day).
           if (coachNote && firstAnalysisToday) {
             const settings = await readBlockSettings();
@@ -300,9 +323,9 @@ export async function POST() {
             }
           }
 
-          // Update compliance memory for the planned type.
-          if (plannedDay && compliancePct !== null) {
-            await updateComplianceMemory(plannedDay.type as WorkoutType, compliancePct, today);
+          // Update compliance memory for the planned type (execution-capped value).
+          if (plannedDay && resolvedCompliancePct !== null) {
+            await updateComplianceMemory(plannedDay.type as WorkoutType, resolvedCompliancePct, today);
           }
         } catch {
           // Analysis is best-effort — don't fail the whole sync.

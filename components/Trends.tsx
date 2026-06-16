@@ -7,6 +7,7 @@ import { TYPE_STYLES } from "@/lib/workout-types";
 import Sparkline, { type SparkPoint } from "./Sparkline";
 import MultiSparkline, { type MultiSeries } from "./MultiSparkline";
 import { Card, StatTile, CyberFrame } from "./ui";
+import { useSync } from "./SyncProvider";
 
 type Point = SparkPoint;
 interface TrendBlock {
@@ -203,16 +204,25 @@ function baselineCards(b: RollingBaselines) {
 export default function Trends() {
   const [data, setData] = useState<TrendsData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Re-fetch whenever a sync completes so execution quality + compliance-by-type reflect the
+  // latest scores rather than going stale after the page first mounted.
+  const { state } = useSync();
+  const syncedAt = state?.lastSync?.syncedAt ?? null;
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
-        setData(await api<TrendsData>("/api/trends"));
+        const d = await api<TrendsData>("/api/trends");
+        if (!cancelled) setData(d);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load trends");
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load trends");
       }
     })();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [syncedAt]);
 
   if (error) {
     return (

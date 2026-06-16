@@ -317,8 +317,16 @@ export interface RideAnalysisInput {
 
 function fmtIntervals(c: IntervalComparison | null): string | null {
   if (!c || c.reps.length === 0) return null;
-  const execs = c.reps.map((r) => `${r.actualWatts}W (${r.adherencePct}%)`).join(", ");
-  return `Intervals: prescribed ${c.prescribedLabels.join(" + ")} → executed ${execs}; ${c.completed}/${c.total} reps done, avg ${c.avgAdherencePct}% of target.`;
+  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+  // Include BOTH power and duration per rep — a rep at target watts but cut short is not a
+  // full rep, and the coach note must reflect that rather than calling it textbook.
+  const execs = c.reps
+    .map(
+      (r) =>
+        `${r.actualWatts}W/${r.adherencePct}% power, ${mmss(r.durationSec)} of ${mmss(r.targetDurationSec)}/${r.durationPct}% duration`
+    )
+    .join("; ");
+  return `Intervals: prescribed ${c.prescribedLabels.join(" + ")} → executed ${execs}. ${c.completed}/${c.total} reps held full duration; avg ${c.avgAdherencePct}% power, ${c.avgDurationPct}% duration.`;
 }
 
 function fmtZones(times: number[], prefix: string): string | null {
@@ -381,7 +389,7 @@ export async function analyseRide(input: RideAnalysisInput): Promise<string> {
     : null;
 
   const prompt = [
-    "You are a cycling coach. Review today's ride vs the plan in 2–3 sentences. Power is the primary lens: if interval adherence is given, lead with how execution matched the prescribed power targets. Use HR and decoupling only to judge aerobic efficiency. Be direct: execution quality, any notable deviation, and one concrete takeaway for next session. If the athlete left a note, factor it in. No greeting, no fluff, and do not restate the prescription verbatim.",
+    "You are a cycling coach. Review today's ride vs the plan in 2–3 sentences. Power is the primary lens: if interval adherence is given, judge execution on BOTH the power hit AND whether each rep held its prescribed duration — a rep at target watts but cut short is NOT full execution, so don't call it textbook. Use HR and decoupling only to judge aerobic efficiency. Be direct: execution quality, any notable deviation, and one concrete takeaway for next session. If the athlete left a note, factor it in. No greeting, no fluff, and do not restate the prescription verbatim.",
     "",
     planned,
     header,

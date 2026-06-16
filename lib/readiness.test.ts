@@ -95,6 +95,26 @@ describe("computeIntensityDistribution", () => {
     expect(d.hardPct).toBe(20);
   });
 
+  it("uses true time-in-zone so a threshold ride doesn't read as all-easy", () => {
+    // Average power is sub-threshold (200/288 ≈ 0.69 → the old avg-power logic would log this
+    // 100% easy), but the session has real Z4 work. Zone seconds: [Z1..Z7].
+    const activities = [
+      { date: daysAgo(1), movingTimeSec: 3600, avgWatts: 200, powerZoneTimes: [600, 2000, 100, 800, 60, 40, 0] },
+    ];
+    const d = computeIntensityDistribution(activities, 288)!;
+    expect(d.easyPct).toBe(72); // Z1+Z2 = 2600/3600
+    expect(d.moderatePct).toBe(3); // Z3 = 100/3600
+    expect(d.hardPct).toBe(25); // Z4..Z7 = 900/3600
+  });
+
+  it("falls back to average power when a ride has no per-zone data", () => {
+    const d = computeIntensityDistribution(
+      [{ date: daysAgo(1), movingTimeSec: 3600, avgWatts: 280, powerZoneTimes: null }],
+      288
+    )!;
+    expect(d.hardPct).toBe(100); // 280/288 > 0.90
+  });
+
   it("returns null when FTP is unknown", () => {
     expect(computeIntensityDistribution([{ date: daysAgo(1), movingTimeSec: 100, avgWatts: 150 }], 0)).toBeNull();
   });

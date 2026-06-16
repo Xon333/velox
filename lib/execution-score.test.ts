@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeExecutionScore, executionScoreLabel, type ExecutionScoreInput } from "./execution-score";
+import { computeExecutionScore, executionScoreLabel, resolveCompliance, type ExecutionScoreInput } from "./execution-score";
 
 const base: ExecutionScoreInput = {
   compliancePct: null,
@@ -161,6 +161,26 @@ describe("intrinsic (off-plan) scoring", () => {
     const tight = computeExecutionScore({ ...base, intensityFactor: 0.7, plannedType: "Z2", decoupling: 1, intrinsic: true })!;
     const drifty = computeExecutionScore({ ...base, intensityFactor: 0.7, plannedType: "Z2", decoupling: 12, intrinsic: true })!;
     expect(tight).toBeGreaterThan(drifty);
+  });
+});
+
+describe("resolveCompliance", () => {
+  it("leaves compliance alone when execution is adequate or unknown", () => {
+    expect(resolveCompliance(100, null)).toBe(100);
+    expect(resolveCompliance(100, 5)).toBe(100);
+    expect(resolveCompliance(90, 8)).toBe(90);
+  });
+
+  it("caps compliance when execution is poor — no 100% next to a 1/10", () => {
+    expect(resolveCompliance(100, 1)).toBe(18);
+    expect(resolveCompliance(100, 3)).toBe(54);
+    expect(resolveCompliance(100, 4)).toBe(72);
+  });
+
+  it("never raises compliance and is null/overshoot safe", () => {
+    expect(resolveCompliance(40, 3)).toBe(40); // already below the ceiling
+    expect(resolveCompliance(130, 8)).toBe(100); // overshoot capped at 100
+    expect(resolveCompliance(null, 5)).toBeNull();
   });
 });
 
