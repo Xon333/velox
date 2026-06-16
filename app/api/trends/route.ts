@@ -4,24 +4,27 @@ import {
   readBlockHistory,
   readInterventionLog,
   readLastSync,
+  readRideFeedback,
   readRollingBaselines,
   readScoreLog,
 } from "@/lib/data-store";
 import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
 import { summariseValidation } from "@/lib/intervention";
+import { summariseFeedback } from "@/lib/feedback";
 import { weightTrendFromWellness } from "@/lib/nutrition";
 
 // GET assembles the long-term, second-brain-derived trends. It deliberately does
 // NOT reproduce intervals.icu's raw PMC/power-curve charts — only signals that
 // tie training execution to the athlete's own blocks and adaptation.
 export async function GET() {
-  const [sync, profile, history, baselines, scoreLog, interventionLog] = await Promise.all([
+  const [sync, profile, history, baselines, scoreLog, interventionLog, feedbackLog] = await Promise.all([
     readLastSync(),
     readAthleteProfile(),
     readBlockHistory(),
     readRollingBaselines(),
     readScoreLog(),
     readInterventionLog(),
+    readRideFeedback(),
   ]);
 
   const ftp = profile.performance.ftp;
@@ -173,6 +176,7 @@ export async function GET() {
     recent,
     validation,
     recentInterventions,
+    feedback: summariseFeedback(feedbackLog.entries),
     syncedAt: sync?.syncedAt ?? null,
   });
 }

@@ -7,7 +7,8 @@ import {
   generateTrainingBlock,
   isAnthropicConfigured,
 } from "@/lib/anthropic-api";
-import { readAthleteProfile, readBlockSettings, readComplianceMemory, readInterventionLog, readLastSync, readScoreLog } from "@/lib/data-store";
+import { readAthleteProfile, readBlockSettings, readComplianceMemory, readInterventionLog, readLastSync, readRideFeedback, readScoreLog } from "@/lib/data-store";
+import { feedbackToPromptBlock, summariseFeedback } from "@/lib/feedback";
 import { latestRetrospectiveSeeds, loadKnowledgeBaseContext } from "@/lib/kb-loader";
 import { readPhysiology, resolveHrZones, resolvePowerZones } from "@/lib/physiology";
 import { buildAthleteModel, deriveInsights, insightsToPromptBlock } from "@/lib/athlete-model";
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
 
   try {
     // Knowledge base is read fresh every call so manager edits apply immediately.
-    const [profile, sync, kbContext, blockSettings, complianceMemory, retroSeeds, scoreLog, physStore, interventionLog] = await Promise.all([
+    const [profile, sync, kbContext, blockSettings, complianceMemory, retroSeeds, scoreLog, physStore, interventionLog, feedbackLog] = await Promise.all([
       readAthleteProfile(),
       readLastSync(),
       loadKnowledgeBaseContext(),
@@ -73,6 +74,7 @@ export async function POST(req: Request) {
       readScoreLog(),
       readPhysiology(),
       readInterventionLog(),
+      readRideFeedback(),
     ]);
 
     const weightTrend = (sync ? weightTrendFromWellness(sync.wellness) : null) ?? 0;
@@ -121,6 +123,10 @@ export async function POST(req: Request) {
     // the model trust validated dimensions and reconsider refuted ones (closed loop).
     const validationContext = validationToPromptBlock(summariseValidation(interventionLog));
 
+    // Recent athlete-reported feel (RPE / legs / gut comfort) — the subjective half of the
+    // learning loop, weighed against the objective ledger.
+    const feedbackContext = feedbackToPromptBlock(summariseFeedback(feedbackLog.entries));
+
     // Live training zones from the physiology store, rendered for the prompt (these used to
     // live in athlete_profile.md but are now synced from Intervals.icu).
     const fmtZoneRange = (z: Zone, unit: string) =>
@@ -139,7 +145,7 @@ export async function POST(req: Request) {
     }
 
     const system = buildSystemPrompt(
-      kbContext + complianceContext + seedsContext + insightsContext + validationContext,
+      kbContext + complianceContext + seedsContext + insightsContext + validationContext + feedbackContext,
       buildAthleteDataSection(profile, sync, zonesText),
       blockParams
     );
