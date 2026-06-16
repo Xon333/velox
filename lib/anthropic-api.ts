@@ -550,38 +550,51 @@ export async function generateTrainingBlock(
 
 // ---------- Low-token "ask coach" spot-checks ----------
 
-export interface AskCoachSession {
-  name: string;
-  type: string;
-  durationMin: number;
-  intervals: string[]; // prescribed interval labels, e.g. ["2×20m @ 274W"]
+export interface AskCoachContext {
+  // Current block position — so answers respect where the athlete is in their periodization.
+  block: { goal: string; weekOfBlock: number; totalWeeks: number; overview: string } | null;
+  // Today's prescribed session (null on a rest/unplanned day).
+  session: { name: string; type: string; durationMin: number; intervals: string[] } | null;
+  form: string | null; // pre-formatted current state, e.g. "TSB +3, ACWR optimal, readiness Build"
+  ftp: number | null;
+  rideLogged: string | null; // note if today's ride is already done
 }
 
-// Pure prompt builder — injects ONLY today's session + the athlete's question (and any context
-// they typed, e.g. weather), never the historical ledger. Kept tiny on purpose so these
-// spot-checks stay cheap and fast. Deterministic so it's unit-testable.
-export function buildAskCoachPrompt(session: AskCoachSession | null, query: string): string {
-  const today = session
-    ? `Today's planned session: ${session.type} — "${session.name}" (${session.durationMin} min)` +
-      (session.intervals.length > 0 ? `\nPrescribed intervals: ${session.intervals.join(", ")}` : "")
-    : "No structured session is planned today.";
-  return [
-    "You are the athlete's cycling coach. Answer their question about today in 2–4 short, practical sentences — concrete and decisive, no preamble or caveats. Use only the session context and what they tell you in the question; do not ask for more data.",
+// Pure prompt builder — injects today's session, the block it sits in, and current form
+// (the same situational data the ride analysis uses), but NOT the full historical ledger, so
+// spot-checks stay cheap. Deterministic + unit-testable.
+export function buildAskCoachPrompt(ctx: AskCoachContext, query: string): string {
+  const lines: string[] = [
+    "You are the athlete's cycling coach. Answer their question in 2–4 short, practical, decisive sentences. Use the situation below plus whatever they tell you in the question (e.g. weather, how they feel) — don't ask for more data.",
     "",
-    today,
-    "",
-    `Question: ${query.trim()}`,
-  ].join("\n");
+  ];
+  if (ctx.block) {
+    lines.push(
+      `Block: "${ctx.block.goal}" — week ${ctx.block.weekOfBlock} of ${ctx.block.totalWeeks}.` +
+        (ctx.block.overview ? ` ${ctx.block.overview}` : "")
+    );
+  }
+  lines.push(
+    ctx.session
+      ? `Today's session: ${ctx.session.type} — "${ctx.session.name}" (${ctx.session.durationMin} min)` +
+          (ctx.session.intervals.length > 0 ? `; intervals ${ctx.session.intervals.join(", ")}` : "")
+      : "No structured session is planned today."
+  );
+  if (ctx.form) lines.push(`Current form: ${ctx.form}.`);
+  if (ctx.ftp) lines.push(`FTP: ${ctx.ftp} W.`);
+  if (ctx.rideLogged) lines.push(ctx.rideLogged);
+  lines.push("", `Question: ${query.trim()}`);
+  return lines.join("\n");
 }
 
-export async function askCoach(session: AskCoachSession | null, query: string): Promise<string> {
+export async function askCoach(ctx: AskCoachContext, query: string): Promise<string> {
   if (!isAnthropicConfigured()) throw new Error("Anthropic API is not configured.");
   const client = new Anthropic();
   const response = await client.messages.create({
     model: QUICK_MODEL,
     max_tokens: 320,
     temperature: 0.4,
-    messages: [{ role: "user", content: buildAskCoachPrompt(session, query) }],
+    messages: [{ role: "user", content: buildAskCoachPrompt(ctx, query) }],
   });
   return response.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
