@@ -116,20 +116,6 @@ export async function GET() {
     nextBlockSeeds: h.nextBlockSeeds ?? null,
   }));
 
-  // Cumulative compliance by type, derived from the per-ride score log (which
-  // backfills every matched planned day on each sync) rather than compliance-memory
-  // (which only records today's ride at sync time and is therefore gappy).
-  const compAgg = new Map<string, { sum: number; n: number }>();
-  for (const e of scoreLog.entries) {
-    if (e.compliancePct === null || e.plannedType === null) continue; // off-plan rides have no compliance
-    const a = compAgg.get(e.plannedType) ?? { sum: 0, n: 0 };
-    a.sum += e.compliancePct;
-    a.n += 1;
-    compAgg.set(e.plannedType, a);
-  }
-  const complianceByType = [...compAgg.entries()]
-    .map(([type, a]) => ({ type, avgCompliancePct: Math.round(a.sum / a.n), sessions: a.n }))
-    .sort((a, b) => b.sessions - a.sessions);
 
   // Learned coaching insights from the execution history (the "second brain").
   const insights = deriveInsights(buildAthleteModel(scoreLog.entries));
@@ -179,7 +165,6 @@ export async function GET() {
     ctl,
     energy,
     blocks,
-    complianceByType,
     baselines,
     // Execution-quality metric excludes legacy (pre-first-block) rides — they remain stored
     // in the ledger as history, they just don't count toward the metric or the drift signal.

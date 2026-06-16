@@ -304,18 +304,9 @@ function TodayRideCard({
     ? TYPE_STYLES[analysis.plannedType as keyof typeof TYPE_STYLES] ?? TYPE_STYLES.Z2
     : null;
 
-  const complianceColor =
-    analysis.compliancePct == null
-      ? ""
-      : analysis.compliancePct >= 90
-      ? "text-green-700 dark:text-green-400"
-      : analysis.compliancePct >= 70
-      ? "text-amber-700 dark:text-amber-400"
-      : "text-red-600 dark:text-red-400";
-
+  // Compliance % removed — execution (the duration/completion-aware 1–10 shown above) is the
+  // single completion-anchored index; a separate macro % only duplicated the same story.
   const metrics: Array<{ label: string; value: string; highlight?: string }> = [];
-  if (analysis.compliancePct != null)
-    metrics.push({ label: "Compliance", value: `${analysis.compliancePct}%`, highlight: complianceColor });
   if (analysis.intensityFactor != null)
     metrics.push({ label: "IF", value: analysis.intensityFactor.toFixed(2) });
   if (analysis.activityNormalizedPower != null)

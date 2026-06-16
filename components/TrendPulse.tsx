@@ -62,15 +62,14 @@ export default function TrendPulse({ vertical }: { vertical?: boolean }) {
   const ef = data.ef.map((p) => p.value);
   const ctl = data.ctl.map((p) => p.value);
   const exec = data.scores.map((s) => s.executionScore);
-  const comp = data.scores.map((s) => s.compliancePct).filter((v): v is number => v !== null);
-  const compAvg = comp.length ? Math.round(comp.reduce((s, v) => s + v, 0) / comp.length) : null;
 
+  // Execution (1–10, duration/completion-aware) is the single completion-anchored index —
+  // the old separate "Compliance %" tile was removed to avoid two metrics telling one story.
   return (
-    <div className={`grid gap-2 ${vertical ? "grid-cols-2 lg:grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}>
+    <div className={`grid gap-2 ${vertical ? "grid-cols-2 lg:grid-cols-1" : "grid-cols-3 sm:grid-cols-3"}`}>
       <TrendTile label="Pw:HR" value={ef.length ? ef[ef.length - 1].toFixed(2) : "—"} points={ef} delta={delta(ef)} onClick={go} />
       <TrendTile label="CTL" value={ctl.length ? ctl[ctl.length - 1].toFixed(0) : "—"} points={ctl} delta={delta(ctl)} onClick={go} />
       <TrendTile label="Execution" value={exec.length ? `${exec[exec.length - 1].toFixed(1)}/10` : "—"} points={exec} delta={delta(exec)} onClick={go} />
-      <TrendTile label="Compliance" value={compAvg !== null ? `${compAvg}%` : "—"} points={comp} delta={delta(comp)} onClick={go} />
     </div>
   );
 }

@@ -21,11 +21,6 @@ interface TrendBlock {
   plannedHours: number | null;
   nextBlockSeeds: string[] | null;
 }
-interface ComplianceRow {
-  type: string;
-  avgCompliancePct: number | null;
-  sessions: number;
-}
 interface ScoreEntry {
   date: string;
   executionScore: number;
@@ -64,7 +59,6 @@ interface TrendsData {
   ctl: Point[];
   energy: EnergyRow[];
   blocks: TrendBlock[];
-  complianceByType: ComplianceRow[];
   baselines: RollingBaselines;
   scores: ScoreEntry[];
   insights: Insight[];
@@ -424,35 +418,12 @@ export default function Trends() {
         </div>
       )}
 
-      {/* Execution pair — per-ride quality vs. compliance by type, side by side */}
-      {(data.scores.length >= 2 || data.complianceByType.length > 0) && (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {data.scores.length >= 2 && (
-            <Card title="Execution quality" hint="per-ride score, accumulating">
-              <ScoreBars scores={data.scores} />
-            </Card>
-          )}
-          {data.complianceByType.length > 0 && (
-            <Card title="Compliance by session type" hint="all logged sessions">
-              <div className="space-y-1.5">
-                {data.complianceByType.map((c) => {
-                  const pct = c.avgCompliancePct ?? 0;
-                  const barCls = pct >= 90 ? "bg-green-400 dark:bg-emerald-500/70" : pct >= 75 ? "bg-amber-400 dark:bg-amber-500" : "bg-red-400 dark:bg-red-500";
-                  return (
-                    <div key={c.type} className="flex items-center gap-2">
-                      <span className="w-20 shrink-0 text-xs text-zinc-600 dark:text-zinc-400">{c.type}</span>
-                      <div className="h-2.5 flex-1 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-900">
-                        <div className={`h-full ${barCls}`} style={{ width: `${Math.min(100, pct)}%` }} />
-                      </div>
-                      <span className="w-8 shrink-0 text-right font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300">{pct}%</span>
-                      <span className="w-12 shrink-0 text-right text-[10px] text-zinc-400 dark:text-zinc-500">{c.sessions}×</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          )}
-        </div>
+      {/* Execution quality — the single completion-anchored index (duration-aware, capped).
+          The old "compliance by session type" card was removed: it told the same story. */}
+      {data.scores.length >= 2 && (
+        <Card title="Execution quality" hint="per-ride completion score, accumulating">
+          <ScoreBars scores={data.scores} />
+        </Card>
       )}
 
       {/* Fueling & weight — kept wide; it carries three weekly series */}
