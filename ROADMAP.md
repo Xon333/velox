@@ -67,20 +67,10 @@ generation/readiness. This is the heart of the goal.
 
 ## UI refinements (from the Images 1–5 audit)
 
-- **Readiness card (Img 1) — trim bloat:** keep the verdict + TSB + ACWR + Polarization (decision-
-  relevant); demote CTL/ATL/7-day-hours to Trends (status, not a daily decision).
-- **Trend Pulse (Img 5) — redesign:** keep CTL; replace the Pw:HR + Execution tiles (both already
-  on Trends) with a **weekly-volume bar** (~8 wk hours) and a **time-in-zones mini-bar** (polarization
-  split) — the two things a glance should answer.
-- **Trends Execution-Quality + Recent-Baselines (Img 4) — compact layout:** they're full-width and
-  sparse; pair into a 2-column row or square cards.
-- **Recent Baselines replacement metric (Img 4):** Avg CTL removed (done); fill the slot with a
-  higher-value baseline — **weekly ride hours**, **off-plan %** (behaviour signal already computed),
-  or **20-min power / w·kg**.
-- **Profile (Img 3) — spacing:** larger section gaps + `leading-relaxed` on the prose blobs + a
-  hairline divider after the PR bracket. No logic change.
-- **Interval-execution completion % (Img 2):** make the "41%" a `MetricTip` hover explaining
-  power × duration completion (component already exists).
+Most of these shipped — see "Done recently". Remaining:
+- **Interval-execution completion % (Img 2):** the bracket header has a native `title` tooltip;
+  upgrading it to the styled `MetricTip` popup (to match the readiness hovers) is a minor nicety,
+  not yet done.
 
 ---
 
@@ -109,6 +99,10 @@ than producing a flawed number. Small, zero-hallucination-correct.
 ---
 
 ## Done recently (context)
+- **UI refinements (Images 1–5):** readiness card trimmed to TSB/ACWR/Polarization; Trend Pulse
+  reworked to CTL + weekly-volume bar + time-in-zones bar; Trends Execution-Quality + Recent-
+  Baselines compacted into a 2-col pair, with Weekly hours replacing Avg CTL; Profile modernized
+  (eyebrow headings, hairline dividers, looser spacing) to match the other pages.
 - Session **disposition flag + learning gate** (roadmap #3, first half): athlete marks
   Completed/Partial/Compromised(reason) on the ride card; compromised rides are kept as history
   but excluded from the execution EWMA + execution-quality metric, and surfaced to Ask-Coach so a
