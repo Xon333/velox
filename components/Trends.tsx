@@ -65,6 +65,9 @@ interface TrendsData {
   recent: RecentSnapshot | null;
   validation: ValidationData | null;
   recentInterventions: InterventionRow[];
+  weeklyHours: Array<{ date: string; hours: number }>;
+  zones: number[];
+  behaviour: { avgWeeklyHours: number | null; offPlanPct: number } | null;
   syncedAt: string | null;
 }
 
@@ -184,10 +187,12 @@ function ScoreBars({ scores }: { scores: ScoreEntry[] }) {
   );
 }
 
-function baselineCards(b: RollingBaselines) {
+function baselineCards(b: RollingBaselines, behaviour: TrendsData["behaviour"]) {
   const cards: Array<{ label: string; value: string }> = [];
-  // Avg CTL removed — redundant with the CTL graph + live CTL on the readiness card.
+  // Avg CTL removed — redundant with the CTL graph. Replaced with weekly volume: a higher-value,
+  // training-behaviour metric Intervals doesn't foreground the same way.
   if (b.avgTss90d != null) cards.push({ label: "Avg TSS / ride", value: String(Math.round(b.avgTss90d)) });
+  if (behaviour?.avgWeeklyHours != null) cards.push({ label: "Weekly hours", value: `${behaviour.avgWeeklyHours.toFixed(1)} h` });
   if (b.avgDecoupling90d != null) cards.push({ label: "Avg decoupling", value: `${b.avgDecoupling90d.toFixed(1)}%` });
   if (b.avgCadence90d != null) cards.push({ label: "Avg cadence", value: `${Math.round(b.avgCadence90d)} rpm` });
   return cards;
@@ -230,7 +235,7 @@ export default function Trends() {
   const noData = !data.syncedAt;
   const efTrend = trendDir(data.ef, true);
   const ctlTrend = trendDir(data.ctl, true);
-  const cards = baselineCards(data.baselines);
+  const cards = baselineCards(data.baselines, data.behaviour);
 
   const kcal = (v: number) => `${Math.round(v).toLocaleString()} kcal`;
   const energySeries: MultiSeries[] = [
@@ -419,12 +424,24 @@ export default function Trends() {
         </div>
       )}
 
-      {/* Execution quality — the single completion-anchored index (duration-aware, capped).
-          The old "compliance by session type" card was removed: it told the same story. */}
-      {data.scores.length >= 2 && (
-        <Card title="Execution quality" hint="per-ride completion score, accumulating">
-          <ScoreBars scores={data.scores} />
-        </Card>
+      {/* Execution quality + recent baselines — compact pair so they stop spreading wide. */}
+      {(data.scores.length >= 2 || cards.length > 0) && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {data.scores.length >= 2 && (
+            <Card title="Execution quality" hint="per-ride completion score">
+              <ScoreBars scores={data.scores} />
+            </Card>
+          )}
+          {cards.length > 0 && (
+            <Card title="Recent baselines" hint="rolling 90 days">
+              <div className="grid grid-cols-2 gap-2">
+                {cards.map((c) => (
+                  <StatTile key={c.label} label={c.label} value={c.value} />
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Fueling & weight — kept wide; it carries three weekly series */}
@@ -434,16 +451,6 @@ export default function Trends() {
           <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
             Per week: total ride burn (kJ≈kcal) and total intake against the week&apos;s median weight, each on its own scale. Fills in over a few weeks. Tap a legend chip to show/hide; isolating one fills the area.
           </p>
-        </Card>
-      )}
-
-      {cards.length > 0 && (
-        <Card title="Recent baselines" hint="rolling 90 days">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {cards.map((c) => (
-              <StatTile key={c.label} label={c.label} value={c.value} />
-            ))}
-          </div>
         </Card>
       )}
 

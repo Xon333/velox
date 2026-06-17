@@ -798,32 +798,23 @@ function RecentDataSummary({
   bare?: boolean;
 }) {
   if (!sync) return null;
-  const today = todayIso();
   const cutoff7 = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
   const cutoff14 = new Date(Date.now() - 14 * 86_400_000).toISOString().slice(0, 10);
-  const hours7 =
-    sync.activities
-      .filter((a) => a.date >= cutoff7 && a.date <= today)
-      .reduce((s, a) => s + a.movingTimeSec, 0) / 3600;
 
-  // Wellness sorted newest-first for trend deltas.
+  // Wellness sorted newest-first for the form (TSB) trend delta.
   const wSorted = [...sync.wellness].sort((a, b) => b.date.localeCompare(a.date));
   const latest7d = wSorted.find((w) => w.date >= cutoff7 && w.ctl !== null);
   const week2Ago = wSorted.find((w) => w.date < cutoff7 && w.date >= cutoff14 && w.ctl !== null);
-  const ctlArrow = trendArrow(latest7d?.ctl ?? null, week2Ago?.ctl ?? null, true);
-  const atlArrow = trendArrow(latest7d?.atl ?? null, week2Ago?.atl ?? null, false);
   const tsbNow = latest7d?.ctl != null && latest7d?.atl != null ? latest7d.ctl - latest7d.atl : null;
   const tsbPrev = week2Ago?.ctl != null && week2Ago?.atl != null ? week2Ago.ctl - week2Ago.atl : null;
   const tsbArrow = trendArrow(tsbNow, tsbPrev, true); // rising form (fresher) is "up"
 
-  // Weight / weight-trend deliberately live on the Trends page now; the freed slots here
-  // surface ACWR and polarization — the load-and-balance signals that belong with readiness.
+  // Trimmed to the tiles that drive today's decision: form (TSB) + the load/balance signals
+  // (ACWR, polarization). CTL/ATL/volume are status — CTL now lives in the trend pulse, the
+  // rest on Trends.
   const tiles = (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-      <StatTile label="CTL (fitness)" value={sync.fitness.ctl?.toFixed(1) ?? "—"} arrow={ctlArrow} accent="pink" />
-      <StatTile label="ATL (fatigue)" value={sync.fitness.atl?.toFixed(1) ?? "—"} arrow={atlArrow} accent="pink" />
+    <div className="grid grid-cols-3 gap-2">
       <StatTile label="TSB (form)" value={sync.fitness.tsb?.toFixed(1) ?? "—"} arrow={tsbArrow} accent="pink" />
-      <StatTile label="7-day hours" value={`${hours7.toFixed(1)} h`} accent="pink" />
       {acwr && (
         <div className="group relative rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
           <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-400">

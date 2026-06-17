@@ -70,18 +70,20 @@ export async function GET() {
     const m = Math.floor(s.length / 2);
     return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
   };
-  const wk = new Map<string, { burn: number; burnN: number; intake: number; intakeN: number; weights: number[] }>();
+  const wk = new Map<string, { burn: number; burnN: number; intake: number; intakeN: number; weights: number[]; hoursSec: number }>();
   const getW = (monday: string) => {
     let e = wk.get(monday);
     if (!e) {
-      e = { burn: 0, burnN: 0, intake: 0, intakeN: 0, weights: [] };
+      e = { burn: 0, burnN: 0, intake: 0, intakeN: 0, weights: [], hoursSec: 0 };
       wk.set(monday, e);
     }
     return e;
   };
   for (const a of sync?.activities ?? []) {
-    if ((a.type === "Ride" || a.type === "VirtualRide") && a.kj !== null) {
-      const e = getW(mondayOf(a.date));
+    if (a.type !== "Ride" && a.type !== "VirtualRide") continue;
+    const e = getW(mondayOf(a.date));
+    e.hoursSec += a.movingTimeSec;
+    if (a.kj !== null) {
       e.burn += a.kj;
       e.burnN += 1;
     }
@@ -103,6 +105,21 @@ export async function GET() {
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
+  // Weekly training volume (hours) — for the Trend Pulse "are you building or slipping?" bar.
+  const weeklyHours = [...wk.entries()]
+    .map(([date, e]) => ({ date, hours: Math.round((e.hoursSec / 3600) * 10) / 10 }))
+    .filter((w) => w.hours > 0)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-12);
+
+  // Recent time-in-zone (last 28d), seconds per power zone Z1..Z7 — for the polarization bar.
+  const zoneCutoff = new Date(Date.now() - 27 * 86_400_000).toISOString().slice(0, 10);
+  const zones = [0, 0, 0, 0, 0, 0, 0];
+  for (const a of sync?.activities ?? []) {
+    if (a.date < zoneCutoff || !a.powerZoneTimes) continue;
+    for (let i = 0; i < Math.min(7, a.powerZoneTimes.length); i++) zones[i] += a.powerZoneTimes[i] ?? 0;
+  }
+
   // Block timeline — newest first. Already accumulates across blocks.
   const blocks = history.map((h) => ({
     goal: h.goal,
@@ -118,7 +135,8 @@ export async function GET() {
 
 
   // Learned coaching insights from the execution history (the "second brain").
-  const insights = deriveInsights(buildAthleteModel(scoreLog.entries));
+  const model = buildAthleteModel(scoreLog.entries);
+  const insights = deriveInsights(model);
 
   // Recent-7-day snapshot — the live-data intent relocated from the Profile page, where it
   // sits with the rest of the long-term tracking.
@@ -173,6 +191,9 @@ export async function GET() {
     recent,
     validation,
     recentInterventions,
+    weeklyHours,
+    zones,
+    behaviour: { avgWeeklyHours: model.behaviour.weeklyHours, offPlanPct: model.behaviour.offPlanPct },
     syncedAt: sync?.syncedAt ?? null,
   });
 }

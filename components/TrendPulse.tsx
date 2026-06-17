@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client-api";
 import { TrendTile } from "./ui";
@@ -8,14 +8,10 @@ import { TrendTile } from "./ui";
 interface Pt {
   value: number;
 }
-interface Score {
-  executionScore: number;
-  compliancePct: number | null;
-}
 interface TrendsResp {
-  ef: Pt[];
   ctl: Pt[];
-  scores: Score[];
+  weeklyHours: Array<{ date: string; hours: number }>;
+  zones: number[];
   syncedAt: string | null;
 }
 
@@ -28,8 +24,72 @@ function delta(points: number[]): "up" | "down" | "flat" | undefined {
   return b - a > eps ? "up" : b - a < -eps ? "down" : "flat";
 }
 
-// The Today view's "trend pulse" — four compact tiles answering "am I improving?"
-// at a glance. Reuses the server-computed trends so the numbers match the Trends page.
+const arrowFor = (d: ReturnType<typeof delta>) => (d === "up" ? "↑" : d === "down" ? "↓" : d === "flat" ? "→" : "");
+
+function Tile({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-md bg-zinc-50 px-2.5 py-2 text-left transition-colors hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+    >
+      <p className="text-[10px] uppercase tracking-wide text-zinc-400">{label}</p>
+      {children}
+    </button>
+  );
+}
+
+// Weekly training volume — the "am I building or slipping?" answer a glance should give.
+function VolumeTile({ weeks, onClick }: { weeks: TrendsResp["weeklyHours"]; onClick: () => void }) {
+  const hours = weeks.map((w) => w.hours);
+  const latest = hours.length ? hours[hours.length - 1] : null;
+  const max = Math.max(...hours, 1);
+  return (
+    <Tile label="Weekly volume" onClick={onClick}>
+      <div className="my-0.5 flex h-[22px] items-end gap-[2px]">
+        {weeks.map((w, i) => (
+          <div
+            key={i}
+            title={`${w.date}: ${w.hours} h`}
+            className="flex-1 rounded-[1px] bg-zinc-300 dark:bg-[#00d4ff]/45"
+            style={{ height: `${Math.max(6, (w.hours / max) * 100)}%` }}
+          />
+        ))}
+      </div>
+      <p className="font-mono text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+        {latest != null ? `${latest.toFixed(1)} h` : "—"}
+        {arrowFor(delta(hours)) && (
+          <span className="ml-0.5 text-[10px] font-normal text-cyan-600 dark:text-[#00d4ff]">{arrowFor(delta(hours))}</span>
+        )}
+      </p>
+    </Tile>
+  );
+}
+
+// Time-in-zone over the last 28 days, collapsed to easy / moderate / hard (the polarization
+// split). ~80% easy is the endurance-base target.
+function ZoneTile({ zones, onClick }: { zones: number[]; onClick: () => void }) {
+  const total = zones.reduce((s, v) => s + v, 0);
+  if (total === 0) return null;
+  const easy = (zones[0] ?? 0) + (zones[1] ?? 0);
+  const mod = zones[2] ?? 0;
+  const hard = (zones[3] ?? 0) + (zones[4] ?? 0) + (zones[5] ?? 0) + (zones[6] ?? 0);
+  const pct = (x: number) => Math.round((x / total) * 100);
+  return (
+    <Tile label="Time in zones · 28d" onClick={onClick}>
+      <div className="my-1 flex h-2.5 overflow-hidden rounded-full">
+        <div style={{ width: `${pct(easy)}%` }} className="bg-blue-400 dark:bg-blue-500/70" />
+        <div style={{ width: `${pct(mod)}%` }} className="bg-amber-400 dark:bg-amber-500/70" />
+        <div style={{ width: `${pct(hard)}%` }} className="bg-red-400 dark:bg-red-500/70" />
+      </div>
+      <p className="font-mono text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+        {pct(easy)}/{pct(mod)}/{pct(hard)} <span className="text-[10px] font-normal text-zinc-400">e/m/h</span>
+      </p>
+    </Tile>
+  );
+}
+
+// The Today view's "trend pulse" — fitness trajectory, weekly volume, and polarization at a
+// glance. Reuses the server-computed trends so the numbers match the Trends page.
 export default function TrendPulse({ vertical }: { vertical?: boolean }) {
   const router = useRouter();
   const [data, setData] = useState<TrendsResp | null>(null);
@@ -59,17 +119,12 @@ export default function TrendPulse({ vertical }: { vertical?: boolean }) {
     );
   }
 
-  const ef = data.ef.map((p) => p.value);
   const ctl = data.ctl.map((p) => p.value);
-  const exec = data.scores.map((s) => s.executionScore);
-
-  // Execution (1–10, duration/completion-aware) is the single completion-anchored index —
-  // the old separate "Compliance %" tile was removed to avoid two metrics telling one story.
   return (
-    <div className={`grid gap-2 ${vertical ? "grid-cols-2 lg:grid-cols-1" : "grid-cols-3 sm:grid-cols-3"}`}>
-      <TrendTile label="Pw:HR" value={ef.length ? ef[ef.length - 1].toFixed(2) : "—"} points={ef} delta={delta(ef)} onClick={go} />
-      <TrendTile label="CTL" value={ctl.length ? ctl[ctl.length - 1].toFixed(0) : "—"} points={ctl} delta={delta(ctl)} onClick={go} />
-      <TrendTile label="Execution" value={exec.length ? `${exec[exec.length - 1].toFixed(1)}/10` : "—"} points={exec} delta={delta(exec)} onClick={go} />
+    <div className={`grid gap-2 ${vertical ? "grid-cols-2 lg:grid-cols-1" : "grid-cols-3"}`}>
+      <TrendTile label="CTL — fitness" value={ctl.length ? ctl[ctl.length - 1].toFixed(0) : "—"} points={ctl} delta={delta(ctl)} onClick={go} />
+      <VolumeTile weeks={data.weeklyHours} onClick={go} />
+      <ZoneTile zones={data.zones} onClick={go} />
     </div>
   );
 }
