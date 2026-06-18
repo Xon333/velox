@@ -8,28 +8,28 @@ Actionable tracker for the feedback dump. Strategic/forward backlog stays in [RO
 
 ---
 
-## ☑ Done (commit 39fbdf7)
+## ☑ Done
 | ID | Item |
 |----|------|
-| TODAY-2 | Power-zone bar: removed % text labels, hover tooltip shows `Z· %` |
-| TODAY-3 | Trend Pulse volume: per-week hover (`Week of … : h`); removed misleading down-arrow → "this wk" |
-| TODAY-5 | Energy unit kJ → kcal on ride card (audit other surfaces still open) |
+| TODAY-2 | Power-zone bar: removed % text labels, hover tooltip shows `Z· %` (39fbdf7) |
+| TODAY-3 | Trend Pulse volume: per-week hover (`Week of … : h`); removed misleading down-arrow → "this wk" (39fbdf7) |
+| TODAY-5 | Energy unit kJ → kcal on ride card (39fbdf7; audit other surfaces still open) |
+| PW-7 | SIT duration: `lib/workout-validate.ts` flags efforts >45s against KB §4 (4–6×30s); wired into generate-route warnings |
 
 ---
 
 ## Data integrity & interval detection
 | ID | S | Pri | Type | Item |
 |----|---|-----|------|------|
-| DI-1 | ☐ | P1 | bug | Analysis wrong when plan interval defs ≠ live-detected defs — reconcile before scoring |
-| DI-2 | ☐ | P1 | bug | Interval power mis-read: Intervals.icu 540W vs app 445W (duration correct) |
+| DI-1 | ◑ | P1 | bug | Analysis wrong when plan defs ≠ live defs. Root manifestation (correct ride vs wrong SIT plan) now caught pre-write by workout-validate; matcher tolerance for legit plan deviations still open |
+| DI-2 | ☐ | P1 | bug | Interval power mis-read: Intervals.icu 540W vs app 445W (duration correct). **Blocked: need a sample `/activity/{id}/intervals` payload to pin field vs alignment — won't blind-patch the frozen scoring core** |
 | DI-3 | ☐ | P2 | bug | Mid-ride added interval detected but not shown as an extra in UI |
 | DI-4 | ☐ | P2 | feat | No breakthrough recognition — coach misses PRs set during intervals (→ PW-10) |
 
 ## Plan & workout structure
 | ID | S | Pri | Type | Item |
 |----|---|-----|------|------|
-| PW-7 | ☐ | P1 | bug | **SIT duration mismatch**: Intervals.icu 5×30s vs app plan 5×1m — single source, sync (blocks PW-2) |
-| PW-8 | ☐ | P1 | bug | Power goal ignores KB: app showed 150%, KB says SIT is maximal 130–200% FTP — reference KB intensity defs |
+| PW-8 | ◑ | P1 | bug | KB intensity now enforced: workout-validate flags work steps outside KB %FTP bands (SIT <130% floor, threshold >115% ceiling, VO2max band). Prompt-side "maximal/all-out framing in SIT descriptions" still open |
 | PW-6 | ☐ | P1 | bug | "Ask Coach" lacks plan context — suggested 4m intervals for a 30s–1m SIT day (→ ROADMAP §2) |
 | PW-2 | ☐ | P2 | bug | SIT listed as 30s in places but conflicts elsewhere (resolve via PW-7) |
 | PW-1 | ☐ | P2 | feat | Sprints: seated-only — add standing technique option + when/how guidance |

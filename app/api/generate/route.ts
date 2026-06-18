@@ -21,6 +21,7 @@ import {
   type AthleteNutritionConfig,
 } from "@/lib/nutrition";
 import { parsePlan } from "@/lib/plan-parser";
+import { validatePlanProtocol } from "@/lib/workout-validate";
 import type { BlockParams, GeneratedPlan } from "@/lib/types";
 
 // Generation calls take 1–2 minutes for a 4-week block.
@@ -135,6 +136,10 @@ export async function POST(req: Request) {
 
     const { raw, truncated } = await generateTrainingBlock(system, userMessage);
     const { overview, days, warnings } = parsePlan(raw, weeks.flat());
+    // KB-grounded protocol check: flag any generated workout that contradicts the knowledge
+    // base (e.g. SIT prescribed as 1-min efforts, threshold pushed into VO2max territory) so
+    // the plan and the live session can't describe different things.
+    warnings.push(...validatePlanProtocol(days, profile.performance.ftp));
     if (truncated) {
       warnings.unshift("The AI response hit the token limit and may be incomplete.");
     }
