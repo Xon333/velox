@@ -182,6 +182,54 @@ Execution already uses NP-first + time-in-zone (so descent-skew is handled). The
 is absent on an outdoor ride, don't score off raw avg power — stamp the entry `unverified` rather
 than producing a flawed number. Small, zero-hallucination-correct.
 
+### 9. All-time power PRs (profile + PR baseline)  ⭐
+The synced power curve is only `curves=84d` (`lib/intervals-api.ts`); the Profile "Power PRs" card
+says *"84-day best efforts"*. Intervals.icu also stores all-time bests — fetch a long/all-time curve
+and:
+- show **all-time PRs** on the Profile page (alongside or replacing the 84-day set);
+- use the all-time bests as the **PR-detection baseline** in `lib/pr.ts`. Beating an all-time best is
+  the honest definition of a PR, and a stable stored baseline removes the timing fragility of the
+  current curve-to-curve (prev-sync) comparison — which can only register a PR on the first sync
+  after the ride.
+- Verify the Intervals.icu `power-curves` param for all-time / long range before wiring; store it
+  (e.g. alongside `last-sync` or its own small file) so the baseline survives the rolling 84-day window.
+
+---
+
+## Exploratory research (not committed) — the "Second Brain" vision
+
+A research spike (deployment + libraries undecided) into evolving Nodevelo from a static store into a
+learning / reasoning / connected "second brain", framed as **Hippocampus** (memory) · **Cortex**
+(knowledge) · **Prefrontal** (orchestration). **Verdict: the capabilities mostly already exist in
+lean, deterministic form — the real gap is signal fusion (#5), not new frameworks. Findings only, no
+build commitment.** Most named libraries also conflict with the local-first / zero-bloat /
+deterministic-core mandates, and several overlap items already in "Decided against".
+
+Anatomy → what already plays each role today:
+- **Hippocampus / memory** → immutable `score-log` ledger + rolling baselines + `intervention-log`;
+  the EWMA (`α=0.35`) already *is* recency decay.
+- **Cortex / knowledge** → KB context-dump (small, intentional) + `synthesis.ts` directives.
+- **Prefrontal / orchestration** → the sync pipeline + synthesis + the intervention validation loop.
+
+Per-target findings:
+
+| Target | Capability | Verdict | Lean path if ever pursued |
+|---|---|---|---|
+| `langchain-ai/langgraph` | cyclic hypothesis→verify→refine | Skip the framework; chase the *outcome* | #5 signal fusion + the existing validation loop |
+| `mem0ai/mem0` | memory + decay + entity recall | Skip — opaque LLM memory vs. the deterministic core | ledger + EWMA + targeted queries over `score-log` |
+| `microsoft/graphrag` | KB correlation graph | Skip — heavy Python batch pipeline; ≈ the rejected Obsidian/Cytoscape graph | "knowledge connections (lean)" below |
+| `logseq` block-refs | live insight references | Skip — ≈ the rejected RxDB/sqlite rewrite | insights are already injected at generation; the ledger is the audit trail |
+| HRV / raw FIT (`garmin-fit`) | readiness beyond TSB | **Wanted but gated** — no HRV source today | when one exists, prefer synced `wellness.hrv` → rolling baseline in `readiness.ts` |
+
+Lean spin-offs worth keeping on the radar (the prioritised slices of the spike):
+- **Knowledge connections (lean):** surface simple correlations from the *structured* data we already
+  hold — e.g. compromised-reason (sickness/equipment) → next-session execution, or low-fuel weeks →
+  decoupling — computed deterministically and shown in Trends/insights. NOT a graph DB.
+- **HRV-based readiness (gated):** upgrade `readiness.ts` with an HRV rolling baseline once a data
+  source exists. Lightest path = the synced `wellness.hrv` field; FIT-file parsing is the heavy path.
+- **Signal fusion** is the genuine "reasoning loop" win and already lives at **#5** — that's where the
+  LangGraph/Mem0 *intent* should land, in lean deterministic form.
+
 ---
 
 ## Done recently (context)
