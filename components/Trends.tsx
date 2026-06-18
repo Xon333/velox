@@ -37,7 +37,7 @@ interface EnergyRow {
 interface RecentSnapshot {
   latestWeightKg: number | null;
   weightTrend7Day: number | null;
-  avgRpe7Day: number | null;
+  load7Day: number | null;
   lastKcalConsumed: number | null;
 }
 interface ValidationData {
@@ -291,7 +291,7 @@ export default function Trends() {
 
       {data.recent &&
         (data.recent.latestWeightKg != null ||
-          data.recent.avgRpe7Day != null ||
+          data.recent.load7Day != null ||
           data.recent.lastKcalConsumed != null) && (
           <Card title="Last 7 days" hint="recent snapshot">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -307,7 +307,7 @@ export default function Trends() {
                     : "—"
                 }
               />
-              <StatTile label="Avg RPE" value={data.recent.avgRpe7Day != null ? `${data.recent.avgRpe7Day}/10` : "—"} />
+              <StatTile label="7-day load" value={data.recent.load7Day != null ? `${data.recent.load7Day} TSS` : "—"} />
               <StatTile
                 label="Last intake"
                 value={data.recent.lastKcalConsumed != null ? `${data.recent.lastKcalConsumed} kcal` : "—"}

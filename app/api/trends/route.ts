@@ -141,9 +141,11 @@ export async function GET() {
   // Recent-7-day snapshot — the live-data intent relocated from the Profile page, where it
   // sits with the rest of the long-term tracking.
   const cutoff7 = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
-  const recentRpes = (sync?.activities ?? [])
-    .filter((a) => a.date >= cutoff7 && a.rpe !== null)
-    .map((a) => a.rpe as number);
+  // 7-day training load (sum of TSS) — an actionable "have I trained enough this week?" signal,
+  // replacing the trivial 7-day average RPE (a single mixed-type RPE average says little).
+  const load7Day = (sync?.activities ?? [])
+    .filter((a) => a.date >= cutoff7)
+    .reduce((s, a) => s + (a.trainingLoad ?? 0), 0);
   const lastKcal = (sync?.wellness ?? [])
     .filter((w) => w.kcalConsumed !== null)
     .sort((a, b) => b.date.localeCompare(a.date))[0];
@@ -154,10 +156,7 @@ export async function GET() {
     ? {
         latestWeightKg: latestWeight?.weightKg ?? null,
         weightTrend7Day: weightTrendFromWellness(sync.wellness),
-        avgRpe7Day:
-          recentRpes.length > 0
-            ? Math.round((recentRpes.reduce((a, b) => a + b, 0) / recentRpes.length) * 10) / 10
-            : null,
+        load7Day: load7Day > 0 ? Math.round(load7Day) : null,
         lastKcalConsumed: lastKcal?.kcalConsumed ?? null,
       }
     : null;

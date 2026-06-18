@@ -303,12 +303,14 @@ function TodayRideCard({
   const metrics: Array<{ label: string; value: string; highlight?: string }> = [];
   if (analysis.intensityFactor != null)
     metrics.push({ label: "IF", value: analysis.intensityFactor.toFixed(2) });
-  if (analysis.activityNormalizedPower != null)
-    metrics.push({ label: "NP", value: `${analysis.activityNormalizedPower}W` });
-  if (analysis.activityAvgWatts != null)
-    metrics.push({ label: "Avg power", value: `${analysis.activityAvgWatts}W` });
-  if (analysis.activityTrainingLoad != null)
-    metrics.push({ label: "TSS", value: String(analysis.activityTrainingLoad) });
+  // NP and avg power share one tile ("NP / Avg") — the gap reads as variability at a glance, and
+  // one tile instead of two trims the card. TSS is dropped: it's identical to Intervals' "Load"
+  // (same field) which the athlete already sees there; execution is the app's load-completion read.
+  const np = analysis.activityNormalizedPower;
+  const avgW = analysis.activityAvgWatts;
+  if (np != null && avgW != null) metrics.push({ label: "NP / Avg", value: `${np} / ${avgW}W` });
+  else if (np != null) metrics.push({ label: "NP", value: `${np}W` });
+  else if (avgW != null) metrics.push({ label: "Avg power", value: `${avgW}W` });
   if (analysis.activityDecoupling != null)
     metrics.push({ label: "Decoupling", value: `${analysis.activityDecoupling.toFixed(1)}%` });
   if (analysis.activityRpe != null)

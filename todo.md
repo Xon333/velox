@@ -22,6 +22,9 @@ Actionable tracker for the feedback dump. Strategic/forward backlog stays in [RO
 | PW-2 | SIT consistency: `physMarkerFor` tracked SIT progress via 1-min power; now 30-sec power to match the 30s all-out protocol (KB §4). All surfaces (KB, validator, prompt, Ask-Coach, marker) now agree on 30s. `lib/intervention.ts` |
 | TODAY-6 | ACWR tooltip completed: added the <0.8 detraining band to the existing what/why/safe-band/spike explanation (`components/Dashboard.tsx`) |
 | TODAY-8 | TSB (Form) tooltip added: definition (CTL−ATL), calc basis, and readiness bands (−10/−30 overload, ~0 balanced, +5/+25 race-fresh). `components/Dashboard.tsx` |
+| TODAY-1 | Ride-card de-dup: merged NP + Avg power into one "NP / Avg" tile and dropped TSS (identical to Intervals' "Load"; execution score is the app's load-completion read). 6 → 4 metric tiles. `components/Dashboard.tsx` |
+| PLAN-3 | Audited — "This week" card Hours/TSS are NOT duplicated on the Plan page itself (Trend Pulse lives on Today, not Plan), so removing Hours would strip the page's only weekly-hours number. Left as-is. |
+| TRENDS-3 | Replaced trivial 7-day avg RPE with **7-day load** (sum of TSS, last 7d) on the Trends "Last 7 days" card — an actionable "trained enough this week?" signal. `app/api/trends/route.ts`, `components/Trends.tsx` |
 
 ---
 
@@ -54,25 +57,19 @@ Actionable tracker for the feedback dump. Strategic/forward backlog stays in [RO
 ## Today page
 | ID | S | Pri | Type | Item |
 |----|---|-----|------|------|
-| TODAY-1 | ☐ | P2 | audit | Metric duplication: IF + TSS vs Intervals "Load" — keep only what moves the needle; cut data fatigue |
 | TODAY-7 | ☐ | P2 | audit | Verify completed/partial/compromised state logic + UI updates (→ ROADMAP §3) |
-
-## Plan page
-| ID | S | Pri | Type | Item |
-|----|---|-----|------|------|
-| PLAN-3 | ☐ | P2 | audit | "This week" card: Hours dup (Trend Pulse), TSS dup — keep utilitarian only / add something genuinely useful |
 
 ## Trends page
 | ID | S | Pri | Type | Item |
 |----|---|-----|------|------|
 | TRENDS-1 | ☐ | P2 | audit | Pw:HR — decide Intervals.icu method vs current; exclude indoor rides; apply only to rides >45 min |
 | TRENDS-2 | ☐ | P2 | ux | Fueling/weight graph: display complete weeks only (keep day-level granularity in backend/second-brain) |
-| TRENDS-3 | ☐ | P2 | ux | Last-7d avg RPE is trivial — replace with an actionable metric (→ ROADMAP Recent-Baselines rework) |
 
 ---
 
 ### Suggested order
-1. **P1 data-integrity cluster** (DI-1, DI-2, PW-7, PW-8) — scoring is only as trustworthy as detection; fix before anything that consumes scores.
-2. **PW-6 / ROADMAP §2** — Ask-Coach session context (also kills the "4m vs 30s" class of error).
-3. **Metric audits** (TODAY-1, PLAN-3, TRENDS-3) — cheap, reduce duplication/fatigue.
-4. Feature work (race-sim, fluid rides, PR detection) and edu tooltips last.
+1. ~~P1 data-integrity cluster (DI-1, DI-2, PW-7, PW-8)~~ ✓ · ~~PW-6 Ask-Coach context~~ ✓ · ~~SIT cleanup + edu tooltips (PW-2, TODAY-6, TODAY-8)~~ ✓ · ~~Metric audits (TODAY-1, PLAN-3, TRENDS-3)~~ ✓
+2. **PR recognition** (DI-4 + PW-10) — detect PRs set during intervals → trophy on Today.
+3. **State-logic audit** (TODAY-7, DI-3) — verify session-state transitions + surface mid-ride extras.
+4. **Trends data-quality** (TRENDS-1 Pw:HR, TRENDS-2 complete-weeks) · **NUT-6** nutrition audit.
+5. Feature work (PW-1 standing sprints, PW-3 race-sim, PW-9 fluid rides) + edu (PW-4, PW-5) + UI-5 ride-card redesign last.
