@@ -242,7 +242,14 @@ export async function POST() {
             decoupling: todayActivity.decoupling,
             variabilityIndex,
             // Duration-aware: a rep nailed on watts but cut short scores lower than a full one.
-            adherencePct: intervalComparison?.effectiveAdherencePct ?? null,
+            // But when the plan's rep-duration definition disagrees with what was ridden
+            // (structuralMismatch), the duration-discounted adherence is untrustworthy — drop it
+            // so execution falls back to duration-compliance + intensity + decoupling instead of
+            // confidently mis-scoring a correct session.
+            adherencePct:
+              intervalComparison && !intervalComparison.structuralMismatch
+                ? intervalComparison.effectiveAdherencePct
+                : null,
             rpe: todayActivity.rpe,
           });
 

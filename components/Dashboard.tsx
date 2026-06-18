@@ -429,6 +429,11 @@ function TodayRideCard({
                   {analysis.intervalComparison.completed}/{analysis.intervalComparison.total} · {analysis.intervalComparison.effectiveAdherencePct}%
                 </span>
               </div>
+              {analysis.intervalComparison.structuralMismatch && (
+                <p className="mt-1.5 text-[10px] leading-snug text-amber-700 dark:text-amber-400">
+                  ⚠ Executed durations differ from the plan&apos;s definition (power was on target) — likely a plan/detection mismatch, scored on power &amp; overall execution rather than rep duration.
+                </p>
+              )}
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {analysis.intervalComparison.reps.map((r, i) => {
                   const band = (pct: number) =>

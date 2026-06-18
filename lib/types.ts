@@ -185,6 +185,12 @@ export interface IntervalComparison {
   avgAdherencePct: number; // avg power adherence across reps
   avgDurationPct: number; // avg duration completion across reps
   effectiveAdherencePct: number; // power × duration completion — what execution scoring uses
+  // The plan's per-rep duration definition disagrees with what was actually ridden/detected
+  // (every rep ran ~half-or-less the prescribed length, yet power was nailed and the rep count
+  // matched). That signature is a plan-vs-detection mismatch — NOT a failed session — so
+  // duration-based adherence is untrustworthy and execution scoring should fall back to the
+  // intent-independent signals. Distinct from a genuine bail (short reps with weak power).
+  structuralMismatch: boolean;
 }
 
 export interface CurrentBlockDay {

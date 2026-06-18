@@ -43,6 +43,12 @@ export function matchPrescription(
   }
 
   const avg = (xs: number[]) => (xs.length > 0 ? Math.round(xs.reduce((s, v) => s + v, 0) / xs.length) : 0);
+  const median = (xs: number[]) => {
+    if (xs.length === 0) return 0;
+    const s = [...xs].sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+  };
   const avgAdherencePct = avg(reps.map((r) => r.adherencePct));
   const avgDurationPct = avg(reps.map((r) => r.durationPct));
   // Effective execution = power adherence scaled by how much of the prescribed duration was
@@ -51,6 +57,17 @@ export function matchPrescription(
   const effectiveAdherencePct = avg(
     reps.map((r) => Math.round(r.adherencePct * Math.min(1, r.durationPct / 100)))
   );
+
+  // Plan-vs-detection mismatch (not a bail): every matched rep ran ~half-or-less its prescribed
+  // length, yet power was on target AND the rep count matched. That consistent half-duration +
+  // nailed-watts signature means the plan's per-rep duration definition differs from what was
+  // ridden (e.g. a SIT day stored as 1-min reps but ridden/detected as 30s) — so the duration
+  // penalty would mis-score a correct session. A genuine bail (short reps with weak power, or a
+  // mid-session fade) is excluded by the strong-power + all-reps-consistent requirement.
+  const countMatches = reps.length === flat.length;
+  const allRepsHalvedOrLess = reps.length >= 2 && reps.every((r) => r.durationPct < 55);
+  const powerNailed = median(reps.map((r) => r.adherencePct)) >= 95;
+  const structuralMismatch = countMatches && allRepsHalvedOrLess && powerNailed;
 
   return {
     prescribedLabels: prescription.map((p) => p.label),
@@ -61,5 +78,6 @@ export function matchPrescription(
     avgAdherencePct,
     avgDurationPct,
     effectiveAdherencePct,
+    structuralMismatch,
   };
 }

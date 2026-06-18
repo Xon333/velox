@@ -274,6 +274,7 @@ Hard rules:
 - Use ISO dates (YYYY-MM-DD) in every DAY line, exactly as listed above.
 - DURATION is an integer number of minutes.
 - TYPE must be one of: Z2, Threshold, VO2max, SIT, Recovery, Strength, Rest.
+- **Interval protocols — match the knowledge base exactly:** SIT = 4–6 × 20–30s ALL-OUT efforts (maximal, 130–200% FTP) with 4 min easy recovery — never prescribe SIT as 1-minute or sub-130% efforts, and state the effort as "all-out / maximal" in the DESCRIPTION intent. VO2max = 3–8 min efforts at 106–120% FTP. Threshold = 88–105% FTP (sweet-spot 88–93%). Do not push a Threshold session above 105% or a VO2max session above 120%.
 - Workout step durations must sum approximately to DURATION.
 - **WEEKLY VOLUME (loading weeks):** Target ${settings.weeklyHoursMin}–${settings.weeklyHoursMax} hours total per week. Each loading week must reach at least ${settings.weeklyHoursMin}h.
 - **WEEKLY VOLUME (recovery week):** Reduce to ${settings.recoveryWeekHoursMin}–${settings.recoveryWeekHoursMax} hours total.
@@ -329,7 +330,10 @@ function fmtIntervals(c: IntervalComparison | null): string | null {
         `${r.actualWatts}W/${r.adherencePct}% power, ${mmss(r.durationSec)} of ${mmss(r.targetDurationSec)}/${r.durationPct}% duration`
     )
     .join("; ");
-  return `Intervals: prescribed ${c.prescribedLabels.join(" + ")} → executed ${execs}. ${c.completed}/${c.total} reps held full duration; avg ${c.avgAdherencePct}% power, ${c.avgDurationPct}% duration.`;
+  const mismatchNote = c.structuralMismatch
+    ? " NOTE: executed rep durations differ consistently from the plan's definition while power was on target — treat this as a plan/detection mismatch, not a failed session; judge on power and overall execution, not rep duration."
+    : "";
+  return `Intervals: prescribed ${c.prescribedLabels.join(" + ")} → executed ${execs}. ${c.completed}/${c.total} reps held full duration; avg ${c.avgAdherencePct}% power, ${c.avgDurationPct}% duration.${mismatchNote}`;
 }
 
 function fmtZones(times: number[], prefix: string): string | null {
