@@ -92,9 +92,11 @@ store). Each file has one responsibility:
 | `last-sync.json` | data-store | Cached raw Intervals.icu pull (~6-month / 182-day window) |
 | `current-block.json` | data-store | The active training block (frozen prescriptions) |
 | `score-log.json` | data-store | Immutable per-ride execution ledger (the learning corpus) |
+| `dispositions.json` | data-store | Athlete attribution per session (completed/partial/compromised) — only `compromised` changes scoring |
+| `intervention-log.json` | data-store | Coaching directives fired per block + their validated/refuted outcomes |
 | `compliance-memory.json` | data-store | Rolling per-workout-type compliance |
 | `rolling-baselines.json` | data-store | 90-day baselines (CTL, decoupling, cadence, TSS) |
-| `today-analysis.json` | data-store | Latest ride analysis + coach note |
+| `today-analysis.json` | data-store | Latest ride analysis + coach note + interval comparison + power PRs |
 | `block-history.json` | data-store | Completed blocks + retrospectives |
 | `block-settings.json` | data-store | Volume/structure knobs + platform toggles |
 
@@ -162,7 +164,7 @@ future blocks. The pipeline is fully deterministic except for the final natural-
                                                             │
                                   deriveInsights()  ─────────► Insight[]  (alert/watch/good)
                                                             │
-                       insightsToPromptBlock() ─────────────► injected into generation
+                  synthesizeCoachingDirectives() ───────────► injected into generation
 ```
 
 ### Execution scoring (`lib/execution-score.ts`)
@@ -172,6 +174,28 @@ adherence** (`lib/interval-match.ts`, comparing the prescription against the int
 in Intervals.icu) is the primary signal; on steady rides, duration compliance is used instead.
 Intensity appropriateness, aerobic decoupling, RPE-vs-intensity, and pacing (variability index)
 adjust the score. No AI is involved.
+
+The interval matcher is deliberately defensive about detection noise:
+
+- **Adherence reads average watts, not NP.** Normalized power overstates short/variable efforts
+  by 20%+; average power is what the athlete actually held, so it's the honest adherence number.
+  (NP is still used to *filter* warm-up/recovery laps out of the work band.)
+- **Duration-aware completion.** A rep nailed on watts but cut short is not a full rep — only
+  reps that held ≥90% of the prescribed duration count as "completed."
+- **Structural-mismatch guard.** When every rep ran ~half its prescribed length yet power was
+  on target and the rep count matched, that's a plan-definition-vs-detection mismatch (e.g. a
+  SIT day stored as 1-min reps but ridden as 30s) — *not* a bail. Scoring drops the untrustworthy
+  duration penalty and falls back to power + decoupling, and the UI explains why.
+- **Extras.** Work efforts beyond the prescribed count (a mid-ride added interval) are surfaced
+  as bonus context rather than silently dropped.
+
+### Breakthrough (power-PR) recognition (`lib/pr.ts`)
+
+On each sync, the ride's mean-max power for the standard durations (5/15/30 s, 1/5/20 min) is
+computed from its power stream and compared against the 84-day power curve **as it stood before
+this sync** — so a fresh best registers exactly once (the sync then absorbs it into the curve).
+New PRs are stored on `today-analysis.json`, fed to the coach note (which is told to call out a
+breakthrough first), and shown as a 🏆 banner on the Today card with the gain over the prior best.
 
 ### The athlete model (`lib/athlete-model.ts`)
 
@@ -183,9 +207,12 @@ adjust the score. No AI is involved.
 
 `deriveInsights()` translates the model into ranked, actionable observations
 (`alert` / `watch` / `good`) — e.g. "VO2max is a weak point: execution averaging 4.8/10 across
-5 sessions → ease the prescription and progress gradually." These are injected into the
-generation prompt via `insightsToPromptBlock()`, so the next block concretely responds to where
-the athlete is under- or over-performing.
+5 sessions → ease the prescription and progress gradually." `synthesizeCoachingDirectives()`
+(`lib/synthesis.ts`) ranks these into a single directive block injected into the generation
+prompt, so the next block concretely responds to where the athlete is under- or over-performing.
+Directives are snapshotted at block-write time (`lib/intervention.ts`) and later marked
+**validated** or **refuted** once enough time has passed to judge whether acting on each insight
+actually worked — closing the learning loop.
 
 ### Readiness & polarization (`lib/readiness.ts`)
 
@@ -197,6 +224,19 @@ excluded — no HRV tracker in the loop):
 - **Intensity distribution** — share of time `easy (<0.75 IF) / moderate / hard (>0.90 IF)`,
   the polarization check.
 - **TSB / fitness** — CTL, ATL, and form pulled from Intervals.icu wellness.
+
+ACWR and TSB carry in-app tooltips (what they are, the calc basis, and the good/concerning bands)
+so the numbers are self-explanatory.
+
+### Session disposition (`lib/disposition.ts`, `data/dispositions.json`)
+
+The one thing the system can't infer is *why* a session went how it did. The athlete attributes
+each session — **completed / partial / compromised** — on the ride card. Only `compromised`
+(equipment, sickness, weather) changes anything: the ride stays in the ledger as history but is
+excluded from the execution metric and the learning model, so a fluke can't be misread as
+under-recovery. This attribution flows to the Plan calendar, which distinguishes a *compromised*
+ride (ridden, excluded from scoring) from a genuinely *missed* day rather than conflating them,
+and labels a *partial* session for what it was instead of a flat "completed."
 
 ---
 
@@ -252,7 +292,11 @@ the earliest snapshot anchor to the earliest). Two consequences keep the coachin
   bump — so trends reflect real adaptation, not a redefinition of the FTP denominator.
 
 FTP-independent markers (Pw:HR / efficiency factor, decoupling, raw power-curve PRs) are the
-backbone of long-term progression precisely because they survive FTP redefinition.
+backbone of long-term progression precisely because they survive FTP redefinition. The Pw:HR
+trend (`lib/trends.ts`) is deliberately like-for-like: **outdoor** rides only (indoor/virtual
+rides have a distorted power:HR from cardiac drift and ERG-flattened power), in the steady
+endurance band, and ≥45 min. The fueling/weight graph aggregates **complete weeks only** — the
+in-progress week's running totals are always misleadingly low, so it's dropped until it closes.
 
 ---
 
@@ -278,13 +322,24 @@ The generator pulls the **latest** zones from the physiology store at generation
 anyone editing a file. Generation context is also enriched with the athlete-model insights and
 the previous block's carry-forward seeds.
 
+**KB-grounded protocol validation.** `lib/workout-validate.ts` checks every generated workout
+against the knowledge base's interval protocols (SIT = 4–6 × 20–30 s all-out at 130–200% FTP;
+VO2max = 3–8 min at 106–120%; threshold = 88–105%) and surfaces a warning if generation drifts
+(e.g. SIT prescribed as 1-min efforts). The same protocols are stated as hard rules in the prompt,
+so the guard works on both ends — generation *and* validation.
+
+**Execution cues in descriptions.** Each generated day can carry a one-line `Execution` cue
+grounded in the KB and the athlete's weakpoints — e.g. govern long hilly Z2 by the HR ceiling
+rather than watts (grey-zone drift is a known leak), stay seated for sprints, or use descents as
+deliberate cornering practice.
+
 ---
 
 ## Pages & API routes
 
 | Page | Purpose |
 |---|---|
-| `/today` (default) | Readiness tiles (CTL/ATL/TSB, ACWR, polarization), today's session & fuel, trend pulse, coach note |
+| `/today` (default) | Readiness tiles (CTL/ATL/TSB, ACWR, polarization), today's session & fuel, smoothed power trace, PR trophy banner, trend pulse, coach note, ask-coach spot-check |
 | `/plan` | Active block calendar, collapsible block generator + preview, goals vs. this week, history |
 | `/trends` | Last-7-day snapshot, learned insights, paired graphs (Pw:HR ‖ CTL, execution ‖ compliance), fueling & weight, block history |
 | `/profile` | Synced performance (FTP, threshold/max HR), all-time PRs, goals, weakpoints, nutrition settings |
@@ -300,7 +355,9 @@ the previous block's carry-forward seeds.
 | `/api/profile` | GET / PUT | Profile snapshot (physiology projected) / save nutrition settings |
 | `/api/knowledge` | GET / PUT | List & edit knowledge-base / retrospective files |
 | `/api/settings` | GET / PUT | Block-generation settings + platform toggles |
-| `/api/retrospective`, `/api/history`, `/api/note` | — | Block retro generation, block history, manual note write-back |
+| `/api/ask` | POST | Low-token "ask coach" spot-check — sees block position, today's + the next planned session, current form, FTP (not the full ledger) |
+| `/api/disposition` | GET / POST | Read/set a session's athlete attribution (completed/partial/compromised); re-stamps the ledger immediately |
+| `/api/retrospective`, `/api/history`, `/api/note`, `/api/reschedule` | — | Block retro generation, block history, manual note write-back, auto-reschedule |
 
 ---
 
@@ -314,15 +371,24 @@ the previous block's carry-forward seeds.
 | `anthropic-api.ts` | Prompt assembly + Claude calls (always `claude-sonnet-4-6`) |
 | `plan-parser.ts` | Claude output → structured `PlannedDay[]` → Intervals.icu events |
 | `prescription.ts` | Parse workout syntax into structured target intervals |
-| `interval-match.ts` | Prescription vs. executed-interval adherence |
+| `workout-validate.ts` | KB-grounded protocol validation of generated workouts (SIT/VO2max/threshold bands) |
+| `interval-match.ts` | Prescription vs. executed-interval adherence (avg-watts, duration-aware, structural-mismatch + extras) |
 | `execution-score.ts` | Deterministic 1–10 ride quality score |
 | `score-log.ts` | Build + immutably merge the per-ride execution ledger |
+| `disposition.ts` | Apply athlete session attributions (compromised excluded from metrics) onto the ledger |
+| `ride-classify.ts` | Infer a ride's workout type from its intensity/structure |
+| `pr.ts` | Power-PR detection — ride mean-max vs the prior 84-day curve |
 | `athlete-model.ts` | EWMA model + trend detection + insight derivation |
+| `synthesis.ts` | Rank model insights into one coaching-directive block for generation |
+| `intervention.ts` | Snapshot directives at block-write, validate/refute them after maturity |
+| `calibration.ts` | Auto-tuned EWMA alpha + ACWR bands |
 | `readiness.ts` | ACWR, intensity distribution, fatigue/load-ramp signals |
+| `reschedule.ts` | Auto-reschedule missed/compromised quality sessions within the block |
 | `zones.ts` | Re-bucket power/HR streams into the athlete's own zones |
 | `nutrition.ts` | Deterministic calorie/carb/protein formula |
 | `kb-loader.ts` | Knowledge-base + retrospective IO and parsing |
-| `trace.ts` | Downsampled ride streams + interval bands for the power chart |
+| `trends.ts` | Trends time-series transforms (outdoor-only Pw:HR, complete-week energy) |
+| `trace.ts` | Downsampled + 30s-smoothed ride streams + interval bands for the power chart |
 
 ---
 
@@ -338,7 +404,7 @@ and only phrases them in natural language — it never calculates nutrition.
 ## Development
 
 ```bash
-npm test       # vitest (85 tests: physiology, scoring, athlete model, nutrition, parser, …)
+npm test       # vitest (169 tests across 22 suites: physiology, scoring, interval match, athlete model, interventions, nutrition, parser, trends, PR detection, trace, …)
 npm run lint
 npm run build
 ```
