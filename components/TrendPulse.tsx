@@ -24,8 +24,6 @@ function delta(points: number[]): "up" | "down" | "flat" | undefined {
   return b - a > eps ? "up" : b - a < -eps ? "down" : "flat";
 }
 
-const arrowFor = (d: ReturnType<typeof delta>) => (d === "up" ? "↑" : d === "down" ? "↓" : d === "flat" ? "→" : "");
-
 function Tile({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
     <button
@@ -49,17 +47,15 @@ function VolumeTile({ weeks, onClick }: { weeks: TrendsResp["weeklyHours"]; onCl
         {weeks.map((w, i) => (
           <div
             key={i}
-            title={`${w.date}: ${w.hours} h`}
-            className="flex-1 rounded-[1px] bg-zinc-300 dark:bg-[#00d4ff]/45"
+            title={`Week of ${w.date}: ${w.hours} h`}
+            className="flex-1 cursor-help rounded-[1px] bg-zinc-300 dark:bg-[#00d4ff]/45"
             style={{ height: `${Math.max(6, (w.hours / max) * 100)}%` }}
           />
         ))}
       </div>
       <p className="font-mono text-xs font-semibold text-zinc-800 dark:text-zinc-100">
         {latest != null ? `${latest.toFixed(1)} h` : "—"}
-        {arrowFor(delta(hours)) && (
-          <span className="ml-0.5 text-[10px] font-normal text-cyan-600 dark:text-[#00d4ff]">{arrowFor(delta(hours))}</span>
-        )}
+        <span className="ml-1 text-[10px] font-normal text-zinc-400">this wk</span>
       </p>
     </Tile>
   );

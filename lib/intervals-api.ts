@@ -99,6 +99,23 @@ function numArr(value: unknown): number[] | null {
   return arr.some((v) => v > 0) ? arr : null;
 }
 
+// Zone-time arrays from Intervals come in two shapes depending on endpoint/version: a raw
+// seconds array, or an array of objects ({ secs } | { time } | { seconds }). Parse both so
+// time-in-zone (polarization, trend-pulse zones) doesn't silently fall back to average power.
+function zoneSecs(value: unknown): number[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const arr = value.map((v) => {
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (v && typeof v === "object") {
+      const o = v as Record<string, unknown>;
+      const n = o.secs ?? o.time ?? o.seconds ?? o.s;
+      return typeof n === "number" && Number.isFinite(n) ? n : 0;
+    }
+    return 0;
+  });
+  return arr.some((v) => v > 0) ? arr : null;
+}
+
 function localDate(value: unknown): string {
   // "2026-06-01T09:30:00" -> "2026-06-01"
   return str(value).slice(0, 10);
@@ -186,8 +203,8 @@ export async function fetchActivities(oldest: string, newest: string): Promise<A
       avgCadence: num(a.average_cadence),
       distanceMeters: num(a.distance),
       elevationGain: num(a.total_elevation_gain),
-      powerZoneTimes: numArr(a.icu_power_zone_times),
-      hrZoneTimes: numArr(a.icu_hr_zone_times),
+      powerZoneTimes: zoneSecs(a.icu_power_zone_times ?? a.icu_zone_times),
+      hrZoneTimes: zoneSecs(a.icu_hr_zone_times),
     };
   });
 }

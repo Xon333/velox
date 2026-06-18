@@ -261,23 +261,15 @@ function ZoneBars({ times, label, secondary }: { times: number[]; label: string;
   return (
     <div className={secondary ? "opacity-90" : undefined}>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">{label}</p>
-      <div className={`flex w-full overflow-hidden rounded gap-px ${secondary ? "h-1.5" : "h-3.5"}`}>
+      <div className={`flex w-full overflow-hidden rounded gap-px ${secondary ? "h-2" : "h-4"}`}>
         {pcts.map((pct, i) =>
           pct >= 1 ? (
             <div
               key={i}
               style={{ width: `${pct}%` }}
-              className={`${ZONE_COLORS[i] ?? "bg-zinc-400"} shrink-0`}
+              title={`Z${i + 1} · ${pct}%`}
+              className={`${ZONE_COLORS[i] ?? "bg-zinc-400"} shrink-0 cursor-help`}
             />
-          ) : null
-        )}
-      </div>
-      <div className="mt-0.5 flex gap-2 flex-wrap">
-        {pcts.map((pct, i) =>
-          pct >= 1 ? (
-            <span key={i} className="text-[10px] text-zinc-400 dark:text-zinc-500">
-              Z{i + 1} {pct}%
-            </span>
           ) : null
         )}
       </div>
@@ -363,7 +355,7 @@ function TodayRideCard({
               <span className="text-xs text-zinc-500 dark:text-zinc-400">{analysis.activityAvgHr} bpm avg</span>
             )}
             {analysis.activityKj !== null && (
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">{analysis.activityKj} kJ</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">{analysis.activityKj} kcal</span>
             )}
           </div>
         </div>
@@ -651,9 +643,9 @@ function BlockCalendar({ block, scores }: { block: CurrentBlock; scores: RideSco
                       } ${missed ? "opacity-40" : ""} ${!completed && !missed && day.date < today ? "opacity-40" : ""}`}
                     >
                       {completed ? (
-                        <span className="flex items-baseline gap-0.5">
-                          <span className="text-[8px] leading-none">✓</span>
-                          {score}
+                        <span className="flex items-center gap-0.5 rounded-sm bg-black/45 px-1 leading-none text-white">
+                          <span className="text-[10px] font-bold leading-none">✓</span>
+                          <span className="text-[10px]">{score}</span>
                         </span>
                       ) : (
                         day.date.slice(8)
@@ -738,8 +730,12 @@ function CurrentBlockSection({
     block.lengthWeeks,
     Math.max(1, Math.floor((Date.parse(today) - Date.parse(block.startDate)) / (7 * 86_400_000)) + 1)
   );
-  // Real sessions still to come — exclude rest days (durationMin 0), which aren't "sessions".
-  const sessionsToGo = block.days.filter((d) => d.date >= today && d.durationMin > 0).length;
+  // Real sessions still to come — exclude rest days (durationMin 0) and any day already ridden
+  // (so today drops off once it's logged, instead of lingering as "to go").
+  const completedDates = new Set(scores.map((s) => s.date));
+  const sessionsToGo = block.days.filter(
+    (d) => d.date >= today && d.durationMin > 0 && !completedDates.has(d.date)
+  ).length;
   return (
     <section className="relative rounded-none border-2 border-zinc-300 bg-white px-4 py-4 dark:border-[#00d4ff]/55 dark:bg-zinc-900 dark:shadow-[0_0_28px_-8px_rgba(0,212,255,0.45)]">
       <CyberFrame accent="cyan" />

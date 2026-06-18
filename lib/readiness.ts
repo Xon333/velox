@@ -147,7 +147,7 @@ export function computeAcwr(
 // average power only for rides with no per-zone data (e.g. no power meter). ~80% easy is the
 // endurance-base target.
 export function computeIntensityDistribution(
-  activities: Array<{ date: string; movingTimeSec: number; avgWatts: number | null; powerZoneTimes?: number[] | null }>,
+  activities: Array<{ date: string; movingTimeSec: number; avgWatts: number | null; normalizedPower?: number | null; powerZoneTimes?: number[] | null }>,
   ftp: number,
   days = 7
 ): IntensityDistribution | null {
@@ -164,8 +164,9 @@ export function computeIntensityDistribution(
       easy += (z[0] ?? 0) + (z[1] ?? 0);
       moderate += z[2] ?? 0;
       hard += (z[3] ?? 0) + (z[4] ?? 0) + (z[5] ?? 0) + (z[6] ?? 0);
-    } else if (a.avgWatts !== null && a.movingTimeSec > 0) {
-      const r = a.avgWatts / ftp;
+    } else if ((a.normalizedPower ?? a.avgWatts) !== null && a.movingTimeSec > 0) {
+      // No per-zone data: classify by NP (not raw avg, which descents/coasting drag down).
+      const r = (a.normalizedPower ?? (a.avgWatts as number)) / ftp;
       if (r < 0.75) easy += a.movingTimeSec;
       else if (r < 0.9) moderate += a.movingTimeSec;
       else hard += a.movingTimeSec;
