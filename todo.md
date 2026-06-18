@@ -29,6 +29,8 @@ Actionable tracker for the feedback dump. Strategic/forward backlog stays in [RO
 | TODAY-7 | Session-state audit: fixed the calendar showing **compromised** rides as "Missed" (they're excluded from `scores`, so the calendar misread them) — threaded `compromisedDates`/`partialDates` through sync → state → calendar; compromised now shows "~" + "Compromised — ridden, excluded from scoring", partial shows "Partial · execution X/10". `missed` confirmed auto-derived (no athlete-set path needed). `app/api/sync/route.ts`, `components/SyncProvider.tsx`, `components/Dashboard.tsx` |
 | TRENDS-1 | Pw:HR now **excludes indoor rides** (outdoor `Ride` only — VirtualRide has distorted Pw:HR from cardiac drift / ERG-flat power); ≥45-min + endurance-band + Intervals.icu `efficiencyFactor` method confirmed. Extracted to tested `lib/trends.ts` (`efSeries`). |
 | TRENDS-2 | Fueling/weight graph now shows **complete weeks only** — the in-progress week (always partial, misleadingly low totals) is dropped; day-level data untouched in the sync. Extracted to tested `lib/trends.ts` (`weeklyEnergy`). |
+| PW-4 | Long-Z2-on-hills execution guidance added to generation prompt: govern by HR ceiling (top of Z2) not just watts, let power drift on climbs but cap HR, ease descents instead of surging — grounded in KB grey-zone-drift weakpoint. `lib/anthropic-api.ts` |
+| PW-5 | Contextual technique cues in ride descriptions: new optional `Execution:` line in DESCRIPTION format + grounded rule (sit-down sprints, descents as descending/cornering practice — the athlete's weakpoints). Parser passes it through as free-text. `lib/anthropic-api.ts` |
 
 ---
 
@@ -44,8 +46,6 @@ Actionable tracker for the feedback dump. Strategic/forward backlog stays in [RO
 | PW-3 | ☐ | P2 | feat | Race-sim rides as a real workout type (hill attacks, KOM hunts, block-fit logic) — today only a goal string |
 | PW-9 | ☐ | P2 | feat | Fluid/athlete-directed sessions (e.g. "find 2×20m climbs, push; Z2 else") — needs DB rules so AI treats them as structured-but-flexible |
 | PW-10 | ☐ | P2 | feat | PR highlighting: profile flag + trophy popup on Today when a new PR detected (→ DI-4) |
-| PW-4 | ☐ | P3 | edu | Long Z2 on hilly routes — execution guidance (strict Z2 vs climbing) |
-| PW-5 | ☐ | P3 | edu | Contextual links/notes in ride descriptions (descending, standing-sprint technique, etc.) |
 
 ## Ride card / UI
 | ID | S | Pri | Type | Item |
@@ -60,7 +60,7 @@ Actionable tracker for the feedback dump. Strategic/forward backlog stays in [RO
 ---
 
 ### Suggested order
-1. ~~P1 data-integrity cluster (DI-1, DI-2, PW-7, PW-8)~~ ✓ · ~~PW-6 Ask-Coach context~~ ✓ · ~~SIT cleanup + edu tooltips (PW-2, TODAY-6, TODAY-8)~~ ✓ · ~~Metric audits (TODAY-1, PLAN-3, TRENDS-3)~~ ✓ · ~~State-logic audit (TODAY-7, DI-3)~~ ✓
+1. ~~P1 cluster (DI-1, DI-2, PW-7, PW-8)~~ ✓ · ~~PW-6 Ask-Coach context~~ ✓ · ~~SIT + tooltips (PW-2, TODAY-6, TODAY-8)~~ ✓ · ~~Metric audits (TODAY-1, PLAN-3, TRENDS-3)~~ ✓ · ~~State-logic (TODAY-7, DI-3)~~ ✓ · ~~Trends data-quality (TRENDS-1, TRENDS-2)~~ ✓ · ~~Edu cues (PW-4, PW-5)~~ ✓
 2. **PR recognition** (DI-4 + PW-10) — detect PRs set during intervals → trophy on Today.
 3. **NUT-6** nutrition-formula audit.
-4. Feature work (PW-1 standing sprints, PW-3 race-sim, PW-9 fluid rides) + edu (PW-4, PW-5) + UI-5 ride-card redesign last.
+4. Remaining feature work: PW-1 standing sprints, PW-3 race-sim, PW-9 fluid rides, UI-5 ride-card redesign.

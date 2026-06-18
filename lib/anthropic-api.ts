@@ -261,6 +261,7 @@ DAY [date]: [Session name]
 
 DESCRIPTION FORMAT for each workout:
   Intent: [1 sentence on the physiological goal of this session]
+  Execution: [Optional — one short pacing or technique cue for THIS session/terrain when it adds value (see execution-cue rule). Omit entirely when nothing useful applies.]
   Pre-ride: [Carbohydrate grams from the reference table]
   In-ride: [Carbohydrate grams/hr from the reference table, only for rides > 60 min]
   Post-ride: [Carbs and protein targets in grams from the reference table]
@@ -275,6 +276,11 @@ Hard rules:
 - DURATION is an integer number of minutes.
 - TYPE must be one of: Z2, Threshold, VO2max, SIT, Recovery, Strength, Rest.
 - **Interval protocols — match the knowledge base exactly:** SIT = 4–6 × 20–30s ALL-OUT efforts (maximal, 130–200% FTP) with 4 min easy recovery — never prescribe SIT as 1-minute or sub-130% efforts, and state the effort as "all-out / maximal" in the DESCRIPTION intent. VO2max = 3–8 min efforts at 106–120% FTP. Threshold = 88–105% FTP (sweet-spot 88–93%). Do not push a Threshold session above 105% or a VO2max session above 120%.
+- **Execution cues (DESCRIPTION "Execution" line — grounded in the KB + this athlete's weakpoints; one short clause, only when it genuinely helps):**
+  - **Long / endurance Z2 (esp. on hilly routes):** govern by the HR ceiling (top of Z2), not just watts — grey-zone drift is this athlete's known outdoor leak. On climbs let power drift up briefly but keep HR capped; ease on descents instead of surging (amateurs surge climbs and coast descents — the opposite of optimal).
+  - **Sprints / SIT:** stay seated — standing recruits upper body and gives less consistent power.
+  - **Rides with descents:** treat descents as deliberate practice for descending and cornering (known weakpoints) — work line choice and braking, not just recovery.
+  Omit the Execution line for Rest days and whenever no cue adds value; never repeat the Intent.
 - Workout step durations must sum approximately to DURATION.
 - **WEEKLY VOLUME (loading weeks):** Target ${settings.weeklyHoursMin}–${settings.weeklyHoursMax} hours total per week. Each loading week must reach at least ${settings.weeklyHoursMin}h.
 - **WEEKLY VOLUME (recovery week):** Reduce to ${settings.recoveryWeekHoursMin}–${settings.recoveryWeekHoursMax} hours total.
