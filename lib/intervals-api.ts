@@ -274,12 +274,10 @@ function extractCurve(data: unknown): PowerCurvePoint[] {
   return [];
 }
 
-export async function fetchPowerCurve(): Promise<PowerCurvePoint[]> {
-  // Best efforts over the last 84 days of rides.
-  const data = await icuFetch(athletePath(`/power-curves?curves=84d&type=Ride`));
-  const full = extractCurve(data);
+// Reduce a per-second power curve to the spec's key durations (nearest point), dropping targets
+// the athlete has no data near (e.g. no 60-min effort).
+function reduceToKeyDurations(full: PowerCurvePoint[]): PowerCurvePoint[] {
   if (full.length === 0) return [];
-  // Reduce the per-second curve to the spec's key durations (nearest point).
   return POWER_CURVE_DURATIONS_SEC.flatMap((target) => {
     let best: PowerCurvePoint | null = null;
     for (const p of full) {
@@ -287,10 +285,25 @@ export async function fetchPowerCurve(): Promise<PowerCurvePoint[]> {
         best = p;
       }
     }
-    // Drop targets the athlete has no data near (e.g. no 60min effort).
     if (!best || Math.abs(best.durationSec - target) > target * 0.2) return [];
     return [{ durationSec: target, watts: Math.round(best.watts) }];
   });
+}
+
+async function fetchCurve(spec: string): Promise<PowerCurvePoint[]> {
+  const data = await icuFetch(athletePath(`/power-curves?curves=${spec}&type=Ride`));
+  return reduceToKeyDurations(extractCurve(data));
+}
+
+// Best efforts over the last 84 days — the recent-form curve (intervention markers, generation).
+export function fetchPowerCurve(): Promise<PowerCurvePoint[]> {
+  return fetchCurve("84d");
+}
+
+// All-time best efforts — the athlete's true PRs. Monotonic (only rises), so it's the stable
+// baseline for PR detection + the Profile "all-time PRs" display.
+export function fetchPowerCurveAllTime(): Promise<PowerCurvePoint[]> {
+  return fetchCurve("all");
 }
 
 function latestFitness(wellness: WellnessEntry[]): FitnessMetrics {
@@ -318,10 +331,11 @@ export async function runFullSync(): Promise<SyncData> {
   const oldestDate = new Date(Date.now() - SYNC_WINDOW_DAYS * 24 * 3600 * 1000);
   const oldest = oldestDate.toISOString().slice(0, 10);
 
-  const [activities, wellness, powerCurve] = await Promise.all([
+  const [activities, wellness, powerCurve, allTime] = await Promise.all([
     fetchActivities(oldest, newest),
     fetchWellness(oldest, newest),
     fetchPowerCurve(),
+    fetchPowerCurveAllTime().catch(() => [] as PowerCurvePoint[]),
   ]);
 
   return {
@@ -329,6 +343,8 @@ export async function runFullSync(): Promise<SyncData> {
     activities,
     wellness,
     powerCurve,
+    // Fall back to the 84-day curve if the all-time fetch is unavailable, so PRs/profile still work.
+    powerCurveAllTime: allTime.length > 0 ? allTime : powerCurve,
     fitness: latestFitness(wellness),
   };
 }

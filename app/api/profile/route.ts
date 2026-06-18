@@ -70,7 +70,8 @@ export async function GET() {
     physiologyChange,
     physiologySource: physStore?.current.source ?? null,
     athleteMd,
-    syncedPowerCurve: sync?.powerCurve ?? [],
+    // Prefer all-time best efforts (true PRs); fall back to the 84-day curve if unavailable.
+    syncedPowerCurve: sync?.powerCurveAllTime ?? sync?.powerCurve ?? [],
     weightHistory: (sync?.wellness ?? [])
       .filter((w) => w.weightKg !== null)
       .map((w) => ({ date: w.date, weightKg: w.weightKg as number }))

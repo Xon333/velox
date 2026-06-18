@@ -244,9 +244,13 @@ export async function POST() {
           }
           const trace = buildRideTrace(powerStream, hrStream, executed, prescription[0]?.targetWatts ?? null);
 
-          // Power PRs: durations where the freshly-synced curve beat the previous sync's curve
-          // (both Intervals.icu's own math, so the delta is honest — no stream-vs-curve noise).
-          const powerPRs = detectPowerPRs(lastSync.powerCurve, prevSync?.powerCurve ?? []);
+          // Power PRs: durations where this sync's ALL-TIME best beat the previous sync's all-time
+          // best. All-time is monotonic (only rises on a genuine PR), so unlike the 84-day curve it
+          // never false-drops as efforts age out of a window — and the delta is a true all-time PR.
+          const powerPRs = detectPowerPRs(
+            lastSync.powerCurveAllTime ?? lastSync.powerCurve,
+            prevSync?.powerCurveAllTime ?? []
+          );
 
           // Execution score: on interval days the power-target adherence is the primary
           // execution signal; duration compliance is used otherwise. RPE adds effort.

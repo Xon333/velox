@@ -182,18 +182,6 @@ Execution already uses NP-first + time-in-zone (so descent-skew is handled). The
 is absent on an outdoor ride, don't score off raw avg power — stamp the entry `unverified` rather
 than producing a flawed number. Small, zero-hallucination-correct.
 
-### 9. All-time power PRs (profile + PR baseline)  ⭐
-The synced power curve is only `curves=84d` (`lib/intervals-api.ts`); the Profile "Power PRs" card
-says *"84-day best efforts"*. Intervals.icu also stores all-time bests — fetch a long/all-time curve
-and:
-- show **all-time PRs** on the Profile page (alongside or replacing the 84-day set);
-- use the all-time bests as the **PR-detection baseline** in `lib/pr.ts`. Beating an all-time best is
-  the honest definition of a PR, and a stable stored baseline removes the timing fragility of the
-  current curve-to-curve (prev-sync) comparison — which can only register a PR on the first sync
-  after the ride.
-- Verify the Intervals.icu `power-curves` param for all-time / long range before wiring; store it
-  (e.g. alongside `last-sync` or its own small file) so the baseline survives the rolling 84-day window.
-
 ---
 
 ## Exploratory research (not committed) — the "Second Brain" vision
@@ -233,6 +221,11 @@ Lean spin-offs worth keeping on the radar (the prioritised slices of the spike):
 ---
 
 ## Done recently (context)
+- **All-time power PRs** (#9): `fetchPowerCurveAllTime()` pulls Intervals.icu's `curves=all` best
+  efforts into `SyncData.powerCurveAllTime`; the Profile "Power PRs" card now shows all-time bests,
+  and PR detection (`lib/pr.ts`) uses the all-time curve as a monotonic baseline (prev-sync vs
+  current) — no window false-drops, true all-time deltas. Falls back to the 84-day curve if the
+  all-time fetch is unavailable.
 - **Auto-reschedule** (roadmap #3, second half): `lib/reschedule.ts` detects the most recent
   not-delivered quality session (missed / compromised / no ride) and suggests the next clear rest
   day to make it up on (no back-to-back hard days); RescheduleBanner on the Plan page applies it to

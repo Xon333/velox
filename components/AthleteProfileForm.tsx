@@ -189,7 +189,7 @@ export default function AthleteProfileForm() {
           {syncedPowerCurve.length > 0 ? (
             <>
               <p className="mb-3 text-[11px] text-zinc-400 dark:text-zinc-500">
-                84-day best efforts · from Intervals.icu · {timeAgo(autoSync.syncedAt)}
+                all-time best efforts · from Intervals.icu · {timeAgo(autoSync.syncedAt)}
               </p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                 {syncedPowerCurve.map((pt) => {

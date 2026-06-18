@@ -104,7 +104,8 @@ export interface SyncData {
   syncedAt: string; // ISO timestamp
   activities: ActivitySummary[];
   wellness: WellnessEntry[];
-  powerCurve: PowerCurvePoint[];
+  powerCurve: PowerCurvePoint[]; // 84-day best efforts — recent form
+  powerCurveAllTime?: PowerCurvePoint[]; // all-time best efforts — true PRs + PR-detection baseline
   fitness: FitnessMetrics;
 }
 
