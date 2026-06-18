@@ -80,6 +80,44 @@ generation/readiness. This is the heart of the goal.
 
 ---
 
+## Platform & performance (local-first)
+
+Deployment is **local-first, single-user** (confirmed). The hosted-SaaS migration items from the
+external audit (Postgres/RLS, blob storage, auth) are intentionally out of scope — see "Decided
+against". The items below are deployment-agnostic cost / robustness / UX wins.
+
+### P1. Prompt caching (token cost)  ⭐
+Apply `cache_control` to the static system-prompt prefix (coach persona + KB context + resolved
+zones) in `lib/anthropic-api.ts`, ordered before the volatile per-request context so the cache
+breakpoint actually lands. Largest spend reduction with no design change; aligns with the
+token-economy mandate. Verified absent today (`cache_control` appears nowhere).
+- [ ] cache_control on the static prefix in generation + ride-analysis calls
+- [ ] verify prefix ordering (static → volatile) so the cached segment is reused
+
+### P2. Structured outputs (parse robustness)
+Replace the regex plan parser (`lib/plan-parser.ts`) with Anthropic tool-use / structured JSON for
+the generated block — removes the regex as a failure surface; the model returns structured days.
+- [ ] define a `create_block` / day tool schema; switch generation to tool-use
+- [ ] keep `workout-validate.ts` + KB protocol rules as the post-generation guard
+- [ ] keep the regex parser as a fallback for one release in case of malformed tool output
+
+### P3. Decouple `/api/sync` from AI analysis
+`/api/sync` is a God function (fetch → reconcile → score → PR → AI → validate → post-back): a step-5
+crash leaves inconsistent state and users wait for the whole chain. Split it so the data fetch +
+deterministic metrics return fast (instant chart/calendar), then AI analysis runs as a separate
+triggered call and patches `today-analysis.json`.
+- [ ] return after data + deterministic metrics; move `analyseRide` to a follow-up call/endpoint
+- [ ] frontend: render the fast path, then fill in coach note / PRs when analysis lands
+- [ ] keep it local — a triggered second call, NOT a serverless queue / Trigger.dev
+
+### P4. Observability + generation caching
+- [ ] Generate caching: skip the Claude call when the assembled prompt is byte-identical to a recent one
+- [ ] Stream `/api/ask` responses (token streaming) for snappier coach replies
+- [ ] Surface intervention **coach-accuracy %** (from `intervention-log.json`) on the dashboard
+- [ ] Token/cost tracker in Settings (tally input/output tokens per call → running cost estimate)
+
+---
+
 ## UI refinements
 
 Most of the Images 1–5 audit shipped — see "Done recently". Remaining:
@@ -170,6 +208,13 @@ than producing a flawed number. Small, zero-hallucination-correct.
   time-in-zone polarization; physiology single-source-of-truth; Ask-Coach (block+form context).
 
 ## Decided against (don't re-propose without a real reason)
+- **Postgres/Supabase + RLS · blob storage for KB · auth middleware** — an external audit flagged
+  these as "Phase 1 blockers", but it assumed a Vercel/serverless multi-tenant SaaS. Nodevelo is
+  local-first single-user by design (CLAUDE.md + README); on `localhost` there's no athlete-isolation
+  or URL-exposure threat, and `fs`/JSON *is* the intended store. Revisit only on a deliberate pivot
+  to a hosted multi-user product.
+- **pgvector RAG for the KB** — the KB is a handful of small markdown files that fit cheaply in the
+  prompt; the context-dump is intentional. Against the "no heavy DB abstractions" rule.
 - **RxDB / better-sqlite3 reactive-DB rewrite** — contradicts the local-first JSON design; the
   desync it targeted is already fixed with refetch-on-sync.
 - **Cytoscape / Obsidian-style knowledge graph** — heavyweight dep that re-presents existing data;
