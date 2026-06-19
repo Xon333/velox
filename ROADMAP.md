@@ -153,6 +153,8 @@ Apply `cache_control` to the static system-prompt prefix (coach persona + KB con
 zones) in `lib/anthropic-api.ts`, ordered before the volatile per-request context so the cache
 breakpoint actually lands. Largest spend reduction with no design change; aligns with the
 token-economy mandate. Verified absent today (`cache_control` appears nowhere).
+- [ ] **singleton Anthropic client** — `new Anthropic()` is instantiated per call ×4 today; move it to
+  module top level (connection reuse + prerequisite for cache headers)
 - [ ] cache_control on the static prefix in generation + ride-analysis calls
 - [ ] verify prefix ordering (static → volatile) so the cached segment is reused
 
@@ -168,6 +170,9 @@ the generated block — removes the regex as a failure surface; the model return
 crash leaves inconsistent state and users wait for the whole chain. Split it so the data fetch +
 deterministic metrics return fast (instant chart/calendar), then AI analysis runs as a separate
 triggered call and patches `today-analysis.json`.
+- [ ] **surface a `warnings[]` array** (cheap first slice — replaces the silent `// best-effort`
+  catches so a failed analysis/validation is visible; render as a toast in SyncProvider)
+- [ ] decompose into named steps returning Result types (a lean Result is fine; neverthrow optional)
 - [ ] return after data + deterministic metrics; move `analyseRide` to a follow-up call/endpoint
 - [ ] frontend: render the fast path, then fill in coach note / PRs when analysis lands
 - [ ] keep it local — a triggered second call, NOT a serverless queue / Trigger.dev
@@ -184,6 +189,43 @@ enforces it — `workout-validate.ts` checks protocol bands, not placement. Add 
 check that flags adjacent hard days (and quality sessions over the weekly budget), surfaced as a
 generation warning like the protocol checks. Closes the block-creation gap (sessions slot in by KB
 rules, but placement is only LLM-instructed today).
+
+### P6. Reliability & resilience quick-wins (from the code audit)
+Cheap, mostly-independent correctness / auditability wins:
+- [ ] **`error.tsx` boundary** — so a runtime error in Dashboard/Trends doesn't white-screen the page.
+- [ ] **Model + prompt-version stamping** — add `model` + `promptVersion` (a bumped constant) to
+  `TodayAnalysis` / `GeneratedPlan` / `BlockHistoryEntry`, stamped at generation; makes past AI
+  outputs reproducible/auditable when the model or prompt changes.
+- [ ] **Export / import backup** — `GET /api/export` zips `data/` + `knowledge-base/`; `POST
+  /api/import` restores. Disaster-recovery insurance for the only source of truth.
+- [ ] **json-store async mutex** — a per-file in-flight-write lock in `lib/json-store.ts` so a
+  concurrent sync + disposition POST can't clobber each other.
+- [ ] **Re-analyse-today** — `today-analysis.json` is overwritten each sync; a failed coach note
+  (Anthropic hiccup) is lost. Add a manual re-analyse action and don't overwrite a good note with an
+  empty one.
+- _(The audit's "sync warnings[]" and "singleton Anthropic client" are folded into P3 and P1.)_
+
+### P7. TanStack Query client
+`SyncProvider` + `lib/client-api.ts` are a hand-rolled cache (fetch-on-mount, manual refetch, no
+refetch-on-focus/reconnect, no dedup, no retry; Trends does a second manual fetch keyed on
+`syncedAt`). Move the data layer to TanStack Query (`useQuery(['sync'])` + `useMutation` with
+invalidation) for focus/reconnect refetch, dedup, retry, optimistic updates — keep the sync-button
+UI as a thin wrapper. Fixes the "stale after an overnight tab" UX. ~2-day refactor.
+
+### P8. Logging + AI-route rate-limit
+- [ ] **Structured logging** — replace silent `catch`/`console` with a small logger (pino or a lean
+  wrapper) carrying `{route, step, status, ms}`; turns "sync succeeded but no coach note" into a
+  traceable event. Pairs with P3's `warnings[]`. (Weigh the dep vs. a tiny console+file wrapper for
+  single-user.)
+- [ ] **AI-route cost guard** — an in-memory token-bucket on `/api/generate` + `/api/ask` (e.g.
+  N/hour) so a client loop or fat-finger can't run up Anthropic spend. Mild single-user value,
+  table-stakes for multi-user.
+
+### P9. PWA + streamed generation
+- [ ] **PWA install** — `app/manifest.ts` + service worker + install prompt; "add to home screen"
+  for an app checked before every ride.
+- [ ] **Stream `/api/generate`** — it blocks 1–2 min today; stream the block so the overview, then
+  each day, appears as it's built ("Claude is building your plan" vs. "is it stuck?"). Extends P4.
 
 ---
 

@@ -84,6 +84,10 @@ A full pass over a feedback dump (bugs + UX + features), worked P1 → P3.
 
 ## Foundations & earlier milestones
 
+- **Timezone-correct "today" (code-audit fix).** The server matched today's ride on a UTC date
+  while activities carry their *local* date, so an evening ride could be missed entirely (no
+  analysis/PR). `lib/date.ts` now makes the client's local date the single source of "today"
+  (client sends it; server prefers it, UTC fallback). No date-fns dep.
 - **Disposition flag + learning gate.** Athlete marks Completed / Partial / Compromised(reason);
   compromised rides stay as history but are excluded from the execution EWMA + metric and surfaced
   to Ask-Coach, so a fluke can't be misread as under-recovery. `data/dispositions.json`
