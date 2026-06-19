@@ -154,12 +154,10 @@ against". The items below are deployment-agnostic cost / robustness / UX wins.
 - [ ] Surface intervention **coach-accuracy %** (from `intervention-log.json`) on the dashboard
 - [ ] Token/cost tracker in Settings (tally input/output tokens per call → running cost estimate)
 
-### P5. Deterministic schedule validator
-Generation is *instructed* to space quality sessions ("avoid back-to-back hard days") but nothing
-enforces it — `workout-validate.ts` checks protocol bands, not placement. Add a post-generation
-check that flags adjacent hard days (and quality sessions over the weekly budget), surfaced as a
-generation warning like the protocol checks. Closes the block-creation gap (sessions slot in by KB
-rules, but placement is only LLM-instructed today).
+### P5. Deterministic schedule validator — DONE (see ARCHIVE)
+`lib/schedule-validate.ts validateSchedule` flags adjacent hard days + quality sessions over the
+weekly budget as generation warnings. Closes the placement gap (`workout-validate` checks protocol,
+not placement).
 
 ### P6. Reliability & resilience quick-wins (from the code audit)
 Cheap, mostly-independent correctness / auditability wins:

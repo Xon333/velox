@@ -84,6 +84,16 @@ A full pass over a feedback dump (bugs + UX + features), worked P1 → P3.
 
 ## Foundations & earlier milestones
 
+- **Deterministic schedule validator (ROADMAP P5).** Generation was *instructed* to space quality
+  sessions ("avoid back-to-back hard days") and cap them at the weekly budget, but nothing enforced
+  placement — `workout-validate.ts` checks each session's protocol bands in isolation. New
+  `lib/schedule-validate.ts validateSchedule(days, settings)` does a post-generation pass over the
+  block's day sequence and flags (a) two hard/quality days on consecutive calendar dates (by date
+  adjacency, so it spans the week boundary and never false-pairs across a gap) and (b) any week over
+  the `qualitySessionsPerLoadingWeek` budget. Quality set = Threshold/VO2max/SIT/**RaceSim** (RaceSim
+  counts toward the budget + spacing). Folded into the generate route's `warnings[]` next to the
+  protocol checks — warns only, never reorders. 11 new tests. `lib/schedule-validate.ts`,
+  `app/api/generate/route.ts`.
 - **Decoupled sync + surfaced warnings (ROADMAP P3).** `/api/sync` now returns fast with the
   deterministic analysis (metrics, zones, intervals, PRs, execution score) and defers only the slow
   LLM coach note to a follow-up `/api/analyze` (extracted `lib/sync-analysis.ts addCoachNote`,

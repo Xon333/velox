@@ -23,6 +23,7 @@ import {
 import { parsePlan } from "@/lib/plan-parser";
 import { PlanToolSchema, structuredToPlannedDays } from "@/lib/plan-schema";
 import { validatePlanProtocol } from "@/lib/workout-validate";
+import { validateSchedule } from "@/lib/schedule-validate";
 import type { BlockParams, GeneratedPlan, PlannedDay } from "@/lib/types";
 
 // Generation calls take 1–2 minutes for a 4-week block.
@@ -163,6 +164,9 @@ export async function POST(req: Request) {
     // base (e.g. SIT prescribed as 1-min efforts, threshold pushed into VO2max territory) so
     // the plan and the live session can't describe different things.
     warnings.push(...validatePlanProtocol(days, profile.performance.ftp));
+    // Placement check (P5): the protocol check validates each session in isolation; this flags
+    // where they land — back-to-back hard days and any week over the quality budget.
+    warnings.push(...validateSchedule(days, blockSettings));
     if (truncated) {
       warnings.unshift("The AI response hit the token limit and may be incomplete.");
     }
