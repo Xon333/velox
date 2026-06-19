@@ -71,6 +71,13 @@ retrieve semantically-similar past contexts ("how did we handle VO2max failures 
 [`lancedb`](https://github.com/lancedb/lancedb) (embedded Rust vector DB with a Node binding,
 stores vectors next to JSON in `/data`).
 
+**Lighter vector path if we ever migrate to SQLite:** [`asg017/sqlite-vec`](https://github.com/asg017/sqlite-vec)
+piggybacks vectors onto a `better-sqlite3` store (no separate vector DB), so *if* the SQLite
+migration happens (see ROADMAP "Decided against" — deferred), semantic memory becomes a near-free
+add. Embeddings are still the open question: local (`transformers.js`, $0, a model download) vs. API
+(`voyage-3`, costs money + network — drops the "$0 local" property). Note the original proposal mixed
+these (Part 1 used API `voyage-3`, Part 2 used local `sqlite-vec`) — pick one; local keeps the ethos.
+
 **Verdict: deferred — lean-first.** The *outcome* is good and the gap is real, but:
 - The deps are the **heaviest** option in the whole second-brain plan (a WASM model download + a
   native vector DB) and push against the zero-bloat mandate; this overlaps the RAG direction already

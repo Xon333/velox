@@ -152,16 +152,24 @@ against". The items below are deployment-agnostic cost / robustness / UX wins.
 Apply `cache_control` to the static system-prompt prefix (coach persona + KB context + resolved
 zones) in `lib/anthropic-api.ts`, ordered before the volatile per-request context so the cache
 breakpoint actually lands. Largest spend reduction with no design change; aligns with the
-token-economy mandate. Verified absent today (`cache_control` appears nowhere).
+token-economy mandate. Verified absent today (`cache_control` appears nowhere). Reality check: this
+cuts input cost on the cached prefix + time-to-first-token, but the ~8k-token *output* still
+dominates wall-clock — pair with streamed generation (P9) for the perceived-speed win; caching alone
+won't make a block feel instant (the "60s→15s" claim is optimistic).
 - [ ] **singleton Anthropic client** — `new Anthropic()` is instantiated per call ×4 today; move it to
   module top level (connection reuse + prerequisite for cache headers)
-- [ ] cache_control on the static prefix in generation + ride-analysis calls
+- [ ] structure `system` as `[{text: kb+athlete+zones, cache_control:{type:"ephemeral"}}, {text: blockParams}]`
+  — static prefix cached, dynamic params after the breakpoint
 - [ ] verify prefix ordering (static → volatile) so the cached segment is reused
 
 ### P2. Structured outputs (parse robustness)
 Replace the regex plan parser (`lib/plan-parser.ts`) with Anthropic tool-use / structured JSON for
 the generated block — removes the regex as a failure surface; the model returns structured days.
+Tool-use guarantees *schema*-valid output, **not** *coaching*-valid (a SIT day can still come back as
+1-min reps), so the `workout-validate` guard stays — don't "delete the parser entirely".
 - [ ] define a `create_block` / day tool schema; switch generation to tool-use
+- [ ] one shared **zod** schema → both `safeParse(body)` (API request validation) and the tool
+  `input_schema` (single source of truth for what the app expects + what the AI may output)
 - [ ] keep `workout-validate.ts` + KB protocol rules as the post-generation guard
 - [ ] keep the regex parser as a fallback for one release in case of malformed tool output
 
@@ -322,8 +330,19 @@ Completed work has moved to **[ARCHIVE.md](ARCHIVE.md)** to keep this list forwa
   to a hosted multi-user product.
 - **pgvector RAG for the KB** — the KB is a handful of small markdown files that fit cheaply in the
   prompt; the context-dump is intentional. Against the "no heavy DB abstractions" rule.
-- **RxDB / better-sqlite3 reactive-DB rewrite** — contradicts the local-first JSON design; the
-  desync it targeted is already fixed with refetch-on-sync.
+- **RxDB reactive-DB rewrite** — contradicts the local-first JSON design; the desync it targeted is
+  already fixed with refetch-on-sync.
+- **SQLite (`better-sqlite3` + Drizzle + `sqlite-vec`) — deferred, not rejected.** A storage-engine
+  swap (transactions, indexed queries, cheap local vectors) is genuinely more justified than the
+  reactive rewrite above. But at single-user scale its wins are mostly theoretical (filtering a few
+  hundred rows is instant; the concurrency race is fixable by P6's mutex), and its standout unlock
+  (`sqlite-vec` semantic memory) is gated on semantic RAG — itself deferred (research.md). The
+  migration also replaces json-store's atomic-write + `.bak` recovery + immutable-ledger logic and
+  adds a native dep. **Reconsider when semantic RAG is committed OR data volume / multi-user
+  justifies it** — then it's the right foundation; just not worth the risk now.
+- **uPlot / canvas charting** — the "long ride freezes the SVG" premise is stale: `buildRideTrace`
+  already downsamples to ~240 points, so no chart ever renders raw 1 Hz streams. Revisit only if we
+  add full-resolution interactive charts (not planned).
 - **Cytoscape / Obsidian-style knowledge graph** — heavyweight dep that re-presents existing data;
   against the zero-bloat mandate.
 - **Post-ride structured survey** — RPE/feel already sync from Intervals.icu (`icu_rpe`).
