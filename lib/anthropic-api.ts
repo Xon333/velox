@@ -5,6 +5,7 @@ import { DEFAULT_BLOCK_SETTINGS } from "./types";
 import { weightTrendFromWellness } from "./nutrition";
 import { prDurationLabel } from "./pr";
 import { TRAINING_BLOCK_TOOL } from "./plan-schema";
+import { recordUsage } from "./ai-usage";
 
 // Non-negotiable: in-app generation always uses claude-sonnet-4-6.
 export const GENERATION_MODEL = "claude-sonnet-4-6";
@@ -456,6 +457,7 @@ export async function analyseRide(input: RideAnalysisInput): Promise<string> {
     temperature: 0.3,
     messages: [{ role: "user", content: prompt }],
   });
+  void recordUsage(GENERATION_MODEL, response.usage); // fire-and-forget telemetry
 
   return response.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
@@ -562,6 +564,7 @@ export async function generateRetrospective(input: RetrospectiveInput): Promise<
     temperature: 0.3,
     messages: [{ role: "user", content: prompt }],
   });
+  void recordUsage(GENERATION_MODEL, response.usage); // fire-and-forget telemetry
 
   return response.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
@@ -597,6 +600,7 @@ export async function generateTrainingBlock(
     tool_choice: { type: "tool", name: TRAINING_BLOCK_TOOL.name },
     messages: [{ role: "user", content: userMessage }],
   });
+  void recordUsage(GENERATION_MODEL, response.usage); // fire-and-forget telemetry
   const toolUse = response.content.find(
     (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
   );
@@ -673,6 +677,7 @@ export async function askCoach(ctx: AskCoachContext, query: string): Promise<str
     temperature: 0.4,
     messages: [{ role: "user", content: buildAskCoachPrompt(ctx, query) }],
   });
+  void recordUsage(QUICK_MODEL, response.usage); // fire-and-forget telemetry
   return response.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)

@@ -149,10 +149,16 @@ external audit (Postgres/RLS, blob storage, auth) are intentionally out of scope
 against". The items below are deployment-agnostic cost / robustness / UX wins.
 
 ### P4. Observability + generation caching
-- [ ] Generate caching: skip the Claude call when the assembled prompt is byte-identical to a recent one
-- [ ] Stream `/api/ask` responses (token streaming) for snappier coach replies
+- [x] **Token/cost tracker in Settings** — DONE (see ARCHIVE). `lib/ai-usage.ts` records every
+  Anthropic call's `usage` into `data/ai-usage.json` (priced per-model, cache read/write aware);
+  `AiUsageCard` surfaces running spend on Settings.
+- [ ] Generate caching: skip the Claude call when the assembled prompt is byte-identical to a recent
+  one. **Open product question:** with temperature 0.3, a deliberate "regenerate" partly exists *to
+  get variation* — decide whether a cache hit reuses the prior plan (cost win) or whether regenerate
+  must always re-call (needs a `refresh` bypass / short dedupe-only TTL). Resolve before building.
+- [ ] Stream `/api/ask` responses (token streaming) for snappier coach replies (most UX-coupled).
 - [ ] Surface intervention **coach-accuracy %** (from `intervention-log.json`) on the dashboard
-- [ ] Token/cost tracker in Settings (tally input/output tokens per call → running cost estimate)
+  (mostly surfacing existing `summariseValidation` data; cheap).
 
 ### P5. Deterministic schedule validator — DONE (see ARCHIVE)
 `lib/schedule-validate.ts validateSchedule` flags adjacent hard days + quality sessions over the

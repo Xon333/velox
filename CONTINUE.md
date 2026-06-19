@@ -4,7 +4,7 @@ A living "resume here" note. Point a fresh session at this file: _"read CONTINUE
 The canonical backlog is [ROADMAP.md](ROADMAP.md); completed work is in [ARCHIVE.md](ARCHIVE.md);
 how the app works is [README.md](README.md). Update or clear this file as work moves.
 
-_Last updated: after P6 shipped (reliability quick-wins)._
+_Last updated: after P4 token/cost tracker shipped (rest of P4 still open)._
 
 ---
 
@@ -25,8 +25,17 @@ the Platform & performance (P-series) + correctness items over the coaching-feat
 - Prior sessions: **P1** (`e357ca3`) prompt caching + singleton client; **P2** (`3d49b27`)
   structured tool-use generation; **P3** (`0de91b5`) decoupled `/api/sync` from the LLM coach note.
 
+## Latest: P4 token/cost tracker
+- `lib/ai-usage.ts` — `recordUsage(model, response.usage)` fire-and-forget after every Anthropic
+  call (4 sites in `anthropic-api.ts`), folding into `data/ai-usage.json`; per-model pricing +
+  cache read/write multipliers; `estimateCostUsd` unit-tested. `AiUsageCard` on the (now
+  `force-dynamic`) Settings page. (Not yet committed.)
+- **Rest of P4 still open** — see ROADMAP P4: (a) generation caching has an unresolved product
+  question (regenerate-for-variation vs cache reuse) — decide before building; (b) stream `/api/ask`;
+  (c) coach-accuracy % on the dashboard.
+
 ## State of the tree
-- **197 tests pass** (`npm test`), **`npx tsc --noEmit` clean**, **`npm run build` clean**.
+- **203 tests pass** (`npm test`), **`npx tsc --noEmit` clean**, **`npm run build` clean**.
 - **Lint is pre-existing dirty** (~11 problems: React-compiler strictness, `prefer-const` in
   `calibration.ts`/`plan-parser.ts`, an unused `numArr` in `intervals-api.ts`, a `Today's`
   unescaped-entity). These predate this session and the build tolerates them — **don't attribute

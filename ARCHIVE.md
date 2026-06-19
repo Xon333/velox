@@ -84,6 +84,16 @@ A full pass over a feedback dump (bugs + UX + features), worked P1 → P3.
 
 ## Foundations & earlier milestones
 
+- **Token/cost tracker (ROADMAP P4, item 1).** `lib/ai-usage.ts` folds every Anthropic call's
+  `usage` into `data/ai-usage.json` (best-effort, fire-and-forget — never blocks the request; a
+  serialized read-modify-write chain prevents lost increments under concurrency). Cost is estimated
+  from a per-model price table (sonnet-4-6 $3/$15, haiku-4-5 $1/$5 per 1M) with the cache-write
+  premium (1.25×) and cache-read discount (0.1×) applied to the input rate. `recordUsage` wired into
+  all four call sites (generate, ride analysis, retrospective, ask-coach); `AiUsageCard` shows total
+  + per-model spend on the (now dynamic) Settings page. Pure `estimateCostUsd` unit-tested.
+  `lib/ai-usage.ts`, `lib/anthropic-api.ts`, `components/AiUsageCard.tsx`, `app/settings/page.tsx`.
+  Remaining P4: generation caching (open product question — see ROADMAP), stream `/api/ask`,
+  coach-accuracy % on the dashboard.
 - **Reliability & resilience quick-wins (ROADMAP P6).** Five independent hardening wins:
   - **Error boundaries** — `app/error.tsx` (route-segment fallback; the nav rail above it stays
     mounted) + `app/global-error.tsx` (root-shell fallback). Use Next 16's `unstable_retry` prop

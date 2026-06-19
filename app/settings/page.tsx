@@ -1,7 +1,13 @@
 import BlockSettingsForm from "@/components/BlockSettingsForm";
 import BackupRestore from "@/components/BackupRestore";
+import AiUsageCard from "@/components/AiUsageCard";
+import { readAiUsage } from "@/lib/ai-usage";
 
-export default function SettingsPage() {
+// Read the usage store at request time (it changes as AI calls accrue).
+export const dynamic = "force-dynamic";
+
+export default async function SettingsPage() {
+  const usage = await readAiUsage();
   return (
     <div className="space-y-6">
       <div>
@@ -11,6 +17,7 @@ export default function SettingsPage() {
         </p>
       </div>
       <BlockSettingsForm />
+      <AiUsageCard usage={usage} />
       <BackupRestore />
     </div>
   );
