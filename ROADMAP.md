@@ -81,6 +81,26 @@ doesn't *fuse* them. e.g. RPE-high + execution-down + decoupling-up → one "sys
 recover" conclusion, not three lines. Design a single `athleteState` synthesis before
 generation/readiness. This is the heart of the goal.
 
+### Weak-Point Optimizer & rider-type ID  ⭐ (the proprietary edge)
+The distinct value over Intervals.icu / TrainerRoad / TrainingPeaks: translate the raw power curve
+into structured coaching. Deterministically analyse the **shape** of the synced power curve (ratios
+across 5s / 1min / 5min / 20min, plus W/kg) to:
+- **Classify rider type** (sprinter / puncheur / TT / all-rounder) from the curve profile.
+- **Flag the "easy win"** — the duration most depressed relative to the rider's own profile / type
+  norm — as an explicit micro-target for the next block.
+- Surface both on Profile + feed them into generation **and the block review** (this absorbs the
+  "telemetry-graph ingestion" idea — the review reads the curve shape, not just compliance).
+- Replaces today's **manual** weak points (`athlete_profile.md`) with an auto-derived layer; manual
+  stays as an override.
+Keep it **deterministic** — classification + easy-win in TypeScript, the LLM only phrases it. Shares
+the power-profile read with #1 (per-athlete bands): build the curve-shape analysis once.
+
+### Plan-cue generalization
+Execution cues in generation are grounded in weak points, but the *examples* are hardcoded text
+(descending / cornering / standing sprints — this athlete's). Make the cues derive from the
+athlete's actual weak points + goals (and, once the Weak-Point Optimizer lands, the auto-identified
+weak point), so they generalise to any rider instead of baking one athlete's limiters into the prompt.
+
 ---
 
 ## Platform & performance (local-first)
@@ -119,6 +139,13 @@ triggered call and patches `today-analysis.json`.
 - [ ] Surface intervention **coach-accuracy %** (from `intervention-log.json`) on the dashboard
 - [ ] Token/cost tracker in Settings (tally input/output tokens per call → running cost estimate)
 
+### P5. Deterministic schedule validator
+Generation is *instructed* to space quality sessions ("avoid back-to-back hard days") but nothing
+enforces it — `workout-validate.ts` checks protocol bands, not placement. Add a post-generation
+check that flags adjacent hard days (and quality sessions over the weekly budget), surfaced as a
+generation warning like the protocol checks. Closes the block-creation gap (sessions slot in by KB
+rules, but placement is only LLM-instructed today).
+
 ---
 
 ## UI refinements
@@ -140,6 +167,10 @@ Most of the Images 1–5 audit shipped (see [ARCHIVE.md](ARCHIVE.md)). Remaining
 - **Popups where needed:** add styled `MetricTip` hovers to metrics that lack an explanation —
   the interval completion % (Img 2), the new nutrition-availability metric, Recent Baselines tiles,
   Trend Pulse tiles. Consistent hover affordance across the app.
+- **Mobile horizontal-overflow audit:** verify **zero** horizontal scroll on Today/Plan/Trends at
+  narrow viewports (the lean-UX mandate). The layout looks responsive (grids stack at `sm`, vertical
+  containment via `lg:overflow-hidden`) but hasn't been checked on a real phone-width screen — fix
+  any overflow source found (watch the 3-col tile rows + `whitespace-nowrap` chips).
 
 ---
 
