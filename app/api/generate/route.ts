@@ -127,14 +127,18 @@ export async function POST(req: Request) {
       }
     }
 
-    const system = buildSystemPrompt(
-      kbContext + seedsContext + directivesContext,
+    // Split for prompt caching: the reference KB is the stable, cacheable prefix; the
+    // per-block carry-forward seeds + synthesised directives go in the dynamic half so they
+    // don't invalidate the cached prefix.
+    const { cached, dynamic } = buildSystemPrompt(
+      kbContext,
+      seedsContext + directivesContext,
       buildAthleteDataSection(profile, sync, zonesText),
       blockParams
     );
     const userMessage = buildUserMessage(blockParams, weeks, nutritionTable, blockSettings);
 
-    const { raw, truncated } = await generateTrainingBlock(system, userMessage);
+    const { raw, truncated } = await generateTrainingBlock(cached, dynamic, userMessage);
     const { overview, days, warnings } = parsePlan(raw, weeks.flat());
     // KB-grounded protocol check: flag any generated workout that contradicts the knowledge
     // base (e.g. SIT prescribed as 1-min efforts, threshold pushed into VO2max territory) so

@@ -13,6 +13,14 @@ export const QUICK_MODEL = "claude-haiku-4-5";
 const MAX_TOKENS = 8000;
 const TEMPERATURE = 0.3;
 
+// One client, lazily constructed. Lazy so importing this module never requires the API key
+// (every call site guards with isAnthropicConfigured() first); reused so calls share one
+// keep-alive agent (connection pooling) instead of spinning up a client per request.
+let _client: Anthropic | null = null;
+function getClient(): Anthropic {
+  return (_client ??= new Anthropic());
+}
+
 export function isAnthropicConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
@@ -207,25 +215,31 @@ export function buildAthleteDataSection(
 // ---------- Prompt assembly (structure per spec F2) ----------
 
 export function buildSystemPrompt(
-  kbContext: string,
+  kbReference: string, // stable reference KB — the cacheable bulk (persona + syntax + KB below)
+  dynamicContext: string, // carry-forward seeds + synthesised directives — change every block
   athleteDataSection: string,
   blockParams: BlockParams
-): string {
-  return `You are an expert cycling coach who designs structured training blocks. You output training blocks ONLY, in exactly the format the user requests — no preamble, no commentary, no markdown formatting beyond the requested structure. You ground every coaching decision in the knowledge base provided below and in the athlete's current data. You never invent nutrition numbers: you copy the pre-computed values supplied in the user's nutrition reference table.
+): { cached: string; dynamic: string } {
+  // `cached` is the stable prefix; everything that changes per block (seeds, directives, the
+  // athlete's live data + params) goes in `dynamic`, AFTER the cache breakpoint, so it never
+  // invalidates the cached prefix. The caller marks `cached` with cache_control.
+  const cached = `You are an expert cycling coach who designs structured training blocks. You output training blocks ONLY, in exactly the format the user requests — no preamble, no commentary, no markdown formatting beyond the requested structure. You ground every coaching decision in the knowledge base provided below and in the athlete's current data. You never invent nutrition numbers: you copy the pre-computed values supplied in the user's nutrition reference table.
 
 ${WORKOUT_SYNTAX_GUIDE}
 
 KNOWLEDGE BASE CONTEXT
 
-${kbContext}
+${kbReference}`;
 
-${athleteDataSection}
+  const dynamic = `${dynamicContext.trim() ? `${dynamicContext.trim()}\n\n` : ""}${athleteDataSection}
 
 BLOCK PARAMETERS
 
 - Block length: ${blockParams.lengthWeeks} weeks
 - Block goal: ${blockParams.goal}
 - Weakpoints to target this block: ${blockParams.weakpoints.length > 0 ? blockParams.weakpoints.join("; ") : "(none specified)"}`;
+
+  return { cached, dynamic };
 }
 
 export function buildUserMessage(
@@ -429,7 +443,7 @@ export async function analyseRide(input: RideAnalysisInput): Promise<string> {
     athleteNote,
   ].filter(Boolean).join("\n");
 
-  const client = new Anthropic();
+  const client = getClient();
   const response = await client.messages.create({
     model: GENERATION_MODEL,
     max_tokens: 280,
@@ -535,7 +549,7 @@ export async function generateRetrospective(input: RetrospectiveInput): Promise<
     .filter((l) => l !== null)
     .join("\n");
 
-  const client = new Anthropic();
+  const client = getClient();
   const response = await client.messages.create({
     model: GENERATION_MODEL,
     max_tokens: 380,
@@ -551,18 +565,25 @@ export async function generateRetrospective(input: RetrospectiveInput): Promise<
 }
 
 export async function generateTrainingBlock(
-  system: string,
+  systemCached: string,
+  systemDynamic: string,
   userMessage: string
 ): Promise<GenerationResult> {
   if (!isAnthropicConfigured()) {
     throw new Error("Anthropic API is not configured. Set ANTHROPIC_API_KEY in .env.local.");
   }
-  const client = new Anthropic();
+  const client = getClient();
   const response = await client.messages.create({
     model: GENERATION_MODEL,
     max_tokens: MAX_TOKENS,
     temperature: TEMPERATURE,
-    system,
+    // Cache breakpoint after the stable prefix (persona + syntax + reference KB): a repeat
+    // generation within the cache TTL reads it at ~0.1× instead of re-paying full input. The
+    // dynamic block (seeds/directives/athlete/params) follows so it never breaks the cache.
+    system: [
+      { type: "text", text: systemCached, cache_control: { type: "ephemeral" } },
+      { type: "text", text: systemDynamic },
+    ],
     messages: [{ role: "user", content: userMessage }],
   });
   const raw = response.content
@@ -631,7 +652,7 @@ export function buildAskCoachPrompt(ctx: AskCoachContext, query: string): string
 
 export async function askCoach(ctx: AskCoachContext, query: string): Promise<string> {
   if (!isAnthropicConfigured()) throw new Error("Anthropic API is not configured.");
-  const client = new Anthropic();
+  const client = getClient();
   const response = await client.messages.create({
     model: QUICK_MODEL,
     max_tokens: 320,

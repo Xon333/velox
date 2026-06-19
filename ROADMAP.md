@@ -148,20 +148,6 @@ Deployment is **local-first, single-user** (confirmed). The hosted-SaaS migratio
 external audit (Postgres/RLS, blob storage, auth) are intentionally out of scope — see "Decided
 against". The items below are deployment-agnostic cost / robustness / UX wins.
 
-### P1. Prompt caching (token cost)  ⭐
-Apply `cache_control` to the static system-prompt prefix (coach persona + KB context + resolved
-zones) in `lib/anthropic-api.ts`, ordered before the volatile per-request context so the cache
-breakpoint actually lands. Largest spend reduction with no design change; aligns with the
-token-economy mandate. Verified absent today (`cache_control` appears nowhere). Reality check: this
-cuts input cost on the cached prefix + time-to-first-token, but the ~8k-token *output* still
-dominates wall-clock — pair with streamed generation (P9) for the perceived-speed win; caching alone
-won't make a block feel instant (the "60s→15s" claim is optimistic).
-- [ ] **singleton Anthropic client** — `new Anthropic()` is instantiated per call ×4 today; move it to
-  module top level (connection reuse + prerequisite for cache headers)
-- [ ] structure `system` as `[{text: kb+athlete+zones, cache_control:{type:"ephemeral"}}, {text: blockParams}]`
-  — static prefix cached, dynamic params after the breakpoint
-- [ ] verify prefix ordering (static → volatile) so the cached segment is reused
-
 ### P2. Structured outputs (parse robustness)
 Replace the regex plan parser (`lib/plan-parser.ts`) with Anthropic tool-use / structured JSON for
 the generated block — removes the regex as a failure surface; the model returns structured days.

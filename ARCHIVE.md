@@ -84,6 +84,14 @@ A full pass over a feedback dump (bugs + UX + features), worked P1 → P3.
 
 ## Foundations & earlier milestones
 
+- **Prompt caching + singleton Anthropic client (ROADMAP P1).** One lazily-constructed `Anthropic`
+  client reused across all calls (was `new Anthropic()` per call ×4) for connection pooling.
+  Generation's system prompt is split into a cached prefix (persona + workout-syntax guide +
+  reference KB, marked `cache_control: ephemeral`) and a dynamic tail (carry-forward seeds +
+  directives + athlete data + block params), so a repeat generation within the cache TTL re-reads
+  the bulk at ~0.1× input cost. A test locks the invariant that per-block dynamic content never
+  leaks into the cached prefix (which would defeat the cache). `lib/anthropic-api.ts`,
+  `app/api/generate/route.ts`.
 - **Timezone-correct "today" (code-audit fix).** The server matched today's ride on a UTC date
   while activities carry their *local* date, so an evening ride could be missed entirely (no
   analysis/PR). `lib/date.ts` now makes the client's local date the single source of "today"
