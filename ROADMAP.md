@@ -101,6 +101,19 @@ Execution cues in generation are grounded in weak points, but the *examples* are
 athlete's actual weak points + goals (and, once the Weak-Point Optimizer lands, the auto-identified
 weak point), so they generalise to any rider instead of baking one athlete's limiters into the prompt.
 
+### Goal-driven session selection  ⭐ (high priority — make the brain actually use the new types)
+The building blocks already ship — **RaceSim** (KB §10: attack hills / KOM-hunt rehearsal) and
+**athlete-directed / terrain-flexible** sessions (KB §11: *"find 2×20m climbs, push; Z2 otherwise"*
+· *"5 short climbs 2–8 min, stay in VO2max"* · *"Z2 but sprint ≤6 short hills"*). The gap is
+*selection*: the generator only reaches for them when the prompt happens to nudge it. Make it
+**goal-driven and reliable** — when the macro-goal implies terrain/race demands (hill-KOM hunting),
+the block must include race-sim + flexible-climb sessions as *key quality work*, not optional
+flavour. Prefer a deterministic nudge (goal tags → require ≥1 such quality session per loading week)
+over hoping the LLM picks them. They count toward the quality budget and respect spacing (see P5
+schedule validator) so they don't interfere with the fixed-ERG benchmark + interval priority — the
+point is to keep intervals primary while breaking indoor-ladder monotony with structured-but-flexible
+outdoor quality the athlete will actually ride. (Foundation: PW-3/PW-9, shipped — see ARCHIVE.)
+
 ---
 
 ## Platform & performance (local-first)

@@ -284,6 +284,8 @@ Hard rules:
   - **SIT:** stay seated — standing recruits upper body and gives less consistent power for the 30s aerobic efforts. **Standing sprints** are a separate skill (KB): cue them only on dedicated neuromuscular / race-sprint work or RaceSim attacks (hands in drops, rock the bike under a quiet torso, bigger gear) — this athlete has flagged out-of-saddle technique as a weakpoint worth practising.
   - **Rides with descents:** treat descents as deliberate practice for descending and cornering (known weakpoints) — work line choice and braking, not just recovery.
   Omit the Execution line for Rest days and whenever no cue adds value; never repeat the Intent.
+  Keep every cue as concise *inline* coaching (a clause the athlete acts on mid-ride) — **never**
+  tell them to watch a video, read an article, or include any external link/URL.
 - Workout step durations must sum approximately to DURATION.
 - **WEEKLY VOLUME (loading weeks):** Target ${settings.weeklyHoursMin}–${settings.weeklyHoursMax} hours total per week. Each loading week must reach at least ${settings.weeklyHoursMin}h.
 - **WEEKLY VOLUME (recovery week):** Reduce to ${settings.recoveryWeekHoursMin}–${settings.recoveryWeekHoursMax} hours total.
