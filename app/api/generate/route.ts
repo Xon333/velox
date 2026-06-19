@@ -5,7 +5,9 @@ import {
   buildSystemPrompt,
   buildUserMessage,
   generateTrainingBlock,
+  GENERATION_MODEL,
   isAnthropicConfigured,
+  PROMPT_VERSION,
 } from "@/lib/anthropic-api";
 import { readAthleteProfile, readBlockSettings, readInterventionLog, readLastSync, readScoreLog } from "@/lib/data-store";
 import { latestRetrospectiveSeeds, loadKnowledgeBaseContext } from "@/lib/kb-loader";
@@ -173,7 +175,15 @@ export async function POST(req: Request) {
 
     // Audit trail: store the structured tool JSON when present, else the raw text.
     const rawForAudit = toolInput != null ? JSON.stringify(toolInput, null, 2) : raw;
-    const plan: GeneratedPlan = { overview, days, warnings, raw: rawForAudit, blockParams };
+    const plan: GeneratedPlan = {
+      overview,
+      days,
+      warnings,
+      raw: rawForAudit,
+      blockParams,
+      model: GENERATION_MODEL,
+      promptVersion: PROMPT_VERSION,
+    };
     return NextResponse.json({ plan });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Generation failed.";

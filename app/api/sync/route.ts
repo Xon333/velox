@@ -285,9 +285,11 @@ export async function POST(req: Request) {
           const resolvedCompliancePct = resolveCompliance(compliancePct, executionScore);
 
           // The coach note (the slow LLM call) is deferred to /api/analyze so this sync returns
-          // fast. Preserve an already-generated note across a re-sync of the same day; a fresh ride
-          // starts empty and the client triggers the follow-up analysis to fill it.
-          const coachNote = priorAnalysis?.activityDate === today ? priorAnalysis.coachNote : "";
+          // fast. Preserve an already-generated note (and its provenance stamp) across a re-sync of
+          // the same day so an Anthropic hiccup during re-analysis can't wipe a good note; a fresh
+          // ride starts empty and the client triggers the follow-up analysis to fill it.
+          const preserved = priorAnalysis?.activityDate === today ? priorAnalysis : null;
+          const coachNote = preserved?.coachNote ?? "";
 
           todayAnalysis = {
             analysedAt: new Date().toISOString(),
@@ -320,6 +322,8 @@ export async function POST(req: Request) {
             intervalComparison,
             trace,
             powerPRs,
+            ...(preserved?.model ? { model: preserved.model } : {}),
+            ...(preserved?.promptVersion ? { promptVersion: preserved.promptVersion } : {}),
           };
           await writeTodayAnalysis(todayAnalysis);
 

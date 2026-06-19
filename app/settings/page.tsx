@@ -1,4 +1,5 @@
 import BlockSettingsForm from "@/components/BlockSettingsForm";
+import BackupRestore from "@/components/BackupRestore";
 
 export default function SettingsPage() {
   return (
@@ -10,6 +11,7 @@ export default function SettingsPage() {
         </p>
       </div>
       <BlockSettingsForm />
+      <BackupRestore />
     </div>
   );
 }

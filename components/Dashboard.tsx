@@ -968,7 +968,7 @@ function PlannedToday({ block }: { block: CurrentBlock | null }) {
 export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }) {
   // Sync state is shared via SyncProvider so the nav-rail sync control and the page
   // views stay in lock-step. Page-specific state (below) stays local.
-  const { state, setState, loadError, analyzing, doSync } = useSync();
+  const { state, setState, loadError, analyzing, doSync, reAnalyse } = useSync();
 
   const [lengthWeeks, setLengthWeeks] = useState<2 | 4>(4);
   const [goal, setGoal] = useState("");
@@ -1225,10 +1225,32 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
               {state.todayAnalysis?.activityDate === todayIso() && state.todayAnalysis.coachNote ? (
                 <Zone title="Coach note" hero accent="pink" fill>
                   <p className="text-xs leading-5 text-zinc-600 dark:text-zinc-300">{state.todayAnalysis.coachNote}</p>
+                  {state.anthropicConfigured && (
+                    <button
+                      onClick={reAnalyse}
+                      disabled={analyzing}
+                      title="Regenerate today's coach note"
+                      className="mt-2 rounded border border-zinc-200 px-2 py-1 text-[10px] font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+                    >
+                      {analyzing ? "Re-analysing…" : "↻ Re-analyse"}
+                    </button>
+                  )}
                 </Zone>
               ) : state.todayAnalysis?.activityDate === todayIso() && analyzing ? (
                 <Zone title="Coach note" hero accent="pink" fill>
                   <p className="text-xs italic leading-5 text-zinc-400 dark:text-zinc-500">Analysing today&apos;s ride…</p>
+                </Zone>
+              ) : state.todayAnalysis?.activityDate === todayIso() && state.anthropicConfigured ? (
+                // Ride synced but the note is missing (e.g. the auto-run hit an Anthropic hiccup) —
+                // offer a manual retry instead of waiting for the next full sync.
+                <Zone title="Coach note" hero accent="pink" fill>
+                  <p className="text-xs leading-5 text-zinc-400 dark:text-zinc-500">No coach note yet.</p>
+                  <button
+                    onClick={reAnalyse}
+                    className="mt-2 rounded border border-zinc-200 px-2 py-1 text-[10px] font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+                  >
+                    ↻ Generate coach note
+                  </button>
                 </Zone>
               ) : null}
               {state.anthropicConfigured && <AskCoach />}

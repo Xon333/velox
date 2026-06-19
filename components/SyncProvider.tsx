@@ -44,6 +44,9 @@ interface SyncContextValue {
   // coach-note generation) — shown rather than swallowed.
   syncWarnings: string[];
   doSync: () => Promise<void>;
+  // Manually (re)generate today's coach note — recovers a note lost to an Anthropic hiccup without
+  // a full re-sync. `force` regenerates even if a note already exists.
+  reAnalyse: () => Promise<void>;
 }
 
 const SyncContext = createContext<SyncContextValue | null>(null);
@@ -63,6 +66,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [syncWarnings, setSyncWarnings] = useState<string[]>([]);
+
+  // The deferred AI coach-note step. Shared by the post-sync auto-run (force=false, idempotent) and
+  // the manual re-analyse action (force=true, regenerates).
+  const runAnalysis = useCallback(async (force: boolean) => {
+    setAnalyzing(true);
+    try {
+      const a = await api<{ todayAnalysis: TodayAnalysis | null; warnings: string[] }>(
+        "/api/analyze",
+        { method: "POST", body: JSON.stringify({ today: localToday(), force }) }
+      );
+      if (a.todayAnalysis) setState((s) => (s ? { ...s, todayAnalysis: a.todayAnalysis } : s));
+      if (a.warnings?.length) setSyncWarnings((w) => [...w, ...a.warnings]);
+    } catch (e) {
+      setSyncWarnings((w) => [...w, `Coach analysis failed: ${e instanceof Error ? e.message : "error"}`]);
+    } finally {
+      setAnalyzing(false);
+    }
+  }, []);
 
   const doSync = useCallback(async () => {
     setSyncing(true);
@@ -113,22 +134,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     // Fast path done — surface the data immediately, then fetch the deferred coach note so an
     // Anthropic hiccup never blocks (or fails) the sync itself.
     setSyncing(false);
-    if (analysisPending) {
-      setAnalyzing(true);
-      try {
-        const a = await api<{ todayAnalysis: TodayAnalysis | null; warnings: string[] }>(
-          "/api/analyze",
-          { method: "POST", body: JSON.stringify({ today: localToday() }) }
-        );
-        if (a.todayAnalysis) setState((s) => (s ? { ...s, todayAnalysis: a.todayAnalysis } : s));
-        if (a.warnings?.length) setSyncWarnings((w) => [...w, ...a.warnings]);
-      } catch (e) {
-        setSyncWarnings((w) => [...w, `Coach analysis failed: ${e instanceof Error ? e.message : "error"}`]);
-      } finally {
-        setAnalyzing(false);
-      }
-    }
-  }, []);
+    if (analysisPending) await runAnalysis(false);
+  }, [runAnalysis]);
+
+  // Manual re-analyse — force a fresh coach note (e.g. after the auto-run failed).
+  const reAnalyse = useCallback(() => runAnalysis(true), [runAnalysis]);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,7 +156,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <SyncContext.Provider value={{ state, setState, loadError, syncing, syncError, analyzing, syncWarnings, doSync }}>
+    <SyncContext.Provider value={{ state, setState, loadError, syncing, syncError, analyzing, syncWarnings, doSync, reAnalyse }}>
       {children}
     </SyncContext.Provider>
   );

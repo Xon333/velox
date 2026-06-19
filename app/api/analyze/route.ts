@@ -19,7 +19,9 @@ export async function POST(req: Request) {
     /* no body — UTC fallback */
   }
   const today = resolveToday((body as { today?: unknown } | null)?.today);
+  // `force` (from the manual re-analyse action) regenerates the note even if one already exists.
+  const force = (body as { force?: unknown } | null)?.force === true;
   const warnings: string[] = [];
-  const todayAnalysis = await addCoachNote(today, warnings);
+  const todayAnalysis = await addCoachNote(today, warnings, force);
   return NextResponse.json({ todayAnalysis, warnings });
 }

@@ -4,7 +4,7 @@ A living "resume here" note. Point a fresh session at this file: _"read CONTINUE
 The canonical backlog is [ROADMAP.md](ROADMAP.md); completed work is in [ARCHIVE.md](ARCHIVE.md);
 how the app works is [README.md](README.md). Update or clear this file as work moves.
 
-_Last updated: after P5 shipped (deterministic schedule validator)._
+_Last updated: after P6 shipped (reliability quick-wins)._
 
 ---
 
@@ -13,29 +13,29 @@ _Last updated: after P5 shipped (deterministic schedule validator)._
 the Platform & performance (P-series) + correctness items over the coaching-feature items for now.
 
 ## Shipped this session
-- **P5** — deterministic schedule validator (`lib/schedule-validate.ts validateSchedule`): flags
-  back-to-back hard days (date-adjacency, spans week boundary) + any week over the
-  `qualitySessionsPerLoadingWeek` budget. Quality set = Threshold/VO2max/SIT/RaceSim. Folded into
-  the generate route's `warnings[]` beside `validatePlanProtocol`. Warns only — never reorders.
-  11 new tests. (Not yet committed.)
+- **P5** (`00b754f`) — deterministic schedule validator (`lib/schedule-validate.ts`): flags
+  back-to-back hard days + weekly over-budget as generation `warnings[]`. Quality set =
+  Threshold/VO2max/SIT/RaceSim.
+- **P6** — reliability quick-wins (5 items): `app/error.tsx` + `app/global-error.tsx` boundaries
+  (Next 16 uses `unstable_retry`, not `reset`); model+`promptVersion` provenance stamping across
+  `GeneratedPlan`/`TodayAnalysis`/`BlockHistoryEntry`/`CurrentBlock`; export/import backup
+  (`/api/export`+`/api/import`, no-dep JSON bundle, Settings card); per-file write mutex in
+  `lib/json-store.ts` (+ `NODEVELO_DATA_DIR` test override); manual re-analyse (`addCoachNote(force)`
+  + `SyncProvider.reAnalyse` + Today button). (Not yet committed.)
 - Prior sessions: **P1** (`e357ca3`) prompt caching + singleton client; **P2** (`3d49b27`)
-  structured tool-use generation (`lib/plan-schema.ts`; regex `plan-parser.ts` kept one release);
-  **P3** (`0de91b5`) decoupled `/api/sync` from the LLM coach note + `warnings[]` in the nav rail.
+  structured tool-use generation; **P3** (`0de91b5`) decoupled `/api/sync` from the LLM coach note.
 
 ## State of the tree
-- **193 tests pass** (`npm test`), **`npx tsc --noEmit` clean**, **`npm run build` clean**.
+- **197 tests pass** (`npm test`), **`npx tsc --noEmit` clean**, **`npm run build` clean**.
 - **Lint is pre-existing dirty** (~11 problems: React-compiler strictness, `prefer-const` in
   `calibration.ts`/`plan-parser.ts`, an unused `numArr` in `intervals-api.ts`, a `Today's`
   unescaped-entity). These predate this session and the build tolerates them — **don't attribute
   them to recent work or fix them inside an unrelated commit.**
 
 ## Next up (suggested order — backend first)
-1. **P6 — Reliability quick-wins** (cheap, mostly-independent): `error.tsx` boundary,
-   model+prompt-version stamping (schema touch on `TodayAnalysis`/`GeneratedPlan`/
-   `BlockHistoryEntry`), export/import backup, `json-store` async mutex, re-analyse-today.
-2. **P4 — Observability + generation caching**: generate-result cache (skip Claude when the prompt
+1. **P4 — Observability + generation caching**: generate-result cache (skip Claude when the prompt
    is byte-identical to a recent one), stream `/api/ask`, surface intervention coach-accuracy %,
-   token/cost tracker in Settings.
+   token/cost tracker in Settings. (Provenance stamping from P6 pairs well with the cost tracker.)
 - Then bigger platform: P7 (TanStack Query client), P8 (logging + AI-route rate-limit), P9 (PWA +
   streamed generation).
 - Coaching features (after backend): **Weak-Point Optimizer ⭐**, **Goal-driven session selection ⭐**,

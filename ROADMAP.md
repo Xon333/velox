@@ -159,20 +159,12 @@ against". The items below are deployment-agnostic cost / robustness / UX wins.
 weekly budget as generation warnings. Closes the placement gap (`workout-validate` checks protocol,
 not placement).
 
-### P6. Reliability & resilience quick-wins (from the code audit)
-Cheap, mostly-independent correctness / auditability wins:
-- [ ] **`error.tsx` boundary** — so a runtime error in Dashboard/Trends doesn't white-screen the page.
-- [ ] **Model + prompt-version stamping** — add `model` + `promptVersion` (a bumped constant) to
-  `TodayAnalysis` / `GeneratedPlan` / `BlockHistoryEntry`, stamped at generation; makes past AI
-  outputs reproducible/auditable when the model or prompt changes.
-- [ ] **Export / import backup** — `GET /api/export` zips `data/` + `knowledge-base/`; `POST
-  /api/import` restores. Disaster-recovery insurance for the only source of truth.
-- [ ] **json-store async mutex** — a per-file in-flight-write lock in `lib/json-store.ts` so a
-  concurrent sync + disposition POST can't clobber each other.
-- [ ] **Re-analyse-today** — `today-analysis.json` is overwritten each sync; a failed coach note
-  (Anthropic hiccup) is lost. Add a manual re-analyse action and don't overwrite a good note with an
-  empty one.
-- _(The audit's "sync warnings[]" and "singleton Anthropic client" are folded into P3 and P1.)_
+### P6. Reliability & resilience quick-wins — DONE (see ARCHIVE)
+All five shipped: `error.tsx`/`global-error.tsx` boundaries; model+`promptVersion` stamping on
+`GeneratedPlan`/`TodayAnalysis`/`BlockHistoryEntry`/`CurrentBlock`; export/import backup
+(`/api/export` + `/api/import`, no-dep JSON bundle, Settings UI); per-file write mutex in
+`lib/json-store.ts`; and manual re-analyse (`addCoachNote(force)` + Today button, with the
+note-preserved-across-resync guard).
 
 ### P7. TanStack Query client
 `SyncProvider` + `lib/client-api.ts` are a hand-rolled cache (fetch-on-mount, manual refetch, no

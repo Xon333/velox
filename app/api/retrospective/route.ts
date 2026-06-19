@@ -166,6 +166,8 @@ export async function POST() {
     ctlGain: ctlStart !== null && ctlEnd !== null ? Math.round((ctlEnd - ctlStart) * 10) / 10 : null,
     nextBlockSeeds: seeds,
     retrospective,
+    model: block.model,
+    promptVersion: block.promptVersion,
   };
   await appendBlockHistory(historyEntry);
   await writeCurrentBlock(null);

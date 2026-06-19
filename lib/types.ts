@@ -137,6 +137,10 @@ export interface GeneratedPlan {
   warnings: string[];
   raw: string;
   blockParams: BlockParams;
+  // Provenance: the model + prompt version that produced this output (audit/reproducibility).
+  // Optional so plans persisted before stamping landed still parse.
+  model?: string;
+  promptVersion?: number;
 }
 
 // ---------- Active block (data/current-block.json) ----------
@@ -223,6 +227,9 @@ export interface CurrentBlock {
   overview: string;
   createdAt: string;
   days: CurrentBlockDay[];
+  // Provenance carried from the GeneratedPlan that produced this block (see GeneratedPlan).
+  model?: string;
+  promptVersion?: number;
 }
 
 // ---------- Block generation settings (data/block-settings.json) ----------
@@ -276,6 +283,9 @@ export interface BlockHistoryEntry {
   ctlGain?: number | null;
   nextBlockSeeds?: string[];
   retrospective?: string; // Claude narrative
+  // Provenance of the block this entry archives (see GeneratedPlan).
+  model?: string;
+  promptVersion?: number;
 }
 
 // ---------- Readiness / fatigue signals (computed at sync time) ----------
@@ -489,6 +499,9 @@ export interface TodayAnalysis {
   intervalComparison: IntervalComparison | null; // prescription vs execution
   trace: RideTrace | null; // downsampled streams + interval bands for the power chart
   powerPRs?: PowerPR[]; // new power bests set during this ride (vs the prior 84-day curve)
+  // Provenance of the coach note (the only AI-produced field here); set when the note is written.
+  model?: string;
+  promptVersion?: number;
 }
 
 // Downsampled streams + executed-interval bands powering the ride power-trace chart.

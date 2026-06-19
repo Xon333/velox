@@ -81,6 +81,8 @@ export async function POST(req: Request) {
         lengthWeeks: existing.lengthWeeks,
         overview: existing.overview,
         createdAt: existing.createdAt,
+        model: existing.model,
+        promptVersion: existing.promptVersion,
       });
     }
 
@@ -93,6 +95,8 @@ export async function POST(req: Request) {
       endDate: dates[dates.length - 1],
       overview: plan.overview,
       createdAt: new Date().toISOString(),
+      model: plan.model,
+      promptVersion: plan.promptVersion,
       days: plan.days.map((d) => {
         // Capture the coach's prescription structurally so execution can be compared.
         const prescription = parsePrescription(d.workoutText, ftp);

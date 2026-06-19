@@ -84,6 +84,28 @@ A full pass over a feedback dump (bugs + UX + features), worked P1 → P3.
 
 ## Foundations & earlier milestones
 
+- **Reliability & resilience quick-wins (ROADMAP P6).** Five independent hardening wins:
+  - **Error boundaries** — `app/error.tsx` (route-segment fallback; the nav rail above it stays
+    mounted) + `app/global-error.tsx` (root-shell fallback). Use Next 16's `unstable_retry` prop
+    (not `reset` — verified against `node_modules/next/dist/docs`).
+  - **Provenance stamping** — `PROMPT_VERSION` constant + `model`/`promptVersion` (optional) on
+    `GeneratedPlan`, `TodayAnalysis`, `BlockHistoryEntry`, `CurrentBlock`, stamped at generation /
+    coach-note time and carried through block archive → history; makes past AI outputs auditable
+    when the model or prompt later changes. `lib/anthropic-api.ts`, `lib/types.ts`, generate/write/
+    retrospective routes, `lib/sync-analysis.ts`.
+  - **Export / import backup** — `GET /api/export` bundles `data/*.json` + `knowledge-base/**/*.md`
+    into one downloadable JSON (no zip dep); `POST /api/import` restores it, guarded (must self-id as
+    a NodeVelo backup, path-traversal-confined, data files go through `writeJsonFile` so critical
+    stores keep their pre-import `.bak`). Settings "Backup & restore" card. `components/BackupRestore.tsx`.
+  - **json-store per-file write mutex** — concurrent writes to the same store chain one-at-a-time
+    (last-write-wins) so a sync + disposition POST can't clobber the shared temp file; different
+    files stay parallel. Data dir made env-overridable (`NODEVELO_DATA_DIR`) for test isolation.
+    `lib/json-store.ts` + new mutex/round-trip tests.
+  - **Manual re-analyse** — `addCoachNote(today, warnings, force)` regenerates today's coach note on
+    demand (force bypasses the idempotency guard); `/api/analyze` reads `force`; `SyncProvider`
+    exposes `reAnalyse`; the Today coach-note card shows a re-analyse / "generate note" button so an
+    Anthropic hiccup is recoverable without a full re-sync. The sync route already preserves a good
+    note + its stamp across a re-sync (never overwrites with empty).
 - **Deterministic schedule validator (ROADMAP P5).** Generation was *instructed* to space quality
   sessions ("avoid back-to-back hard days") and cap them at the weekly budget, but nothing enforced
   placement — `workout-validate.ts` checks each session's protocol bands in isolation. New

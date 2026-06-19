@@ -15,7 +15,11 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// Resolved per call (not a module const) so tests can point at a throwaway directory via
+// NODEVELO_DATA_DIR without re-importing, and so the app always reads the env in force at runtime.
+function dataDir(): string {
+  return process.env.NODEVELO_DATA_DIR || path.join(process.cwd(), "data");
+}
 
 // Stores that cannot be re-derived from a fresh sync → keep a one-deep backup.
 const CRITICAL = new Set([
@@ -30,7 +34,7 @@ const CRITICAL = new Set([
 ]);
 
 export async function readJsonFile<T>(file: string, fallback: T): Promise<T> {
-  const full = path.join(DATA_DIR, file);
+  const full = path.join(dataDir(), file);
   for (const candidate of [full, `${full}.bak`]) {
     try {
       const raw = await fs.readFile(candidate, "utf-8");
@@ -44,9 +48,29 @@ export async function readJsonFile<T>(file: string, fallback: T): Promise<T> {
   return fallback;
 }
 
-export async function writeJsonFile(file: string, value: unknown): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  const full = path.join(DATA_DIR, file);
+// Per-file write serialization. Two concurrent writes to the same store (e.g. a sync and a
+// disposition POST both touching score-log.json) share one temp path and would otherwise interleave
+// the copy→write→rename steps and clobber each other. Each write chains onto the previous write of
+// the *same* file so they apply one-at-a-time (last-write-wins); different files stay parallel.
+const writeChains = new Map<string, Promise<void>>();
+
+export function writeJsonFile(file: string, value: unknown): Promise<void> {
+  // `.catch` so a prior failed write doesn't poison the chain for the next caller; the returned
+  // promise still rejects if *this* write fails (preserving the throw-on-error contract).
+  const prev = writeChains.get(file) ?? Promise.resolve();
+  const next = prev.catch(() => {}).then(() => atomicWrite(file, value));
+  writeChains.set(file, next);
+  // Drop the entry once it's settled and still the tail, so the map can't grow unbounded.
+  void next.catch(() => {}).finally(() => {
+    if (writeChains.get(file) === next) writeChains.delete(file);
+  });
+  return next;
+}
+
+async function atomicWrite(file: string, value: unknown): Promise<void> {
+  const dir = dataDir();
+  await fs.mkdir(dir, { recursive: true });
+  const full = path.join(dir, file);
 
   if (CRITICAL.has(file)) {
     // Snapshot the previous good version before overwriting (no-op on first write).
