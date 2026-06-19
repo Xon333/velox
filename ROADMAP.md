@@ -114,6 +114,32 @@ schedule validator) so they don't interfere with the fixed-ERG benchmark + inter
 point is to keep intervals primary while breaking indoor-ladder monotony with structured-but-flexible
 outdoor quality the athlete will actually ride. (Foundation: PW-3/PW-9, shipped — see ARCHIVE.)
 
+### Second-brain learning upgrades  ⭐ (semantic memory + confidence — additive to the deterministic core)
+Make the brain reason about *why*, not just track scalars — **without** surrendering the
+deterministic guarantees (the AI only ever writes the language; the math + validation stay in TS).
+Shared theme: ride notes (athlete `activityDescription` + `coachNote`) are currently generated, shown,
+then discarded — these turn them into durable, queryable memory.
+
+- **Structured retrospective reflection.** `generateRetrospective` emits prose and the forward
+  "learnings" are deterministic seeds. Instead, feed the previous block's `intervention-log`
+  (hypothesis) + actual outcomes to the model and have it return **structured JSON** via Anthropic
+  native tool-use + `zod` — `{hypothesis, observation, root_cause, adjusted_strategy}` — stored on
+  `BlockHistoryEntry` and injected into the next block's system prompt, so the AI reads its own past
+  clinical notes, not just seeds. (Ties to #4 validation loop + P2 structured outputs; one extra
+  call per ~4-week block — negligible. Use native tool-use, **not** the Vercel AI SDK.)
+- **Athlete-quirk extraction (lean).** A small local NER (`compromise`, ~200kb pure JS) over
+  accumulated `activityDescription` notes on sync → recurring symptoms / equipment / psych states
+  (e.g. "left-leg cramp in heat", "indoor aversion") as tags in a **derived** store — *not*
+  `athlete_profile.md` (owned-intent stays authoritative; auto-derived stays separate). Inject the
+  tags into generation so the coach recalls history without RAG-ing it. Tags are hints, not facts
+  (pattern-matching is noisy). This is the lean slice of the semantic-memory spike (research.md).
+- **Confidence-weighted modeling.** EWMA gives a point estimate with no sense of sample size. Add an
+  **uncertainty layer alongside** EWMA (sample-size / variance, or a Beta/Normal conjugate posterior)
+  so the model distinguishes "45% after 1 session, wide" from "tight after 10" — feeding per-athlete
+  bands (#1) and letting low-confidence signals be down-weighted. **Additive, not a rip-out:** keep
+  EWMA's gradation (don't binarise 1–10 → pass/fail and lose the 6-vs-9 distinction). Pure TS
+  (`simple-statistics` or hand-rolled conjugate update).
+
 ---
 
 ## Platform & performance (local-first)

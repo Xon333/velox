@@ -56,3 +56,31 @@ This spike was reviewed with deployment left undecided. As of today the app is *
 single-user** (see ROADMAP "Decided against" for why the hosted-SaaS migration items are out of
 scope). A hosted, multi-tenant pivot would reopen those — but that's a deliberate product decision,
 not a prerequisite for any of the lean spin-offs above.
+
+---
+
+## Semantic note-memory (RAG) — deferred
+
+**Idea:** ride notes (`activityDescription` + `coachNote`) are generated, shown, then discarded.
+Embed them locally on sync and store them in a local vector DB so generation / Ask-Coach can
+retrieve semantically-similar past contexts ("how did we handle VO2max failures before?",
+"cramped on a hot day last July").
+
+**Candidate stack (local, $0):** [`xenova/transformers.js`](https://github.com/xenova/transformers.js)
+(run `Xenova/all-MiniLM-L6-v2`, ~22MB, in-process WASM) for embeddings +
+[`lancedb`](https://github.com/lancedb/lancedb) (embedded Rust vector DB with a Node binding,
+stores vectors next to JSON in `/data`).
+
+**Verdict: deferred — lean-first.** The *outcome* is good and the gap is real, but:
+- The deps are the **heaviest** option in the whole second-brain plan (a WASM model download + a
+  native vector DB) and push against the zero-bloat mandate; this overlaps the RAG direction already
+  in ROADMAP "Decided against" (there for the *static KB* — the distinction here is that *ride notes
+  grow unboundedly*, which is the one case where retrieval could earn its keep).
+- For a single user with a few hundred short notes, the lean **athlete-quirk extraction**
+  (`compromise` NER → derived tags, now a committed ROADMAP item) captures ~80% of the value at
+  ~1% of the weight.
+
+**Revisit when:** note volume genuinely outgrows tag-based recall, or a multi-tenant pivot makes a
+shared vector store worthwhile (swap the local embedder/DB for an API + Pinecone/Weaviate; the
+application logic is identical). Until then, ship the quirk-tags and structured reflection first.
+
