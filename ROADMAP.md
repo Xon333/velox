@@ -308,6 +308,12 @@ Most of the Images 1–5 audit shipped (see [ARCHIVE.md](ARCHIVE.md)). Remaining
   Load — name it consistently), fix the **Weekly-hours window** (it uses the logged-window mean, not
   the 90d rolling its sibling tiles use — see todo `MR-2`), and reconsider the Today card's **"NP /
   Avg" two-value tile + IF** for clarity (NP + NP-based IF are the signal; raw Avg is secondary).
+  _Latest feedback (sharpens this):_ **IF lacks context on its own** — decide whether to pair it with
+  a plain-language read (zone/effort label) or replace it with a more legible intensity metric; and
+  surface **avg power · NP · speed as distinct, clearly-labelled synced tiles** (today NP+Avg share one
+  tile and speed shows only when distance+duration are present). Likely outcome: split NP from Avg,
+  keep speed as a sanity tile, and either annotate or demote IF. (Verify the tiles actually populate
+  post-sync first — todo `TR-4`; avg-speed `RC-1` is a new synced field.)
 - **Pw:HR-drift × fueling overlay on Trends (from the external spec):** the **filtering is already
   shipped** — `lib/trends.ts efSeries` uses Intervals' `icu_efficiency_factor`, outdoor-only,
   endurance band (0.56–0.85 FTP), ≥45 min, as a *trajectory* not single-ride snapshots. The new ask
@@ -320,7 +326,8 @@ Most of the Images 1–5 audit shipped (see [ARCHIVE.md](ARCHIVE.md)). Remaining
   tighten spacing + reorder so the first screen answers "what do I do now?" without scrolling.
 - **Popups where needed:** add styled `MetricTip` hovers to metrics that lack an explanation —
   the interval completion % (Img 2), the new nutrition-availability metric, Recent Baselines tiles,
-  Trend Pulse tiles. Consistent hover affordance across the app.
+  Trend Pulse tiles, and the Trends **Weekly-volume** + **Execution-quality** cards (the last two
+  tracked actionable in todo `TR-3`). Consistent hover affordance across the app.
 - **Mobile horizontal-overflow audit:** verify **zero** horizontal scroll on Today/Plan/Trends at
   narrow viewports (the lean-UX mandate). The layout looks responsive (grids stack at `sm`, vertical
   containment via `lg:overflow-hidden`) but hasn't been checked on a real phone-width screen — fix
