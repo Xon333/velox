@@ -16,20 +16,6 @@ export const ACWR_COLOR: Record<AcwrResult["level"], string> = {
   danger: "text-red-600 dark:text-red-400",
 };
 
-// One-line explanation shown on hover over an alert/readiness bracket. `align` flips the
-// tooltip to the right edge so it doesn't clip when the anchor sits near the card's right.
-export function MetricTip({ text, align = "left" }: { text: string; align?: "left" | "right" }) {
-  return (
-    <span
-      className={`pointer-events-none absolute ${
-        align === "right" ? "right-0" : "left-0"
-      } top-full z-30 mt-1 w-64 max-w-[80vw] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] font-normal normal-case leading-snug text-zinc-600 opacity-0 shadow-md transition-opacity duration-100 group-hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300`}
-    >
-      {text}
-    </span>
-  );
-}
-
 // ---------- Zone distribution mini-bars ----------
 
 export function ZoneBars({ times, label, secondary }: { times: number[]; label: string; secondary?: boolean }) {

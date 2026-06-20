@@ -3,16 +3,33 @@
 
 import type { ReactNode } from "react";
 
-// Eyebrow-titled surface card (muted title + optional right-aligned hint).
+// One-line explanation shown on hover over a metric/title. `align` flips the tooltip to the
+// right edge so it doesn't clip when the anchor sits near a container's right. Wrap the trigger
+// element in `group relative`; the tip fades in on group-hover.
+export function MetricTip({ text, align = "left" }: { text: string; align?: "left" | "right" }) {
+  return (
+    <span
+      className={`pointer-events-none absolute ${
+        align === "right" ? "right-0" : "left-0"
+      } top-full z-30 mt-1 w-64 max-w-[80vw] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] font-normal normal-case leading-snug text-zinc-600 opacity-0 shadow-md transition-opacity duration-100 group-hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300`}
+    >
+      {text}
+    </span>
+  );
+}
+
+// Eyebrow-titled surface card (muted title + optional right-aligned hint + optional ⓘ hover tip).
 export function Card({
   title,
   hint,
+  tip,
   accentTop,
   className,
   children,
 }: {
   title?: string;
   hint?: string;
+  tip?: string;
   accentTop?: boolean;
   className?: string;
   children: ReactNode;
@@ -25,7 +42,17 @@ export function Card({
     >
       {(title || hint) && (
         <div className="mb-2 flex items-baseline justify-between gap-3">
-          {title && <h2 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">{title}</h2>}
+          {title && (
+            <h2 className="flex items-center gap-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+              {title}
+              {tip && (
+                <span className="group relative inline-flex cursor-help text-zinc-400 dark:text-zinc-500">
+                  <span className="text-[10px] opacity-60">ⓘ</span>
+                  <MetricTip text={tip} />
+                </span>
+              )}
+            </h2>
+          )}
           {hint && <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{hint}</span>}
         </div>
       )}

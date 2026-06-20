@@ -12,6 +12,23 @@ exact commits.
 
 ---
 
+## Trends & Today card polish (TR batch)
+
+From a real-use feedback pass on the Trends and Today pages.
+- **TR-1 — Weekly-volume card compacted.** The Trends "Weekly volume" card is now half-width
+  (paired in a `lg:grid-cols-2`, right column intentionally empty) to match the "Execution quality"
+  card instead of spreading full-width. `components/Trends.tsx`
+- **TR-2 — Weekly-volume colour-by-magnitude.** Bars are shaded across four blues relative to the
+  window max (darker = bigger week), so volume reads by hue as well as height. `components/Trends.tsx`
+- **TR-3 — Card ⓘ hovers.** `Card` gained a reusable `tip` prop rendering a `MetricTip` ⓘ next to
+  the title; applied to the Weekly-volume + Execution-quality cards. `MetricTip` promoted from
+  `components/dashboard/shared.tsx` to `components/ui.tsx` as a generic primitive. (Slice of ROADMAP
+  "Popups where needed".)
+- **TR-4 — Today metric strip.** Split the combined "NP / Avg" tile into distinct **NP** and **Avg
+  power** tiles, kept **Avg speed**, and gave **IF** context (effort-band sublabel + ⓘ hover
+  explaining NP÷FTP). Verified the tiles are correctly wired from sync (`app/api/sync/route.ts`) —
+  a missing value means absent Intervals data, not a bug. `components/dashboard/today.tsx`
+
 ## Feedback sweep — all items cleared
 
 A full pass over a feedback dump (bugs + UX + features), worked P1 → P3.

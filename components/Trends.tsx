@@ -196,6 +196,18 @@ function WeeklyVolumeBars({ weeks }: { weeks: TrendsData["weeklyHours"] }) {
   if (recent.length < 2) return null;
   const max = Math.max(...recent.map((w) => w.hours), 1);
   const avg = Math.round((recent.reduce((s, w) => s + w.hours, 0) / recent.length) * 10) / 10;
+  // Encode volume in the bar's blue shade as well as its height, so a big week reads at a glance
+  // (height alone is hard to compare across 16 thin bars). Buckets are relative to the window max.
+  const volColor = (h: number) => {
+    const r = h / max;
+    return r >= 0.85
+      ? "bg-sky-700 dark:bg-[#00d4ff]"
+      : r >= 0.6
+      ? "bg-sky-500 dark:bg-[#00d4ff]/80"
+      : r >= 0.35
+      ? "bg-sky-400 dark:bg-[#00d4ff]/55"
+      : "bg-sky-300 dark:bg-[#00d4ff]/30";
+  };
   return (
     <div>
       <div className="flex items-end gap-px" style={{ height: 56 }}>
@@ -203,13 +215,13 @@ function WeeklyVolumeBars({ weeks }: { weeks: TrendsData["weeklyHours"] }) {
           <div
             key={w.date}
             title={`Week of ${w.date} · ${w.hours.toFixed(1)} h`}
-            className="min-w-[2px] flex-1 rounded-sm bg-sky-400 transition-opacity hover:opacity-70 dark:bg-[#00d4ff]/60"
+            className={`min-w-[2px] flex-1 rounded-sm transition-opacity hover:opacity-70 ${volColor(w.hours)}`}
             style={{ height: `${Math.max(4, (w.hours / max) * 100)}%` }}
           />
         ))}
       </div>
       <p className="mt-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
-        Avg {avg} h/week over last {recent.length} complete weeks
+        Avg {avg} h/week over last {recent.length} complete weeks · darker blue = bigger week
       </p>
     </div>
   );
@@ -445,7 +457,11 @@ export default function Trends() {
       {(data.scores.length >= 2 || cards.length > 0) && (
         <div className="grid gap-3 lg:grid-cols-2">
           {data.scores.length >= 2 && (
-            <Card title="Execution quality" hint="per-ride completion score">
+            <Card
+              title="Execution quality"
+              hint="per-ride completion score"
+              tip="How completely you delivered each session (1–10): duration × power against the plan, over your last 24 matched rides. Taller / greener = better execution; the immutable score the coach and trends read from."
+            >
               <ScoreBars scores={data.scores} />
             </Card>
           )}
@@ -461,11 +477,18 @@ export default function Trends() {
         </div>
       )}
 
-      {/* Weekly volume — the landing view for the Today trend-pulse "Weekly volume" tile (UX-2). */}
+      {/* Weekly volume — the landing view for the Today trend-pulse "Weekly volume" tile (UX-2).
+          Half-width to match the Execution-quality card; the right column is left empty by design. */}
       {data.weeklyHours.length >= 2 && (
-        <Card title="Weekly volume" hint="ride hours · complete weeks">
-          <WeeklyVolumeBars weeks={data.weeklyHours} />
-        </Card>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <Card
+            title="Weekly volume"
+            hint="ride hours · complete weeks"
+            tip="Total ride hours per complete week over the last ~16 weeks (the in-progress week is excluded). Bar height and blue shade both track weekly training volume — your consistency and ramp at a glance."
+          >
+            <WeeklyVolumeBars weeks={data.weeklyHours} />
+          </Card>
+        </div>
       )}
 
       {/* Fueling & weight — kept wide; it carries three weekly series */}

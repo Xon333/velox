@@ -16,8 +16,8 @@ import { prDurationLabel } from "@/lib/pr";
 import { isoDaysAgo, localToday as todayIso } from "@/lib/date";
 import RideTrace from "../RideTrace";
 import SessionDisposition from "../SessionDisposition";
-import { Card } from "../ui";
-import { ACWR_COLOR, MetricTip, READINESS_STYLES, ZoneBars, trendArrow } from "./shared";
+import { Card, MetricTip } from "../ui";
+import { ACWR_COLOR, READINESS_STYLES, ZoneBars, trendArrow } from "./shared";
 
 // ---------- Readiness badge ----------
 
@@ -99,17 +99,32 @@ export function TodayRideCard({
 
   // Compliance % removed — execution (the duration/completion-aware 1–10 shown above) is the
   // single completion-anchored index; a separate macro % only duplicated the same story.
-  const metrics: Array<{ label: string; value: string; highlight?: string }> = [];
-  if (analysis.intensityFactor != null)
-    metrics.push({ label: "IF", value: analysis.intensityFactor.toFixed(2) });
-  // NP and avg power share one tile ("NP / Avg") — the gap reads as variability at a glance, and
-  // one tile instead of two trims the card. TSS is dropped: it's identical to Intervals' "Load"
-  // (same field) which the athlete already sees there; execution is the app's load-completion read.
-  const np = analysis.activityNormalizedPower;
-  const avgW = analysis.activityAvgWatts;
-  if (np != null && avgW != null) metrics.push({ label: "NP / Avg", value: `${np} / ${avgW}W` });
-  else if (np != null) metrics.push({ label: "NP", value: `${np}W` });
-  else if (avgW != null) metrics.push({ label: "Avg power", value: `${avgW}W` });
+  const metrics: Array<{ label: string; value: string; sub?: string; tip?: string; highlight?: string }> = [];
+  // IF alone is opaque ("0.85" relative to what?), so pair it with the effort band it implies and a
+  // hover that explains the metric. NP-based when NP is present (the real signal), avg-power-based
+  // otherwise. TSS is intentionally dropped — it's Intervals' "Load" (same field); execution is the
+  // app's load-completion read.
+  if (analysis.intensityFactor != null) {
+    const IF = analysis.intensityFactor;
+    const band =
+      IF < 0.75 ? "recovery" :
+      IF < 0.85 ? "endurance" :
+      IF < 0.95 ? "tempo" :
+      IF < 1.05 ? "threshold" :
+      IF < 1.15 ? "VO2max" : "anaerobic";
+    metrics.push({
+      label: "IF",
+      value: IF.toFixed(2),
+      sub: band,
+      tip: "Intensity Factor = normalized power ÷ FTP — how hard the whole ride was relative to your threshold. ~0.75–0.85 endurance · 0.85–0.95 tempo · 0.95–1.05 threshold/race · >1.05 VO2+. Uses NP when present, else avg power.",
+    });
+  }
+  // NP and avg power as distinct tiles — NP (the variability-aware figure that IF/execution read
+  // from) is the signal; raw avg is the secondary sanity value. Both synced from Intervals.icu.
+  if (analysis.activityNormalizedPower != null)
+    metrics.push({ label: "NP", value: `${analysis.activityNormalizedPower}W` });
+  if (analysis.activityAvgWatts != null)
+    metrics.push({ label: "Avg power", value: `${analysis.activityAvgWatts}W` });
   // Avg speed from the synced distance + moving time (RC-1).
   if (analysis.activityDistanceMeters != null && analysis.activityDurationMin > 0) {
     const kmh = analysis.activityDistanceMeters / 1000 / (analysis.activityDurationMin / 60);
@@ -191,11 +206,19 @@ export function TodayRideCard({
       {metrics.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {metrics.map((m) => (
-            <div key={m.label} className="rounded bg-zinc-100 px-2.5 py-1.5 dark:bg-zinc-900">
-              <p className="text-[10px] text-zinc-400 dark:text-zinc-500">{m.label}</p>
+            <div
+              key={m.label}
+              className={`group relative rounded bg-zinc-100 px-2.5 py-1.5 dark:bg-zinc-900${m.tip ? " cursor-help" : ""}`}
+            >
+              <p className="flex items-center gap-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+                {m.label}
+                {m.tip && <span className="opacity-60">ⓘ</span>}
+              </p>
               <p className={`font-mono text-sm font-semibold text-zinc-800 ${m.highlight ? m.highlight : "dark:text-zinc-100"}`}>
                 {m.value}
+                {m.sub && <span className="ml-1 font-sans text-[10px] font-normal text-zinc-400 dark:text-zinc-500">{m.sub}</span>}
               </p>
+              {m.tip && <MetricTip text={m.tip} />}
             </div>
           ))}
         </div>
