@@ -189,3 +189,26 @@ export function summariseValidation(log: InterventionLog): ValidationSummary {
   });
   return { byDimension, evaluated, pending };
 }
+
+// One headline number for the dashboard: across every matured intervention, how often acting on the
+// coach's directive proved right (validated / decisive). `hitRatePct` is null until there's at least
+// one decisive (validated|refuted) outcome — the loop runs on a 28-day horizon, so it stays null on
+// a fresh install and `pending` shows how many are still accruing.
+export function overallCoachAccuracy(log: InterventionLog): {
+  hitRatePct: number | null;
+  evaluated: number;
+  pending: number;
+} {
+  const s = summariseValidation(log);
+  let validated = 0;
+  let decisive = 0;
+  for (const d of s.byDimension) {
+    validated += d.validated;
+    decisive += d.validated + d.refuted;
+  }
+  return {
+    hitRatePct: decisive > 0 ? Math.round((validated / decisive) * 100) : null,
+    evaluated: s.evaluated,
+    pending: s.pending,
+  };
+}

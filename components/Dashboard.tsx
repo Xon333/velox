@@ -1221,6 +1221,31 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
             <div className="flex flex-col gap-3 lg:min-h-0">
               <Zone rank={3} title="Trend pulse — am I improving?" hint="opens Trends">
                 <TrendPulse vertical />
+                {/* Coach-accuracy: validation-loop self-assessment. Hidden until the 28-day horizon
+                    yields a decisive outcome or there are interventions still accruing. */}
+                {state.coachAccuracy &&
+                  (state.coachAccuracy.hitRatePct !== null || state.coachAccuracy.pending > 0) && (
+                    <div
+                      title="How often acting on the coach's matured directives proved right (28-day validation horizon)."
+                      className="mt-2 flex items-baseline justify-between border-t border-zinc-100 pt-2 dark:border-zinc-700/60"
+                    >
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                        Coach accuracy
+                      </span>
+                      {state.coachAccuracy.hitRatePct !== null ? (
+                        <span className="font-mono text-xs text-zinc-700 dark:text-zinc-300">
+                          {state.coachAccuracy.hitRatePct}%{" "}
+                          <span className="text-zinc-400 dark:text-zinc-500">
+                            ({state.coachAccuracy.evaluated} checked)
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                          accruing · {state.coachAccuracy.pending} pending
+                        </span>
+                      )}
+                    </div>
+                  )}
               </Zone>
               {state.todayAnalysis?.activityDate === todayIso() && state.todayAnalysis.coachNote ? (
                 <Zone title="Coach note" hero accent="pink" fill>

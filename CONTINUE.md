@@ -4,7 +4,7 @@ A living "resume here" note. Point a fresh session at this file: _"read CONTINUE
 The canonical backlog is [ROADMAP.md](ROADMAP.md); completed work is in [ARCHIVE.md](ARCHIVE.md);
 how the app works is [README.md](README.md). Update or clear this file as work moves.
 
-_Last updated: after P4 token/cost tracker shipped (rest of P4 still open)._
+_Last updated: after P4 coach-accuracy % shipped (2/4 P4 items done)._
 
 ---
 
@@ -21,21 +21,27 @@ the Platform & performance (P-series) + correctness items over the coaching-feat
   `GeneratedPlan`/`TodayAnalysis`/`BlockHistoryEntry`/`CurrentBlock`; export/import backup
   (`/api/export`+`/api/import`, no-dep JSON bundle, Settings card); per-file write mutex in
   `lib/json-store.ts` (+ `NODEVELO_DATA_DIR` test override); manual re-analyse (`addCoachNote(force)`
-  + `SyncProvider.reAnalyse` + Today button). (Not yet committed.)
+  + `SyncProvider.reAnalyse` + Today button).
 - Prior sessions: **P1** (`e357ca3`) prompt caching + singleton client; **P2** (`3d49b27`)
   structured tool-use generation; **P3** (`0de91b5`) decoupled `/api/sync` from the LLM coach note.
 
-## Latest: P4 token/cost tracker
-- `lib/ai-usage.ts` — `recordUsage(model, response.usage)` fire-and-forget after every Anthropic
-  call (4 sites in `anthropic-api.ts`), folding into `data/ai-usage.json`; per-model pricing +
-  cache read/write multipliers; `estimateCostUsd` unit-tested. `AiUsageCard` on the (now
-  `force-dynamic`) Settings page. (Not yet committed.)
-- **Rest of P4 still open** — see ROADMAP P4: (a) generation caching has an unresolved product
-  question (regenerate-for-variation vs cache reuse) — decide before building; (b) stream `/api/ask`;
-  (c) coach-accuracy % on the dashboard.
+## Latest: P4 progress (2 of 4 shipped) + spec fold
+- **P4 token/cost tracker** (`b87a122`) — `lib/ai-usage.ts` `recordUsage` after every Anthropic call
+  (4 sites), per-model pricing + cache read/write multipliers, `AiUsageCard` on the `force-dynamic`
+  Settings page.
+- **P4 coach-accuracy %** (this commit) — `overallCoachAccuracy` rolls the validation loop into one
+  hit-rate; `/api/sync` GET → `AppState.coachAccuracy` → compact line in the Today Trend-pulse zone
+  (hidden until a decisive % or pending interventions exist).
+- **Roadmap fold** (`f41a866`) — the external "second brain" spec mapped onto the backlog
+  (durability taxonomy, fueling correlation engine added; #1/#2/#4/#6 annotated). **Decisions made:**
+  FTP gap → *flag-only, suggest a re-test* (never write `physiology.json` FTP); durability template
+  selection → *limiter-driven, else rotate*. User wants the **rest of P4 finished before** the new
+  spec items.
+- **Still open in P4:** (a) stream `/api/ask` (last buildable item); (b) generation caching — blocked
+  on the regenerate-for-variation product question (decide before building).
 
 ## State of the tree
-- **203 tests pass** (`npm test`), **`npx tsc --noEmit` clean**, **`npm run build` clean**.
+- **205 tests pass** (`npm test`), **`npx tsc --noEmit` clean**, **`npm run build` clean**.
 - **Lint is pre-existing dirty** (~11 problems: React-compiler strictness, `prefer-const` in
   `calibration.ts`/`plan-parser.ts`, an unused `numArr` in `intervals-api.ts`, a `Today's`
   unescaped-entity). These predate this session and the build tolerates them — **don't attribute

@@ -23,7 +23,7 @@ import {
 } from "@/lib/data-store";
 import { isAnthropicConfigured } from "@/lib/anthropic-api";
 import { buildAthleteModel } from "@/lib/athlete-model";
-import { validateInterventions } from "@/lib/intervention";
+import { overallCoachAccuracy, validateInterventions } from "@/lib/intervention";
 import { adjustBuffer, weightTrendFromWellness } from "@/lib/nutrition";
 import { computeExecutionScore, resolveCompliance } from "@/lib/execution-score";
 import { detectPowerPRs } from "@/lib/pr";
@@ -36,15 +36,17 @@ import type { ExecutedInterval, TodayAnalysis } from "@/lib/types";
 
 // GET returns the cached app state; it never hits Intervals.icu.
 export async function GET() {
-  const [lastSync, currentBlock, todayAnalysis, scoreLog, profile, settings, dispositions] = await Promise.all([
-    readLastSync(),
-    readCurrentBlock(),
-    readTodayAnalysis(),
-    readScoreLog(),
-    readAthleteProfile(),
-    readBlockSettings(),
-    readDispositions(),
-  ]);
+  const [lastSync, currentBlock, todayAnalysis, scoreLog, profile, settings, dispositions, interventionLog] =
+    await Promise.all([
+      readLastSync(),
+      readCurrentBlock(),
+      readTodayAnalysis(),
+      readScoreLog(),
+      readAthleteProfile(),
+      readBlockSettings(),
+      readDispositions(),
+      readInterventionLog(),
+    ]);
   const readiness = lastSync
     ? computeReadiness(lastSync.fitness, lastSync.wellness)
     : null;
@@ -73,6 +75,9 @@ export async function GET() {
     // (it still has a score — the athlete attributed it as cut short).
     partialDates: dispositions.entries.filter((e) => e.disposition === "partial").map((e) => e.date),
     autoSyncOnOpen: settings.autoSyncOnOpen,
+    // How often acting on the coach's matured directives proved right (validation loop). Null until
+    // the 28-day horizon yields a decisive outcome; `pending` shows how many are still accruing.
+    coachAccuracy: overallCoachAccuracy(interventionLog),
   });
 }
 

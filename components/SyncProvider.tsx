@@ -30,6 +30,9 @@ export interface AppState {
   compromisedDates: string[];
   partialDates: string[];
   autoSyncOnOpen: boolean;
+  // Validation-loop self-assessment: how often acting on the coach's matured directives proved
+  // right. hitRatePct is null until the 28-day horizon produces a decisive outcome.
+  coachAccuracy?: { hitRatePct: number | null; evaluated: number; pending: number };
 }
 
 interface SyncContextValue {

@@ -96,11 +96,13 @@ motivation 1–5, illness none/mild/sick. Stored as structured JSON (a `morning-
 `intervention-log.json` records verdicts after a 28-day horizon but has none yet. Once data exists,
 make a low hit-rate in `lib/synthesis.ts` actually **demote** that directive (today it only
 annotates). Revisit ~4 weeks after the next block is written.
-- **Prescription-accuracy → baseline nudge (from the external spec).** Beyond demoting *directives*,
-  surface planned-vs-actual per session type on the Plan page and act on a consistent gap — e.g.
-  *"3 of your last 4 threshold sessions landed below prescribed power → suggest FTP/baseline −3 W."*
-  Deterministic, athlete-confirmed (never silently rewrites `physiology.json` FTP, the zone SoT).
-  Ties to the durability-template scoring loop (below) and §1 calibration.
+- **Prescription-accuracy → re-test flag (from the external spec; decision: flag-only).** Beyond
+  demoting *directives*, surface planned-vs-actual per session type on the Plan page and act on a
+  consistent gap — e.g. *"3 of your last 4 threshold sessions landed below prescribed power."* The
+  response is to **flag it and recommend an FTP re-test in Intervals.icu** — never write FTP locally;
+  `physiology.json` stays the synced zone SoT and the next sync carries any new FTP in. (Chosen over
+  an "effective FTP" shadow or a confirmed local override, to keep one source of truth.) Ties to the
+  durability-template scoring loop (below) and §1 calibration.
 
 ### 5. Signal fusion → one coherent athlete state  ⭐ (biggest gap to a "true" second brain)
 The brain *surfaces* parallel signals (execution, behaviour, validation, readiness, RPE); it
@@ -228,9 +230,11 @@ against". The items below are deployment-agnostic cost / robustness / UX wins.
   one. **Open product question:** with temperature 0.3, a deliberate "regenerate" partly exists *to
   get variation* — decide whether a cache hit reuses the prior plan (cost win) or whether regenerate
   must always re-call (needs a `refresh` bypass / short dedupe-only TTL). Resolve before building.
-- [ ] Stream `/api/ask` responses (token streaming) for snappier coach replies (most UX-coupled).
-- [ ] Surface intervention **coach-accuracy %** (from `intervention-log.json`) on the dashboard
-  (mostly surfacing existing `summariseValidation` data; cheap).
+- [x] **Coach-accuracy % on the dashboard** — DONE (see ARCHIVE). `overallCoachAccuracy` rolls the
+  validation loop into one hit-rate %; surfaced in the Trend-pulse zone, hidden until a decisive
+  outcome or pending interventions exist.
+- [ ] Stream `/api/ask` responses (token streaming) for snappier coach replies (most UX-coupled —
+  the last open P4 item besides the generation-caching product question).
 
 ### P5. Deterministic schedule validator — DONE (see ARCHIVE)
 `lib/schedule-validate.ts validateSchedule` flags adjacent hard days + quality sessions over the

@@ -111,6 +111,13 @@ ROADMAP "Platform & performance"; P4 is partially done (1 of 4 items shipped).
   being swallowed by best-effort catches; the Today card shows "Analysing today's ride…" while the
   note lands. `app/api/sync/route.ts`, `app/api/analyze/route.ts`, `lib/sync-analysis.ts`,
   `components/SyncProvider.tsx`, `components/Nav.tsx`, `components/Dashboard.tsx`.
+- **P4 (item 2 of 4) — Coach-accuracy % on the dashboard.** `overallCoachAccuracy(log)` rolls the
+  intervention validation loop into one headline hit-rate (validated / decisive across all
+  dimensions; null until the 28-day horizon produces a decisive outcome). Computed in the `/api/sync`
+  GET handler, carried on `AppState.coachAccuracy`, surfaced as a compact line in the Today
+  Trend-pulse zone — hidden entirely until there's a decisive % *or* pending interventions, so it
+  never shows an empty tile on a fresh install. `lib/intervention.ts`, `app/api/sync/route.ts`,
+  `components/SyncProvider.tsx`, `components/Dashboard.tsx`. 2 new tests.
 - **P4 (item 1 of 4) — Token/cost tracker.** `lib/ai-usage.ts` folds every Anthropic call's
   `usage` into `data/ai-usage.json` (best-effort, fire-and-forget — never blocks the request; a
   serialized read-modify-write chain prevents lost increments under concurrency). Cost is estimated
@@ -119,8 +126,7 @@ ROADMAP "Platform & performance"; P4 is partially done (1 of 4 items shipped).
   all four call sites (generate, ride analysis, retrospective, ask-coach); `AiUsageCard` shows total
   + per-model spend on the (now dynamic) Settings page. Pure `estimateCostUsd` unit-tested.
   `lib/ai-usage.ts`, `lib/anthropic-api.ts`, `components/AiUsageCard.tsx`, `app/settings/page.tsx`.
-  _Still open in P4:_ generation caching (open product question — see ROADMAP), stream `/api/ask`,
-  coach-accuracy % on the dashboard.
+  _Still open in P4:_ generation caching (open product question — see ROADMAP) and stream `/api/ask`.
 - **P5 — Deterministic schedule validator.** Generation was *instructed* to space quality
   sessions ("avoid back-to-back hard days") and cap them at the weekly budget, but nothing enforced
   placement — `workout-validate.ts` checks each session's protocol bands in isolation. New

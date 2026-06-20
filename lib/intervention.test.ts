@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildInterventions, physMarkerFor, summariseValidation, validateInterventions } from "./intervention";
+import { buildInterventions, overallCoachAccuracy, physMarkerFor, summariseValidation, validateInterventions } from "./intervention";
 import type { AthleteModel, Insight, InterventionLog, InterventionRecord, SyncData } from "./types";
 
 const model = (vo2Exec: number, overall = 6): AthleteModel => ({
@@ -127,5 +127,30 @@ describe("summariseValidation", () => {
     expect(s.pending).toBe(1);
     expect(s.byDimension.find((d) => d.dimension === "VO2max")?.hitRate).toBe(0.5);
     expect(s.byDimension.find((d) => d.dimension === "Threshold")?.hitRate).toBe(1);
+  });
+
+  it("overallCoachAccuracy rolls dimensions into one hit-rate % + pending count", () => {
+    // VO2max 1/2 + Threshold 1/1 = 2 validated / 3 decisive = 67%; one pending.
+    const log: InterventionLog = {
+      records: [
+        rec("VO2max", "validated"),
+        rec("VO2max", "refuted"),
+        rec("Threshold", "validated"),
+        { ...rec("Z2", "validated"), id: "pending", outcome: null },
+      ],
+      updatedAt: "",
+    };
+    expect(overallCoachAccuracy(log)).toEqual({ hitRatePct: 67, evaluated: 3, pending: 1 });
+  });
+
+  it("overallCoachAccuracy is null (not 0) before any decisive outcome", () => {
+    const log: InterventionLog = {
+      records: [
+        { ...rec("Z2", "validated"), id: "p1", outcome: null },
+        rec("VO2max", "inconclusive"),
+      ],
+      updatedAt: "",
+    };
+    expect(overallCoachAccuracy(log)).toEqual({ hitRatePct: null, evaluated: 1, pending: 1 });
   });
 });
