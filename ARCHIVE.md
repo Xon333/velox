@@ -111,6 +111,15 @@ ROADMAP "Platform & performance"; P4 is partially done (1 of 4 items shipped).
   being swallowed by best-effort catches; the Today card shows "Analysing today's ride…" while the
   note lands. `app/api/sync/route.ts`, `app/api/analyze/route.ts`, `lib/sync-analysis.ts`,
   `components/SyncProvider.tsx`, `components/Nav.tsx`, `components/Dashboard.tsx`.
+- **P4 (item 4 of 4 — section COMPLETE) — Generation dedupe.** Decision: a **short dedupe-only
+  window**, not a long reuse cache (generation runs at temperature 0.3, so a considered regenerate is
+  partly *for* the variation). `lib/generate-cache.ts dedupeGeneration(key, compute)` keys on a sha256
+  of the three assembled prompt parts and runs `compute` at most once per key while it's in flight +
+  ~60 s after it completes — so a double-click or a second request landing mid-generation shares the
+  one Claude call, a failure evicts immediately so retries re-run, and a deliberate regenerate
+  outside the window re-calls. In-memory + single-process (same assumption as the singleton client; a
+  restart just forgets the window). Wired into `app/api/generate/route.ts`. 6 new tests
+  (in-flight dedupe, per-key, failure-evict, fake-timer window expiry). `lib/generate-cache.ts`.
 - **P4 (item 3 of 4) — Stream `/api/ask`.** `streamAskCoach` (async generator) yields Anthropic text
   deltas as they arrive and records usage from the final message; `/api/ask` wraps it in a plain-text
   `ReadableStream` (validation still returns JSON errors *before* the 200 stream; a mid-stream failure
@@ -134,7 +143,7 @@ ROADMAP "Platform & performance"; P4 is partially done (1 of 4 items shipped).
   all four call sites (generate, ride analysis, retrospective, ask-coach); `AiUsageCard` shows total
   + per-model spend on the (now dynamic) Settings page. Pure `estimateCostUsd` unit-tested.
   `lib/ai-usage.ts`, `lib/anthropic-api.ts`, `components/AiUsageCard.tsx`, `app/settings/page.tsx`.
-  _Still open in P4:_ generation caching (open product question — see ROADMAP) and stream `/api/ask`.
+  (P4 is now complete — items 2/3/4 above.)
 - **P5 — Deterministic schedule validator.** Generation was *instructed* to space quality
   sessions ("avoid back-to-back hard days") and cap them at the weekly budget, but nothing enforced
   placement — `workout-validate.ts` checks each session's protocol bands in isolation. New

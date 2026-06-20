@@ -222,14 +222,15 @@ Deployment is **local-first, single-user** (confirmed). The hosted-SaaS migratio
 external audit (Postgres/RLS, blob storage, auth) are intentionally out of scope — see "Decided
 against". The items below are deployment-agnostic cost / robustness / UX wins.
 
-### P4. Observability + generation caching
+### P4. Observability + generation caching — DONE (see ARCHIVE)
 - [x] **Token/cost tracker in Settings** — DONE (see ARCHIVE). `lib/ai-usage.ts` records every
   Anthropic call's `usage` into `data/ai-usage.json` (priced per-model, cache read/write aware);
   `AiUsageCard` surfaces running spend on Settings.
-- [ ] Generate caching: skip the Claude call when the assembled prompt is byte-identical to a recent
-  one. **Open product question:** with temperature 0.3, a deliberate "regenerate" partly exists *to
-  get variation* — decide whether a cache hit reuses the prior plan (cost win) or whether regenerate
-  must always re-call (needs a `refresh` bypass / short dedupe-only TTL). Resolve before building.
+- [x] **Generation caching** — DONE (see ARCHIVE). **Decision: short dedupe-only window** (chosen
+  over a long reuse cache or skipping it). `lib/generate-cache.ts` dedupes byte-identical generations
+  in-memory while in flight + ~60 s after completion, so a double-click / mid-generation re-request
+  shares one Claude call, but a considered regenerate minutes later re-calls (temperature-0.3
+  variation preserved).
 - [x] **Coach-accuracy % on the dashboard** — DONE (see ARCHIVE). `overallCoachAccuracy` rolls the
   validation loop into one hit-rate %; surfaced in the Trend-pulse zone, hidden until a decisive
   outcome or pending interventions exist.

@@ -4,7 +4,7 @@ A living "resume here" note. Point a fresh session at this file: _"read CONTINUE
 The canonical backlog is [ROADMAP.md](ROADMAP.md); completed work is in [ARCHIVE.md](ARCHIVE.md);
 how the app works is [README.md](README.md). Update or clear this file as work moves.
 
-_Last updated: after P4 streaming shipped (3/4 P4 items done; only generation caching left, blocked)._
+_Last updated: after P4 COMPLETE (all 4 items shipped). Next: the "second brain" spec work._
 
 ---
 
@@ -37,12 +37,18 @@ the Platform & performance (P-series) + correctness items over the coaching-feat
   FTP gap → *flag-only, suggest a re-test* (never write `physiology.json` FTP); durability template
   selection → *limiter-driven, else rotate*. User wants the **rest of P4 finished before** the new
   spec items.
-- **P4 streaming** (this commit) — `streamAskCoach` async generator → route returns a plain-text
-  `ReadableStream`; `AskCoach` reads `res.body` incrementally. tsc/build/lint clean; live token path
-  unexercised (needs a real Anthropic key — would be a billed call).
-- **Only generation caching left in P4** — blocked on the regenerate-for-variation product question.
-  Once resolved (or skipped), **P4 is done** → next is the spec work (user wants P4 finished first):
-  start with the **fueling correlation engine** or the **calibration framework** (see ROADMAP).
+- **P4 streaming** (`fb4f489`) — `streamAskCoach` async generator → route returns a plain-text
+  `ReadableStream`; `AskCoach` reads `res.body` incrementally. Live token path unexercised (needs a
+  real Anthropic key — a billed call).
+- **P4 generation dedupe** (this commit) — decision was a **short dedupe-only window**.
+  `lib/generate-cache.ts dedupeGeneration` keys on a sha256 of the assembled prompt; runs the Claude
+  call once per key while in flight + ~60 s after, so double-clicks / mid-generation re-requests share
+  one call but a considered regenerate re-calls. In-memory, single-process.
+- **P4 is now COMPLETE.** Next is the "second brain" spec work — the user wanted P4 finished first.
+  Per their answers: start with the **fueling correlation engine** (highest stated value, inputs
+  already synced) or the **calibration framework** (the confidence/lock scaffold the others plug
+  into). Recorded decisions for those builds: FTP gap → flag-only/re-test (never write
+  `physiology.json` FTP); durability template selection → limiter-driven, else rotate.
 
 ## State of the tree
 - **205 tests pass** (`npm test`), **`npx tsc --noEmit` clean**, **`npm run build` clean**.

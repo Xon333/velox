@@ -26,6 +26,7 @@ import { parsePlan } from "@/lib/plan-parser";
 import { PlanToolSchema, structuredToPlannedDays } from "@/lib/plan-schema";
 import { validatePlanProtocol } from "@/lib/workout-validate";
 import { validateSchedule } from "@/lib/schedule-validate";
+import { dedupeGeneration, generationKey } from "@/lib/generate-cache";
 import type { BlockParams, GeneratedPlan, PlannedDay } from "@/lib/types";
 
 // Generation calls take 1–2 minutes for a 4-week block.
@@ -142,7 +143,14 @@ export async function POST(req: Request) {
     );
     const userMessage = buildUserMessage(blockParams, weeks, nutritionTable, blockSettings);
 
-    const { toolInput, raw, truncated } = await generateTrainingBlock(cached, dynamic, userMessage);
+    // Dedupe identical generations in a short window (P4): a double-click or a second request landing
+    // mid-generation shares one Claude call instead of paying twice. A considered regenerate minutes
+    // later falls outside the window and re-calls, so temperature-0.3 variation is preserved.
+    const { result: genResult } = await dedupeGeneration(
+      generationKey(cached, dynamic, userMessage),
+      () => generateTrainingBlock(cached, dynamic, userMessage)
+    );
+    const { toolInput, raw, truncated } = genResult;
 
     // Structured-output path (P2): validate Claude's tool payload with the shared zod schema.
     // Fall back to the regex parser on the text only if the tool output is absent/malformed.
