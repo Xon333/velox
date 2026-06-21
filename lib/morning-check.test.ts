@@ -30,9 +30,17 @@ describe("decideMorningCheck", () => {
 
   it("always downgrades on sickness; mild illness only with elevated strain/fatigue (CR-13)", () => {
     expect(decideMorningCheck({ ...fresh, illness: "sick" }, goodObjective).decision).toBe("downgrade");
-    expect(decideMorningCheck({ ...fresh, illness: "mild" }, goodObjective).decision).toBe("proceed"); // fresh + mild → ride easy
+    expect(decideMorningCheck({ ...fresh, illness: "mild" }, goodObjective).decision).toBe("proceed-easy"); // fresh + mild → cap intensity
     expect(decideMorningCheck({ ...moderate, illness: "mild" }, goodObjective).decision).toBe("downgrade"); // mild + strain 12
     expect(decideMorningCheck({ ...fresh, illness: "mild" }, poorObjective).decision).toBe("downgrade"); // mild + poor objective
+  });
+
+  it("proceed-easy caps intensity on mild illness with fresh legs + good objective (RR-10)", () => {
+    const r = decideMorningCheck({ ...fresh, illness: "mild" }, goodObjective);
+    expect(r.decision).toBe("proceed-easy");
+    expect(r.reasons.join(" ")).toMatch(/easy|neck-check/i);
+    // a downgrade outranks the easy cap when the body says more than a sniffle (high strain).
+    expect(decideMorningCheck({ ...wrecked, illness: "mild" }, goodObjective).decision).toBe("downgrade");
   });
 
   it("lets the objective signals tip the medium-strain band", () => {

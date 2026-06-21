@@ -6,6 +6,7 @@ import { localToday } from "@/lib/date";
 import { useSync, type AppState } from "./SyncProvider";
 
 type Illness = "none" | "mild" | "sick";
+type Decision = "proceed" | "proceed-easy" | "downgrade";
 interface Suggestion {
   from: string;
   fromName: string;
@@ -13,12 +14,12 @@ interface Suggestion {
   to: string | null;
 }
 interface CheckState {
-  check: { decision: "proceed" | "downgrade"; strain: number } | null;
+  check: { decision: Decision; strain: number } | null;
   isQualityDay: boolean;
   suggestion: Suggestion | null;
 }
 interface SubmitResult {
-  decision: "proceed" | "downgrade";
+  decision: Decision;
   reasons: string[];
   suggestion: Suggestion | null;
 }
@@ -98,14 +99,16 @@ export default function MorningCheckIn() {
   // mb-2 lives on the component (not a wrapper in Dashboard) so a hidden check-in leaves no gap.
   const shell = "mb-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900/60";
 
-  // ---- After submit: decision + (if downgrade) the proposed move ----
+  // ---- After submit: decision + (if actionable) the proposed move/cap ----
   if (result) {
     const downgrade = result.decision === "downgrade";
+    const easy = result.decision === "proceed-easy";
+    const actionable = downgrade || easy;
     const s = result.suggestion;
     return (
       <div className={shell}>
-        <p className={`text-xs font-semibold ${downgrade ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-400"}`}>
-          {downgrade ? "Downgrade recommended" : "You're good — proceed"}
+        <p className={`text-xs font-semibold ${actionable ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-400"}`}>
+          {downgrade ? "Downgrade recommended" : easy ? "Proceed easy — cap the intensity" : "You're good — proceed"}
         </p>
         {result.reasons.length > 0 && (
           <p className="mt-1 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">{result.reasons.join(" ")}</p>
@@ -121,18 +124,23 @@ export default function MorningCheckIn() {
             )}
           </p>
         )}
+        {easy && s && (
+          <p className="mt-1.5 text-[11px] leading-snug text-zinc-600 dark:text-zinc-300">
+            Keep today&apos;s {s.fromType} ({s.fromName}) easy — apply to cap it to a Z2 endurance ride (no hard intervals).
+          </p>
+        )}
         <div className="mt-2 flex items-center gap-2">
-          {downgrade && (
+          {actionable && (
             <button
               onClick={apply}
               disabled={busy}
               className="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
             >
-              {busy ? "Applying…" : s?.to ? "Apply downgrade + move" : "Downgrade today"}
+              {busy ? "Applying…" : downgrade ? (s?.to ? "Apply downgrade + move" : "Downgrade today") : "Cap to easy ride"}
             </button>
           )}
           <button onClick={() => setDismissed(true)} className="text-xs text-zinc-500 hover:underline dark:text-zinc-400">
-            {downgrade ? "Proceed anyway" : "Dismiss"}
+            {downgrade ? "Proceed anyway" : easy ? "Ride as planned" : "Dismiss"}
           </button>
         </div>
       </div>

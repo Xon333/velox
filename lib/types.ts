@@ -589,7 +589,9 @@ export interface DispositionLog {
 // proceed-vs-downgrade decision. Editable per day, like dispositions (not an immutable ledger).
 
 export type IllnessLevel = "none" | "mild" | "sick";
-export type MorningCheckDecision = "proceed" | "downgrade";
+// "proceed-easy" = train today but cap intensity (mild illness, neck-check rule) — between an
+// unchanged proceed and a full downgrade that moves/defers the stimulus.
+export type MorningCheckDecision = "proceed" | "proceed-easy" | "downgrade";
 
 export interface MorningCheckEntry {
   date: string; // YYYY-MM-DD

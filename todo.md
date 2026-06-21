@@ -27,7 +27,7 @@ Re-review of `63a9263` (CR-9..16 hardening). **RR-1..4 are the priority (P1).**
 | RR-7 | ☑ | P3 | refactor | Opaque `Parameters<typeof computeAcwr>[1]` replaced with the named `Partial<AcwrBands> \| null`. [coach-snapshot.ts](lib/coach-snapshot.ts) |
 | RR-8 | ☑ | P2 | ux | **Warnings consolidated** — one warning naming every offending loading week (`weeks 1, 3 …`) instead of one per week. Bounded fan-out. [session-requirements.ts](lib/session-requirements.ts) |
 | RR-9 | ☑ | P2 | test | **Branches covered:** multi-week consolidation, recovery-week exclusion, and block-floor fallback all tested. [session-requirements.test.ts](lib/session-requirements.test.ts) |
-| RR-10 | ☐ | P2 | feat | CR-13: mild illness is now **fully inert below threshold** — full-intensity quality on a head cold. Consider intensity cap / proceed-but-flag instead of binary. [morning-check.ts:57](lib/morning-check.ts:57) |
+| RR-10 | ☑ | P2 | feat | **`proceed-easy` decision added.** Mild illness on fresh legs now caps intensity instead of going full gas: `applyEasyCap` converts today's quality session to a same-duration Z2 ride (intervals dropped, no relocation), athlete-confirmed like the downgrade. Type + route + component all handle the new state. [morning-check.ts](lib/morning-check.ts) |
 | RR-11 | ☐ | P3 | bug | No input validation/clamping on `MorningCheckAnswers` — `strainScore` is unbounded if values fall outside 1–5. Confirm route validates or clamp here. [morning-check.ts:30](lib/morning-check.ts:30) |
 | RR-12 | ☐ | P3 | polish | `byWeek` grouping assumes contiguous weekNumber + builds a Map only to sort its entries; minor cleanup. [session-requirements.ts:66](lib/session-requirements.ts:66) |
 

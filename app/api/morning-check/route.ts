@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readCurrentBlock, readLastSync, readMorningChecks, readTodayAnalysis, writeCurrentBlock, writeMorningChecks } from "@/lib/data-store";
 import { decideMorningCheck, mergeMorningCheck, proactiveApplyBlock, type MorningCheckAnswers } from "@/lib/morning-check";
-import { applyProactiveReschedule, suggestProactiveReschedule } from "@/lib/reschedule";
+import { applyEasyCap, applyProactiveReschedule, suggestProactiveReschedule } from "@/lib/reschedule";
 import { computeAcwr, computeReadiness } from "@/lib/readiness";
 import { resolveToday } from "@/lib/date";
 import type { CurrentBlock, IllnessLevel, MorningCheckEntry, WorkoutType } from "@/lib/types";
@@ -74,7 +74,9 @@ export async function POST(req: Request) {
   return NextResponse.json({
     decision,
     reasons,
-    suggestion: decision === "downgrade" ? suggestProactiveReschedule(block, date) : null,
+    // Both actionable decisions surface the session being acted on (downgrade moves it, proceed-easy
+    // caps it) so the UI can name it; a plain proceed has nothing to preview.
+    suggestion: decision !== "proceed" ? suggestProactiveReschedule(block, date) : null,
   });
 }
 
@@ -97,6 +99,14 @@ export async function PUT(req: Request) {
   const check = checks.entries.find((e) => e.date === date) ?? null;
   const blocked = proactiveApplyBlock(check, todayAnalysis?.activityDate === date);
   if (blocked) return NextResponse.json({ error: blocked }, { status: 400 });
+
+  // proceed-easy → cap today's intensity in place (no relocation); downgrade → move/swap/deload.
+  if (check!.decision === "proceed-easy") {
+    const capped = applyEasyCap(block, date);
+    if (!capped) return NextResponse.json({ error: "Today isn't a quality day to cap." }, { status: 400 });
+    await writeCurrentBlock({ ...block, days: capped.days });
+    return NextResponse.json({ ok: true, to: null, note: "Capped today to an easy Z2 ride. Mirror it on your Intervals.icu calendar." });
+  }
 
   const applied = applyProactiveReschedule(block, date);
   if (!applied) return NextResponse.json({ error: "Today isn't a quality day to downgrade." }, { status: 400 });

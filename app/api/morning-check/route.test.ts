@@ -33,7 +33,7 @@ const block = (): CurrentBlock => ({
   ],
 });
 
-const check = (decision: "proceed" | "downgrade"): MorningCheckEntry => ({
+const check = (decision: "proceed" | "proceed-easy" | "downgrade"): MorningCheckEntry => ({
   date: TODAY, fatigue: 5, sleep: 1, soreness: 5, motivation: 2, illness: "none", strain: 19, decision, setAt: "",
 });
 
@@ -97,6 +97,16 @@ describe("PUT /api/morning-check — the CR-2 apply guard", () => {
     expect((await res.json()).ok).toBe(true);
     const written = vi.mocked(store.writeCurrentBlock).mock.calls[0][0] as CurrentBlock;
     expect(written.days.find((d) => d.date === TODAY)!.type).not.toBe("VO2max"); // today downgraded
+  });
+
+  it("caps today to a Z2 ride (no relocation) on a proceed-easy decision (RR-10)", async () => {
+    vi.mocked(store.readMorningChecks).mockResolvedValue({ entries: [check("proceed-easy")], updatedAt: "" });
+    const res = await PUT(req("PUT", { today: TODAY }));
+    expect((await res.json()).ok).toBe(true);
+    const written = vi.mocked(store.writeCurrentBlock).mock.calls[0][0] as CurrentBlock;
+    const td = written.days.find((d) => d.date === TODAY)!;
+    expect(td).toMatchObject({ type: "Z2", durationMin: 70 }); // capped in place, same duration
+    expect(written.days.find((d) => d.date === "2026-06-21")!.type).toBe("Rest"); // stimulus NOT relocated onto the rest day
   });
 });
 

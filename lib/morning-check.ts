@@ -48,14 +48,21 @@ export function decideMorningCheck(a: MorningCheckAnswers, o: MorningCheckObject
   const objectivePoor = (o.tsb !== null && o.tsb <= TSB_DEEP) || o.readiness === "Recover" || o.acwr === "high" || o.acwr === "danger";
 
   let downgrade = false;
-  // Sickness always downgrades a quality day; mild illness only when strain or the objective signals
-  // also say so — otherwise a faint sniffle on fresh legs shouldn't nuke a key session (CR-13).
+  let easy = false; // proceed but cap intensity (neck-check rule)
+  // Sickness always downgrades a quality day. Mild illness downgrades only when strain or the
+  // objective signals also say so; otherwise (a sniffle on fresh legs) it proceeds *easy* — train but
+  // cap the hard intervals rather than either nuking the day or going full gas (CR-13 / RR-10).
   if (a.illness === "sick") {
     downgrade = true;
     reasons.push("Reported illness (sick).");
-  } else if (a.illness === "mild" && (strain >= STRAIN_MED || objectivePoor)) {
-    downgrade = true;
-    reasons.push("Mild illness alongside elevated strain/fatigue — don't push a quality day.");
+  } else if (a.illness === "mild") {
+    if (strain >= STRAIN_MED || objectivePoor) {
+      downgrade = true;
+      reasons.push("Mild illness alongside elevated strain/fatigue — don't push a quality day.");
+    } else {
+      easy = true;
+      reasons.push("Mild illness on otherwise-fresh legs — proceed easy and cap the hard intervals (neck-check rule).");
+    }
   }
   if (strain >= STRAIN_HIGH) {
     downgrade = true;
@@ -69,19 +76,21 @@ export function decideMorningCheck(a: MorningCheckAnswers, o: MorningCheckObject
     reasons.push(`Moderate reported strain (${strain}/20) with the objective signals agreeing (${bits.join(", ")}).`);
   }
 
-  if (!downgrade) reasons.push(`You're good — reported strain ${strain}/20${objectivePoor ? ", but watch it" : ""}.`);
+  // A downgrade outranks an easy cap (the body's telling you more than a sniffle is going on).
+  const decision: MorningCheckDecision = downgrade ? "downgrade" : easy ? "proceed-easy" : "proceed";
+  if (decision === "proceed") reasons.push(`You're good — reported strain ${strain}/20${objectivePoor ? ", but watch it" : ""}.`);
 
-  return { decision: downgrade ? "downgrade" : "proceed", strain, reasons };
+  return { decision, strain, reasons };
 }
 
-// Guard for the proactive apply (the downgrade + reschedule). The apply must only fire when the
-// athlete actually checked in *and* got a downgrade, and the day hasn't already been ridden — the
-// route is the real contract, so this can't live only in the component. Returns an error reason, or
-// null when the apply may proceed.
+// Guard for the proactive apply (a downgrade+reschedule or an easy cap). The apply must only fire
+// when the athlete actually checked in *and* got an actionable decision (downgrade or proceed-easy),
+// and the day hasn't already been ridden — the route is the real contract, so this can't live only in
+// the component. Returns an error reason, or null when the apply may proceed.
 export function proactiveApplyBlock(check: MorningCheckEntry | null, rideLoggedToday: boolean): string | null {
-  if (rideLoggedToday) return "Today's ride is already logged — nothing to downgrade.";
+  if (rideLoggedToday) return "Today's ride is already logged — nothing to change.";
   if (!check) return "Do a morning check-in first.";
-  if (check.decision !== "downgrade") return "Today's check-in didn't recommend a downgrade.";
+  if (check.decision === "proceed") return "Today's check-in didn't recommend a change.";
   return null;
 }
 
