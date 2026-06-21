@@ -16,6 +16,7 @@ import type {
   SyncData,
   TodayAnalysis,
 } from "@/lib/types";
+import type { CoachSnapshot } from "@/lib/coach-snapshot";
 
 export interface AppState {
   configured: boolean;
@@ -37,6 +38,9 @@ export interface AppState {
   coachAccuracy?: { hitRatePct: number | null; evaluated: number; pending: number };
   // Signal fusion (§5): the glanceable "second brain's read on you now". Null with too little data.
   athleteState?: AthleteState | null;
+  // ROADMAP #1: the resolved-numbers snapshot the LLM is handed, surfaced on Today so the athlete
+  // sees the same figures the coach reasons from.
+  coachSnapshot?: CoachSnapshot | null;
 }
 
 interface SyncContextValue {
@@ -76,7 +80,7 @@ export function useSync(): SyncContextValue {
 // plan) stays local.
 export function SyncProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const { data, error } = useQuery({ queryKey: SYNC_QUERY_KEY, queryFn: () => api<AppState>("/api/sync") });
+  const { data, error } = useQuery({ queryKey: SYNC_QUERY_KEY, queryFn: () => api<AppState>(`/api/sync?today=${localToday()}`) });
   const state = data ?? null;
   const loadError = error ? (error instanceof Error ? error.message : "Failed to load") : null;
 
@@ -137,6 +141,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         compromisedDates: string[];
         partialDates: string[];
         athleteState: AthleteState | null;
+        coachSnapshot: CoachSnapshot | null;
         // Send the browser's LOCAL date so the server matches today's ride on the same calendar
         // day the athlete sees — not the server's UTC date.
       }>("/api/sync", { method: "POST", body: JSON.stringify({ today: localToday() }) });
@@ -155,6 +160,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
               compromisedDates: result.compromisedDates,
               partialDates: result.partialDates,
               athleteState: result.athleteState,
+              coachSnapshot: result.coachSnapshot,
             }
           : s
       );

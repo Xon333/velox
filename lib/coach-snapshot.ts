@@ -12,9 +12,11 @@ import type {
   CurrentBlock,
   DispositionEntry,
   FitnessMetrics,
+  InterventionLog,
   LoadRampAlert,
   MorningCheckEntry,
   ReadinessSignal,
+  RideScoreEntry,
   RollingBaselines,
   SyncData,
   TodayAnalysis,
@@ -24,6 +26,9 @@ import { computeAcwr, computeLoadRamp, computeReadiness } from "./readiness";
 import { athleteStateInputsFrom, computeAthleteState } from "./athlete-state";
 import { weightTrendFromWellness } from "./nutrition";
 import { resolveAcwrBands, type AcwrBands } from "./calibration";
+import { buildAthleteModel, deriveInsights } from "./athlete-model";
+import { synthesizeCoachingDirectives } from "./synthesis";
+import { summariseValidation } from "./intervention";
 
 export interface CoachSnapshot {
   date: string;
@@ -236,6 +241,41 @@ export function buildCoachSnapshot(input: CoachSnapshotInput): CoachSnapshot {
       ? { kind: input.disposition.disposition, reason: input.disposition.reason }
       : null,
   };
+}
+
+// The already-loaded stores a snapshot is assembled from. The caller does the IO; this owns the
+// deterministic assembly (model → signals → directives → snapshot) so /api/ask and the sync GET (the
+// Today card) build the *same* snapshot — the athlete sees exactly the numbers the LLM does (ROADMAP #1).
+export interface CoachSnapshotSources {
+  date: string;
+  ftp: number | null;
+  block: CurrentBlock | null;
+  sync: SyncData | null;
+  todayAnalysis: TodayAnalysis | null;
+  scoreEntries: RideScoreEntry[];
+  baselines: RollingBaselines;
+  dispositions: DispositionEntry[];
+  interventionLog: InterventionLog;
+  morningChecks: MorningCheckEntry[];
+  acwrBandsOverride?: Partial<AcwrBands> | null;
+}
+
+export function buildCoachSnapshotFromSources(s: CoachSnapshotSources): CoachSnapshot {
+  const athleteModel = buildAthleteModel(s.scoreEntries);
+  const signals = resolveCoachSignals(s.sync, athleteModel, s.baselines, s.acwrBandsOverride);
+  // Match /api/ask: only a real session (durationMin > 0) sets the type — a rest day stays null.
+  const todayDay = s.block?.days.find((d) => d.date === s.date && d.durationMin > 0) ?? null;
+  return buildCoachSnapshot({
+    date: s.date,
+    ftp: s.ftp,
+    block: s.block,
+    todaySessionType: todayDay?.type ?? null,
+    ...signals,
+    todayAnalysis: s.todayAnalysis,
+    directives: synthesizeCoachingDirectives(deriveInsights(athleteModel), summariseValidation(s.interventionLog)),
+    disposition: s.dispositions.find((e) => e.date === s.date) ?? null,
+    morningCheck: s.morningChecks.find((e) => e.date === s.date) ?? null,
+  });
 }
 
 // The athlete-attribution guard — a compromised/partial session must not be read as under-recovery

@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { isAnthropicConfigured, streamAskCoach, type AskCoachContext } from "@/lib/anthropic-api";
 import { readBlockSettings, readCurrentBlock, readDispositions, readInterventionLog, readLastSync, readMorningChecks, readRollingBaselines, readScoreLog, readTodayAnalysis } from "@/lib/data-store";
 import { readPhysiology } from "@/lib/physiology";
-import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
-import { summariseValidation } from "@/lib/intervention";
-import { synthesizeCoachingDirectives } from "@/lib/synthesis";
-import { buildCoachSnapshot, resolveCoachSignals } from "@/lib/coach-snapshot";
+import { buildCoachSnapshotFromSources } from "@/lib/coach-snapshot";
 import { resolveToday } from "@/lib/date";
 
 export const maxDuration = 60;
@@ -64,22 +61,20 @@ export async function POST(req: Request) {
       }
     : null;
 
-  // Resolve the situational signals (all deterministic) and fold them into the one CoachSnapshot
-  // the prompt reads — so the coach answers from resolved numbers it can't invent or override.
-  const athleteModel = buildAthleteModel(scoreLog.entries);
-  // Form/fuel/state signals (incl. calibrated ACWR bands — CR-5) resolved by the shared helper so
-  // Ask-Coach + generation can't drift (CR-9); the helper owns the band resolution (RR-5).
-  const signals = resolveCoachSignals(sync, athleteModel, baselines, settings.acwrBands);
-  const snapshot = buildCoachSnapshot({
+  // The one deterministic CoachSnapshot the prompt reads — so the coach answers from resolved numbers
+  // it can't invent. The same builder feeds the Today card, so the athlete sees identical figures.
+  const snapshot = buildCoachSnapshotFromSources({
     date: today,
     ftp: physStore?.current.ftp ?? null,
     block,
-    todaySessionType: day?.type ?? null,
-    ...signals,
+    sync,
     todayAnalysis,
-    directives: synthesizeCoachingDirectives(deriveInsights(athleteModel), summariseValidation(interventionLog)),
-    disposition: dispositions.entries.find((e) => e.date === today) ?? null,
-    morningCheck: morningChecks.entries.find((e) => e.date === today) ?? null,
+    scoreEntries: scoreLog.entries,
+    baselines,
+    dispositions: dispositions.entries,
+    interventionLog,
+    morningChecks: morningChecks.entries,
+    acwrBandsOverride: settings.acwrBands,
   });
 
   const context: AskCoachContext = { snapshot, session, upcoming };

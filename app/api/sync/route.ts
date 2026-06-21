@@ -12,6 +12,7 @@ import {
   readDispositions,
   readInterventionLog,
   readLastSync,
+  readMorningChecks,
   readRollingBaselines,
   readScoreLog,
   writeInterventionLog,
@@ -33,12 +34,15 @@ import { buildRideScores, mergeScoreLog } from "@/lib/score-log";
 import { applyDispositions, compromisedDates } from "@/lib/disposition";
 import { computeAcwr, computeFatigueAlert, computeIntensityDistribution, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
 import { resolveAcwrBands } from "@/lib/calibration";
+import { buildCoachSnapshotFromSources } from "@/lib/coach-snapshot";
 import { resolveToday } from "@/lib/date";
 import type { ExecutedInterval, TodayAnalysis } from "@/lib/types";
 
-// GET returns the cached app state; it never hits Intervals.icu.
-export async function GET() {
-  const [lastSync, currentBlock, todayAnalysis, scoreLog, profile, settings, dispositions, interventionLog, baselines] =
+// GET returns the cached app state; it never hits Intervals.icu. `?today=` is the client's local date
+// (so the CoachSnapshot resolves against the calendar day the athlete sees); falls back to UTC.
+export async function GET(req: Request) {
+  const today = resolveToday(new URL(req.url).searchParams.get("today"));
+  const [lastSync, currentBlock, todayAnalysis, scoreLog, profile, settings, dispositions, interventionLog, baselines, morningChecks, physStore] =
     await Promise.all([
       readLastSync(),
       readCurrentBlock(),
@@ -49,6 +53,8 @@ export async function GET() {
       readDispositions(),
       readInterventionLog(),
       readRollingBaselines(),
+      readMorningChecks(),
+      readPhysiology(),
     ]);
   const readiness = lastSync
     ? computeReadiness(lastSync.fitness, lastSync.wellness)
@@ -61,6 +67,21 @@ export async function GET() {
   const athleteState = computeAthleteState(
     athleteStateInputsFrom(lastSync, buildAthleteModel(scoreLog.entries), baselines, acwr)
   );
+  // The resolved-numbers snapshot the LLM is handed (ROADMAP #1) — same builder as /api/ask, so the
+  // Today card shows the exact figures the coach reasons from (FTP off the physiology SoT).
+  const coachSnapshot = buildCoachSnapshotFromSources({
+    date: today,
+    ftp: physStore?.current.ftp ?? profile.performance.ftp,
+    block: currentBlock,
+    sync: lastSync,
+    todayAnalysis,
+    scoreEntries: scoreLog.entries,
+    baselines,
+    dispositions: dispositions.entries,
+    interventionLog,
+    morningChecks: morningChecks.entries,
+    acwrBandsOverride: settings.acwrBands,
+  });
   return NextResponse.json({
     configured: isIntervalsConfigured(),
     anthropicConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
@@ -87,6 +108,8 @@ export async function GET() {
     coachAccuracy: overallCoachAccuracy(interventionLog),
     // Signal fusion (§5): the glanceable "second brain's read on you now".
     athleteState,
+    // ROADMAP #1: the resolved-numbers snapshot the LLM reads, surfaced so the athlete sees the same.
+    coachSnapshot,
   });
 }
 
@@ -382,7 +405,30 @@ export async function POST(req: Request) {
     const athleteState = computeAthleteState(
       athleteStateInputsFrom(lastSync, buildAthleteModel(scoreLog.entries), baselines, acwr)
     );
-    return NextResponse.json({ lastSync, todayAnalysis, analysisPending, warnings, readiness, fatigueAlert, loadRamp, acwr, polarization, scores: scoreLog.entries.filter((e) => !e.legacy && !e.compromised), compromisedDates: [...compromisedDates(dispositions.entries)], partialDates: dispositions.entries.filter((e) => e.disposition === "partial").map((e) => e.date), athleteState });
+    // Rebuild the CoachSnapshot on the fresh data so the Today card updates after a sync without a
+    // second round-trip (same builder as the GET + /api/ask — the athlete sees the LLM's numbers).
+    const [blockForSnap, morningChecks, interventionLogForSnap, profileForSnap, settingsForSnap, baselinesForSnap] = await Promise.all([
+      readCurrentBlock(),
+      readMorningChecks(),
+      readInterventionLog(),
+      readAthleteProfile(),
+      readBlockSettings(),
+      readRollingBaselines(), // the freshly-persisted baselines (with updatedAt), written earlier this sync
+    ]);
+    const coachSnapshot = buildCoachSnapshotFromSources({
+      date: today,
+      ftp: physStore?.current.ftp ?? profileForSnap.performance.ftp,
+      block: blockForSnap,
+      sync: lastSync,
+      todayAnalysis,
+      scoreEntries: scoreLog.entries,
+      baselines: baselinesForSnap,
+      dispositions: dispositions.entries,
+      interventionLog: interventionLogForSnap,
+      morningChecks: morningChecks.entries,
+      acwrBandsOverride: settingsForSnap.acwrBands,
+    });
+    return NextResponse.json({ lastSync, todayAnalysis, analysisPending, warnings, readiness, fatigueAlert, loadRamp, acwr, polarization, scores: scoreLog.entries.filter((e) => !e.legacy && !e.compromised), compromisedDates: [...compromisedDates(dispositions.entries)], partialDates: dispositions.entries.filter((e) => e.disposition === "partial").map((e) => e.date), athleteState, coachSnapshot });
   } catch (err) {
     const status = err instanceof IntervalsApiError && err.status === 401 ? 401 : 502;
     const message = err instanceof Error ? err.message : "Sync failed";

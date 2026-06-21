@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildCoachSnapshot, formatCoachSnapshot, formatFormFuelLine, resolveTsbModifier, type CoachSnapshotInput } from "./coach-snapshot";
-import type { AthleteState, CurrentBlock, DispositionEntry, MorningCheckEntry, TodayAnalysis } from "./types";
+import { buildCoachSnapshot, buildCoachSnapshotFromSources, formatCoachSnapshot, formatFormFuelLine, resolveTsbModifier, type CoachSnapshotInput } from "./coach-snapshot";
+import type { AthleteState, CurrentBlock, DispositionEntry, InterventionLog, MorningCheckEntry, RollingBaselines, SyncData, TodayAnalysis } from "./types";
 
 const TODAY = "2026-06-20";
 
@@ -129,6 +129,50 @@ describe("buildCoachSnapshot", () => {
   it("does not drop the load-ramp level when no alert is triggered", () => {
     const s = buildCoachSnapshot(baseInput({ loadRamp: { triggered: false, level: "none", thisWeekTss: 0, lastWeekTss: 0, changePct: null, reason: null } }));
     expect(s.form.loadRamp).toBeNull();
+  });
+});
+
+describe("buildCoachSnapshotFromSources", () => {
+  const baselines: RollingBaselines = { avgTss90d: null, avgDecoupling90d: null, avgCadence90d: null, avgCtl90d: null, avgWeeklyHours90d: null, updatedAt: "" };
+  const sync = { syncedAt: "", fitness: { ctl: 60, atl: 70, tsb: -10 }, activities: [], wellness: [], powerCurve: [] } as unknown as SyncData;
+  const interventionLog = { records: [], updatedAt: "" } as unknown as InterventionLog;
+  const blockWith = (durationMin: number) =>
+    ({ goal: "g", lengthWeeks: 4, startDate: "2026-06-15", endDate: "2026-07-12", overview: "", createdAt: "", days: [{ date: TODAY, name: "Threshold", type: "Threshold", durationMin }] }) as unknown as CurrentBlock;
+
+  const sources = (overrides: Record<string, unknown> = {}) => ({
+    date: TODAY,
+    ftp: 280,
+    block: blockWith(75),
+    sync,
+    todayAnalysis: null,
+    scoreEntries: [],
+    baselines,
+    dispositions: [] as DispositionEntry[],
+    interventionLog,
+    morningChecks: [] as MorningCheckEntry[],
+    acwrBandsOverride: null,
+    ...overrides,
+  });
+
+  it("resolves form from the sync and picks today's session type, disposition and morning check", () => {
+    const dispositions: DispositionEntry[] = [
+      { date: TODAY, disposition: "compromised", reason: "equipment", setAt: "" },
+      { date: "2026-06-19", disposition: "missed", reason: null, setAt: "" }, // a different day — must be ignored
+    ];
+    const morningChecks: MorningCheckEntry[] = [
+      { date: TODAY, fatigue: 2, sleep: 4, soreness: 2, motivation: 4, illness: "none", strain: 8, decision: "proceed", setAt: "" },
+    ];
+    const s = buildCoachSnapshotFromSources(sources({ dispositions, morningChecks }));
+    expect(s.date).toBe(TODAY);
+    expect(s.ftp).toBe(280);
+    expect(s.form.tsb).toBe(-10); // off sync.fitness
+    expect(s.today.sessionType).toBe("Threshold");
+    expect(s.today.morningCheck).toMatchObject({ decision: "proceed" });
+    expect(s.disposition).toMatchObject({ kind: "compromised", reason: "equipment" }); // today's, not the 19th's
+  });
+
+  it("treats a rest day (durationMin 0) as no session type", () => {
+    expect(buildCoachSnapshotFromSources(sources({ block: blockWith(0) })).today.sessionType).toBeNull();
   });
 });
 

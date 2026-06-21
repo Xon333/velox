@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isStale, nextMonday } from "@/lib/client-api";
 import AskCoach from "./AskCoach";
 import AthleteStateCard from "./AthleteStateCard";
+import CoachSnapshotCard from "./CoachSnapshotCard";
 import MorningCheckIn from "./MorningCheckIn";
 import RescheduleBanner from "./RescheduleBanner";
 import type { AthleteMdSnapshot } from "@/lib/kb-loader";
@@ -250,6 +251,13 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
             {state.athleteState && (
               <div className="mb-2">
                 <AthleteStateCard state={state.athleteState} />
+              </div>
+            )}
+            {/* ROADMAP #1: the coach's resolved-numbers read (TSB-as-actionable-modifier + fuel) — the
+                same snapshot the LLM is handed, so the athlete sees what it sees. */}
+            {state.coachSnapshot && (
+              <div className="mb-2">
+                <CoachSnapshotCard snapshot={state.coachSnapshot} />
               </div>
             )}
             {state.readiness || state.fatigueAlert?.triggered || state.loadRamp?.triggered ? (
