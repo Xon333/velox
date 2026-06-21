@@ -96,25 +96,28 @@ describe("suggestProactiveReschedule / applyProactiveReschedule", () => {
   it("does an honest deload (carry forward) instead of raiding a clear rest day (RR-1)", () => {
     const b = block([
       day("2026-06-17", "VO2max", 70), // today, quality
-      day("2026-06-18", "Rest", 0), // a clear rest day — deliberately NOT consumed
-      day("2026-06-19", "Threshold", 75), // quality, so no easy slot exists
+      day("2026-06-18", "Rest", 0), // a *clear* rest day (next day isn't quality) — deliberately NOT consumed
+      day("2026-06-19", "Strength", 45), // not easy/quality → no swap slot, and keeps the 18th clear
     ]);
     const s = suggestProactiveReschedule(b, TODAY)!;
     expect(s.to).toBeNull(); // no easy slot → deload, don't add load to the rest day
+    expect(s.skippedRestDay).toBe("2026-06-18"); // surfaced so the UI can explain we skipped it on purpose (RR-1)
 
     const applied = applyProactiveReschedule(b, TODAY)!;
     expect(applied.to).toBeNull();
+    expect(applied.skippedRestDay).toBe("2026-06-18");
     expect(applied.deferred).toContain("VO2max"); // CR-6: the stimulus is carried forward, not lost
     const byDate = Object.fromEntries(applied.days.map((d) => [d.date, d]));
     expect(byDate[TODAY]).toMatchObject({ type: "Recovery" });
     expect(byDate[TODAY].name).toContain("downgraded from VO2max");
     expect(byDate["2026-06-18"]).toMatchObject({ type: "Rest", durationMin: 0 }); // rest day preserved
-    expect(byDate["2026-06-19"]).toMatchObject({ type: "Threshold", durationMin: 75 }); // untouched
+    expect(byDate["2026-06-19"]).toMatchObject({ type: "Strength", durationMin: 45 }); // untouched
   });
 
   it("caps the recovery downgrade at min(45, original) so it's never longer than the session it replaces (RR-2/CR-10)", () => {
-    // Long quality day → recovery capped at 45.
+    // Long quality day → recovery capped at 45. No rest day either → skippedRestDay stays null.
     const long = block([day("2026-06-17", "VO2max", 70), day("2026-06-18", "Threshold", 75)]);
+    expect(suggestProactiveReschedule(long, TODAY)!.skippedRestDay).toBeNull();
     expect(applyProactiveReschedule(long, TODAY)!.days.find((d) => d.date === TODAY)).toMatchObject({ type: "Recovery", durationMin: 45 });
 
     // Short quality day → recovery never exceeds the original duration.

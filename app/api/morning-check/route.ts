@@ -119,6 +119,8 @@ export async function PUT(req: Request) {
     to: applied.to,
     note: applied.to
       ? "Swapped with that day's easy ride in the app plan. Mirror it on your Intervals.icu calendar."
-      : "Deloaded today; no easy day to swap with this block — it's a priority for your next block.",
+      : applied.skippedRestDay
+        ? `Deloaded today — adding a hard session to your ${applied.skippedRestDay} rest day isn't worth it while you're compromised, so it carries to your next block.`
+        : "Deloaded today; no make-up slot left this block — it's a priority for your next block.",
   });
 }

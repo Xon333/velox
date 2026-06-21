@@ -12,6 +12,7 @@ interface Suggestion {
   fromName: string;
   fromType: string;
   to: string | null;
+  skippedRestDay: string | null;
 }
 interface CheckState {
   check: { decision: Decision; strain: number } | null;
@@ -119,8 +120,13 @@ export default function MorningCheckIn() {
               <>
                 Move your {s.fromType} ({s.fromName}) to <span className="font-medium">{s.to}</span> — swap it with that day&apos;s easy ride.
               </>
+            ) : s.skippedRestDay ? (
+              <>
+                There&apos;s a rest day on <span className="font-medium">{s.skippedRestDay}</span>, but moving a hard session there
+                would add load while you&apos;re compromised — today deloads to recovery and your {s.fromType} carries to the next block.
+              </>
             ) : (
-              <>No easy day to swap with this block — today deloads to recovery and it&apos;s a priority next block.</>
+              <>No make-up slot left this block — today deloads to recovery and it&apos;s a priority next block.</>
             )}
           </p>
         )}

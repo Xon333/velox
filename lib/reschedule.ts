@@ -86,6 +86,10 @@ export interface ProactiveReschedule {
   fromName: string;
   fromType: WorkoutType;
   to: string | null; // the easy-day swap target; null = no easy slot → honest deload, carry to next block
+  // When `to` is null but a clear rest day exists, this is its date — surfaced so the UI can explain
+  // that we deliberately *didn't* raid it (adding load while compromised), instead of implying nothing
+  // was available (RR-1 UI note).
+  skippedRestDay: string | null;
 }
 
 export function suggestProactiveReschedule(block: CurrentBlock | null, today: string): ProactiveReschedule | null {
@@ -94,11 +98,14 @@ export function suggestProactiveReschedule(block: CurrentBlock | null, today: st
   const todayDay = days.find((d) => d.date === today);
   if (!todayDay || !isQuality(todayDay.type, todayDay.durationMin)) return null; // only meaningful on a quality day
   const slot = findMakeUpSlot(days, today, today, ["easy"]); // easy-only — never consume a rest day (RR-1)
+  // No easy slot: was there a clear rest day we chose not to raid? (Only for the explanation.)
+  const skippedRestDay = slot ? null : findMakeUpSlot(days, today, today, ["rest"])?.date ?? null;
   return {
     from: today,
     fromName: todayDay.name,
     fromType: todayDay.type,
     to: slot?.date ?? null,
+    skippedRestDay,
   };
 }
 
@@ -108,7 +115,7 @@ export function suggestProactiveReschedule(block: CurrentBlock | null, today: st
 export function applyProactiveReschedule(
   block: CurrentBlock,
   today: string
-): { days: CurrentBlockDay[]; to: string | null; deferred: string | null } | null {
+): { days: CurrentBlockDay[]; to: string | null; deferred: string | null; skippedRestDay: string | null } | null {
   const sug = suggestProactiveReschedule(block, today);
   if (!sug) return null;
   const todayDay = block.days.find((d) => d.date === today);
@@ -138,7 +145,7 @@ export function applyProactiveReschedule(
   // No easy slot → today deloads and the stimulus would otherwise be lost; report it so the caller can
   // carry it forward to the next block rather than silently dropping it (CR-6).
   const deferred = sug.to === null ? `${todayDay.type} (planned ${today})` : null;
-  return { days, to: sug.to, deferred };
+  return { days, to: sug.to, deferred, skippedRestDay: sug.skippedRestDay };
 }
 
 // Proceed-easy cap (RR-10): the athlete trains today, but mild illness means no hard efforts — turn

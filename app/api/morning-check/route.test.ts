@@ -108,6 +108,24 @@ describe("PUT /api/morning-check — the CR-2 apply guard", () => {
     expect(td).toMatchObject({ type: "Z2", durationMin: 70 }); // capped in place, same duration
     expect(written.days.find((d) => d.date === "2026-06-21")!.type).toBe("Rest"); // stimulus NOT relocated onto the rest day
   });
+
+  it("deloads with a note naming the rest day it deliberately skipped (RR-1 UI)", async () => {
+    // A clear rest day exists but no easy day → deload, and the note explains the skipped rest day.
+    const b: CurrentBlock = {
+      ...block(),
+      days: [
+        { date: TODAY, name: "VO2 6x3", type: "VO2max", durationMin: 70 },
+        { date: "2026-06-21", name: "Rest", type: "Rest", durationMin: 0 }, // clear (next day isn't quality)
+        { date: "2026-06-22", name: "Strength", type: "Strength", durationMin: 45 }, // not easy → no swap slot
+      ],
+    };
+    vi.mocked(store.readCurrentBlock).mockResolvedValue(b);
+    vi.mocked(store.readMorningChecks).mockResolvedValue({ entries: [check("downgrade")], updatedAt: "" });
+    const json = await (await PUT(req("PUT", { today: TODAY }))).json();
+    expect(json.ok).toBe(true);
+    expect(json.to).toBeNull();
+    expect(json.note).toContain("2026-06-21"); // names the skipped rest day instead of "nothing available"
+  });
 });
 
 describe("GET /api/morning-check", () => {

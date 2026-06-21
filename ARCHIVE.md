@@ -64,7 +64,7 @@ A senior-dev re-review of `63a9263` (the CR-9..16 batch) caught 12 items; all re
 - **RR-11 — `strainScore` input clamping.** Route is the real validation boundary (400 on non-1–5 ratings); `strainScore` also clamps each input so its 4–20 range holds for any direct caller.
 - **RR-12 — week-sort cleanup.** `validateSessionRequirements` sorts the small offending-week array rather than the Map entries; no week-numbering assumptions.
 
-*Design note (no fix needed):* when the proactive path finds only a rest day (and skips it), the UI says "no easy day to swap with" without surfacing the reasoning. Acceptable for now; worth a copy improvement if athlete feedback flags it.
+- **RR-1 follow-up — explain the skipped rest day.** When the proactive path deloads because the only free slot is a rest day, `suggestProactiveReschedule` now returns `skippedRestDay` (the clear rest day it deliberately didn't raid). The morning-check preview and the apply note name it ("there's a rest day on X, but moving a hard session there would add load while you're compromised…") instead of implying nothing was available.
 
 ---
 
