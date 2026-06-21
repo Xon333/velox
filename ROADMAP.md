@@ -16,6 +16,11 @@ machinery they share (so the "build the two together" overlaps are explicit). Do
 
 ## Next up (prioritized)
 
+> **⛔ Hardening gate first.** A self-review of the §5/#1/#3/Track B work opened a pre-feature
+> hardening pass in [todo.md](todo.md) (`CR-1..15`). Clear it — at minimum the `CR-1..3`
+> merge-blockers — **before** starting any item below (including #2 and the CoachSnapshot
+> Today-surfacing WIP).
+
 ### 1. CoachSnapshot + Ask-Coach context (the "objective telemetry lens")  ⭐ — foundations SHIPPED
 Foundations shipped — full record in [ARCHIVE.md](ARCHIVE.md). `lib/coach-snapshot.ts` hands Ask-Coach
 + generation one deterministic resolved-numbers snapshot (execution · form+TSB-modifier · fuel · state ·
