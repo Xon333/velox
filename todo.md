@@ -28,8 +28,8 @@ Re-review of `63a9263` (CR-9..16 hardening). **RR-1..4 are the priority (P1).**
 | RR-8 | ☑ | P2 | ux | **Warnings consolidated** — one warning naming every offending loading week (`weeks 1, 3 …`) instead of one per week. Bounded fan-out. [session-requirements.ts](lib/session-requirements.ts) |
 | RR-9 | ☑ | P2 | test | **Branches covered:** multi-week consolidation, recovery-week exclusion, and block-floor fallback all tested. [session-requirements.test.ts](lib/session-requirements.test.ts) |
 | RR-10 | ☑ | P2 | feat | **`proceed-easy` decision added.** Mild illness on fresh legs now caps intensity instead of going full gas: `applyEasyCap` converts today's quality session to a same-duration Z2 ride (intervals dropped, no relocation), athlete-confirmed like the downgrade. Type + route + component all handle the new state. [morning-check.ts](lib/morning-check.ts) |
-| RR-11 | ☐ | P3 | bug | No input validation/clamping on `MorningCheckAnswers` — `strainScore` is unbounded if values fall outside 1–5. Confirm route validates or clamp here. [morning-check.ts:30](lib/morning-check.ts:30) |
-| RR-12 | ☐ | P3 | polish | `byWeek` grouping assumes contiguous weekNumber + builds a Map only to sort its entries; minor cleanup. [session-requirements.ts:66](lib/session-requirements.ts:66) |
+| RR-11 | ☑ | P3 | bug | **Confirmed + hardened.** The `/api/morning-check` route already rejects non-1–5 ratings (400); `strainScore` now also clamps each input so its 4–20 range holds for any direct caller. [morning-check.ts](lib/morning-check.ts) |
+| RR-12 | ☑ | P3 | polish | Validator no longer sorts Map entries — it sorts the small offending-week array instead; no week-numbering assumptions. [session-requirements.ts](lib/session-requirements.ts) |
 
 **Decisions locked (2026-06-21):**
 - **RR-1 → Honest deload + carry.** Proactive reschedule only swaps onto an *easy* day (load-neutral); if no easy slot, today→Recovery and the quality carries forward via the existing `deferred` path (CR-6). Drop the rest-target/`toWasRest` swap so "only the easy-day swap preserves load" is true by construction.

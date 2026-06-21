@@ -107,10 +107,11 @@ export function validateSessionRequirements(days: PlannedDay[], req: SessionRequ
 
   let anyRaceSim = false;
   const offendingWeeks: number[] = [];
-  for (const [week, wd] of [...byWeek.entries()].sort((a, b) => a[0] - b[0])) {
+  for (const [week, wd] of byWeek) {
     if (wd.some((d) => d.type === "RaceSim")) anyRaceSim = true;
     else if (isLoadingWeek(wd)) offendingWeeks.push(week);
   }
+  offendingWeeks.sort((a, b) => a - b); // ascending for a stable "weeks 1, 3 …" message (no week-numbering assumptions)
 
   const warnings: string[] = [];
   if (offendingWeeks.length > 0) {

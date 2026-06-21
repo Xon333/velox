@@ -25,9 +25,12 @@ const STRAIN_HIGH = 15; // strain alone forces a downgrade
 const STRAIN_MED = 12; // strain that downgrades only when the objective signals agree
 const TSB_DEEP = -25;
 
-// Subjective strain, 4 (fresh) … 20 (wrecked).
+// Subjective strain, 4 (fresh) … 20 (wrecked). The /api/morning-check route is the validation
+// boundary (it rejects non-1–5 ratings with a 400); strainScore also clamps each input so the score
+// stays in its documented range for any direct caller (RR-11).
+const clamp1to5 = (n: number): number => Math.max(1, Math.min(5, n));
 export function strainScore(a: MorningCheckAnswers): number {
-  return a.fatigue + a.soreness + (6 - a.sleep) + (6 - a.motivation);
+  return clamp1to5(a.fatigue) + clamp1to5(a.soreness) + (6 - clamp1to5(a.sleep)) + (6 - clamp1to5(a.motivation));
 }
 
 export interface MorningCheckDecisionResult {
