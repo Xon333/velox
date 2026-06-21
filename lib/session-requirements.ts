@@ -52,15 +52,29 @@ export function deriveSessionRequirements(goal: string, weakpoints: string[]): S
   };
 }
 
-// Prompt instruction (null when there's nothing to require). The per-loading-week ask lives here;
-// the validator below enforces only the ≥1/block floor (loading-vs-recovery-week detection is fuzzy).
+// Prompt instruction (null when there's nothing to require). The per-loading-week ask lives here; the
+// validator below enforces it per loading week (≥2 quality, theme-aware) and falls back to a ≥1/block floor.
 export function formatSessionRequirements(req: SessionRequirements): string | null {
   if (!req.terrainRace) return null;
   return `GOAL FOCUS: this block's goal is terrain/race-driven (${req.tags.join(", ")}). Include at least one RaceSim quality session per loading week (KB §10) as key quality work — it counts toward the weekly quality budget, not on top of it — and prefer terrain-flexible outdoor quality (KB §11) where it fits. Keep structured intervals primary.`;
 }
 
+// A week theme that marks the week as recovery/deload/taper. The LLM writes the theme free-text
+// (plan-schema maps `wk.theme`), so match loosely + case-insensitively. Such weeks aren't "loading"
+// weeks even if they happen to keep ≥2 quality sessions, so the per-week RaceSim ask skips them (RR-3).
+const RECOVERY_WEEK = /recover|deload|unload|taper|rest week|easy week/i;
+
+// A loading week = ≥2 quality sessions and not themed as recovery/deload/taper. The quality count
+// alone is a fuzzy proxy; the theme exclusion stops a recovery week that keeps 2 quality from being
+// flagged as needing a RaceSim.
+function isLoadingWeek(weekDays: PlannedDay[]): boolean {
+  if (weekDays.filter((d) => QUALITY.has(d.type)).length < 2) return false;
+  const theme = weekDays.find((d) => d.weekTheme)?.weekTheme ?? "";
+  return !RECOVERY_WEEK.test(theme);
+}
+
 // Post-generation enforcement (warning only — never reorders the coach's plan). For a terrain/race
-// goal: flag each *loading week* (≥2 quality sessions) that lacks a RaceSim (CR-12), plus a
+// goal: one consolidated warning naming every loading week that lacks a RaceSim (RR-8/CR-12), plus a
 // block-level floor for a block that ships zero RaceSim with no loading week to pin the warning on.
 export function validateSessionRequirements(days: PlannedDay[], req: SessionRequirements): string[] {
   if (!req.requireRaceSim || days.length === 0) return [];
@@ -72,21 +86,27 @@ export function validateSessionRequirements(days: PlannedDay[], req: SessionRequ
     else byWeek.set(d.weekNumber, [d]);
   }
 
-  const warnings: string[] = [];
   let anyRaceSim = false;
-  let flaggedAWeek = false;
+  const offendingWeeks: number[] = [];
   for (const [week, wd] of [...byWeek.entries()].sort((a, b) => a[0] - b[0])) {
-    const qualityCount = wd.filter((d) => QUALITY.has(d.type)).length;
-    const hasRaceSim = wd.some((d) => d.type === "RaceSim");
-    if (hasRaceSim) anyRaceSim = true;
-    if (qualityCount >= 2 && !hasRaceSim) {
-      warnings.push(
-        `GOAL: week ${week} is a loading week (${qualityCount} quality sessions) on a terrain/race goal (${req.tags.join(", ")}) but has no RaceSim — add one as key quality work (KB §10).`
-      );
-      flaggedAWeek = true;
-    }
+    if (wd.some((d) => d.type === "RaceSim")) anyRaceSim = true;
+    else if (isLoadingWeek(wd)) offendingWeeks.push(week);
   }
-  if (!anyRaceSim && !flaggedAWeek) {
+
+  const warnings: string[] = [];
+  if (offendingWeeks.length > 0) {
+    const subject =
+      offendingWeeks.length === 1
+        ? `week ${offendingWeeks[0]} is a loading week`
+        : `weeks ${offendingWeeks.join(", ")} are loading weeks`;
+    const verb = offendingWeeks.length === 1 ? "has" : "have";
+    warnings.push(
+      `GOAL: ${subject} (≥2 quality) on a terrain/race goal (${req.tags.join(", ")}) but ${verb} no RaceSim — add one as key quality work each (KB §10).`
+    );
+  }
+  // Block-level floor: a block that ships zero RaceSim with no loading week to pin the warning on
+  // still needs the requirement surfaced.
+  if (!anyRaceSim && offendingWeeks.length === 0) {
     warnings.push(
       `GOAL: the block goal is terrain/race-driven (${req.tags.join(", ")}) but no RaceSim session was prescribed — add at least one as key quality work (KB §10).`
     );
