@@ -96,18 +96,20 @@ second-brain item (Track D) also calls for — build it once here, not twice.
   any tweak there) vs. add a sanctioned per-athlete override living in this calibration framework
   with override semantics. Lean strict-consistency unless there's a real reason to diverge.
 
-### 3. Proactive reschedule — "not feeling it?" morning check-in  ⭐
-A button on Today (prominent when today is a quality day) you tap *before* the session — e.g. you
-wake up wrecked on an interval day. It opens a short set of **standardised questions** (uniform,
-schema-friendly so they trend over time): fatigue 1–5, sleep last night 1–5, leg soreness 1–5,
-motivation 1–5, illness none/mild/sick. Stored as structured JSON (a `morning-check` store).
-- **Deterministic decision:** combine the answers with existing readiness (TSB / ACWR) against
-  thresholds → either "you're good, proceed" or "downgrade to recovery + reschedule the quality
-  stimulus" (reuse `lib/reschedule.ts`). No AI in the decision.
-- This is the proactive counterpart to the reactive "you missed it" banner — catch it at wake-up.
-- Distinct from the (removed) post-ride RPE survey: this is a *pre-session scheduling input*
-  (fatigue/sleep/soreness the system can't sync) that the deliberately-absent HRV/sleep feed would
-  otherwise provide. Keep it lean — a few chips, one tap to reschedule.
+### 3. Proactive reschedule — "not feeling it?" morning check-in  ⭐ — SHIPPED
+`MorningCheckIn` on Today (rank-1 readiness zone, shown before a quality session is ridden) →
+standardised chips (fatigue / sleep / soreness / motivation 1–5 + illness none/mild/sick) → a
+**deterministic** decision (`lib/morning-check.ts decideMorningCheck`: subjective strain + objective
+TSB/readiness/ACWR) → "proceed" or "downgrade + reschedule". Apply (athlete-confirmed) downgrades today
+to recovery and moves the quality stimulus to the next rest day, **else swaps with the next easy day
+(load-preserving)** — `suggestProactiveReschedule` / `applyProactiveReschedule` in `lib/reschedule.ts`.
+Stored in `morning-check.json`; today's check also feeds the **CoachSnapshot** (Ask-Coach reads it). No
+AI in the decision — it only phrases the result.
+- **Also shipped the §3 "wider target slots" sliver** (rest *or* easy-day targeting via a shared
+  slot-finder) for the proactive path; the reactive `RescheduleBanner` stays rest-only (can adopt it).
+- **Remaining:** decision **thresholds are population defaults** (`STRAIN_HIGH`/`STRAIN_MED`, TSB −25) —
+  make per-athlete via **#2**. Local-block only; the Intervals.icu calendar move stays manual (bundle
+  with §7 bidirectional sync), same as the reactive reschedule.
 
 ### 4. Let the validation loop accrue, then auto-down-weight
 `intervention-log.json` records verdicts after a 28-day horizon but has none yet. Once data exists,
@@ -131,10 +133,10 @@ The bulk of these shipped — full records in [ARCHIVE.md](ARCHIVE.md). Only wha
     The banner currently tells the athlete to mirror the move manually.
   - **Possible follow-up:** a *proactive* sickness/fatigue path (downgrade today + reschedule before
     the session is even missed, on a `fatigueAlert`) — overlaps with #3's morning check-in.
-  - **Wider target slots:** today `suggestReschedule` only lands a make-up on a *rest* day. Let it
-    also use an **easy endurance day** (Z2/Recovery) — swap the quality work onto it and displace the
-    easy ride — rather than requiring a free rest day. Keep the guardrails (preserve weekly load, no
-    back-to-back hard days, athlete-confirmed).
+  - **Wider target slots — DONE for the proactive path (#3):** `findMakeUpSlot` in `lib/reschedule.ts`
+    now lands a make-up on a rest day *or* an **easy endurance day** (Z2/Recovery) via a load-preserving
+    swap, with the no-back-to-back-hard-days guard. Remaining: let the **reactive** `suggestReschedule`
+    use the same finder (it's still rest-only).
 - **Signal fusion → one coherent athlete state (§5 — v1 foundations SHIPPED).**
   `lib/athlete-state.ts computeAthleteState` fuses TSB/ACWR + execution/decoupling/RPE + behaviour
   into one 0–100 score (band on hover) + drivers + a lived-signal override; surfaced on Today

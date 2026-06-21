@@ -574,3 +574,29 @@ export interface DispositionLog {
   entries: DispositionEntry[];
   updatedAt: string;
 }
+
+// ---------- Morning check-in (data/morning-check.json) ----------
+// The proactive counterpart to dispositions: a pre-session subjective read (the fatigue/sleep/
+// soreness signals the deliberately-absent HRV feed would give) that drives a deterministic
+// proceed-vs-downgrade decision. Editable per day, like dispositions (not an immutable ledger).
+
+export type IllnessLevel = "none" | "mild" | "sick";
+export type MorningCheckDecision = "proceed" | "downgrade";
+
+export interface MorningCheckEntry {
+  date: string; // YYYY-MM-DD
+  // All 1–5; higher = more of that thing (fatigue/soreness 5 = bad, sleep/motivation 5 = good).
+  fatigue: number;
+  sleep: number;
+  soreness: number;
+  motivation: number;
+  illness: IllnessLevel;
+  strain: number; // derived: fatigue + soreness + (6−sleep) + (6−motivation)
+  decision: MorningCheckDecision;
+  setAt: string;
+}
+
+export interface MorningCheckLog {
+  entries: MorningCheckEntry[];
+  updatedAt: string;
+}

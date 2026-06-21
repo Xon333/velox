@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCoachSnapshot, formatCoachSnapshot, formatFormFuelLine, resolveTsbModifier, type CoachSnapshotInput } from "./coach-snapshot";
-import type { AthleteState, CurrentBlock, DispositionEntry, TodayAnalysis } from "./types";
+import type { AthleteState, CurrentBlock, DispositionEntry, MorningCheckEntry, TodayAnalysis } from "./types";
 
 const TODAY = "2026-06-20";
 
@@ -57,6 +57,7 @@ function baseInput(overrides: Partial<CoachSnapshotInput> = {}): CoachSnapshotIn
     weightTrend7dKg: -0.4,
     directives: "Prioritise threshold durability; under-delivering on VO2max.",
     disposition: null,
+    morningCheck: null,
     ...overrides,
   };
 }
@@ -112,6 +113,12 @@ describe("buildCoachSnapshot", () => {
     expect(s.fuel.fuelingState).toBeNull();
   });
 
+  it("carries today's morning check into the snapshot", () => {
+    const morningCheck: MorningCheckEntry = { date: TODAY, fatigue: 4, sleep: 2, soreness: 4, motivation: 2, illness: "mild", strain: 16, decision: "downgrade", setAt: "" };
+    const s = buildCoachSnapshot(baseInput({ morningCheck }));
+    expect(s.today.morningCheck).toMatchObject({ fatigue: 4, illness: "mild", decision: "downgrade" });
+  });
+
   it("treats a stale today-analysis (different date) as no ride logged", () => {
     const s = buildCoachSnapshot(baseInput({ todayAnalysis: { ...todayAnalysis, activityDate: "2026-06-19" } as TodayAnalysis }));
     expect(s.today.rideLogged).toBe(false);
@@ -134,6 +141,14 @@ describe("formatCoachSnapshot", () => {
     expect(out).toContain("effective 39% (power 95% × duration 41%)");
     expect(out).toContain("TSB -15 (productive overload");
     expect(out).toContain("target 2,800 kcal");
+  });
+
+  it("renders the reported morning check when present", () => {
+    const morningCheck: MorningCheckEntry = { date: TODAY, fatigue: 4, sleep: 2, soreness: 4, motivation: 2, illness: "mild", strain: 16, decision: "downgrade", setAt: "" };
+    const out = formatCoachSnapshot(buildCoachSnapshot(baseInput({ morningCheck })));
+    expect(out).toContain("Reported this morning: fatigue 4/5");
+    expect(out).toContain("illness mild");
+    expect(out).toContain("recommended a downgrade");
   });
 
   it("never renders the reserved (WIP) fuel slots", () => {

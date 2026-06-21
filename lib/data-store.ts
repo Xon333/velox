@@ -1,7 +1,7 @@
 // Local JSON persistence under /data. This app is local-first by design:
 // the filesystem is the single source of truth (see README — not Vercel-safe).
 // Crash-safe atomic writes + backup/recovery live in ./json-store.
-import type { AthleteProfile, BlockHistoryEntry, BlockSettings, CurrentBlock, DispositionLog, InterventionLog, RollingBaselines, ScoreLog, SyncData, TodayAnalysis } from "./types";
+import type { AthleteProfile, BlockHistoryEntry, BlockSettings, CurrentBlock, DispositionLog, InterventionLog, MorningCheckLog, RollingBaselines, ScoreLog, SyncData, TodayAnalysis } from "./types";
 import { DEFAULT_BLOCK_SETTINGS } from "./types";
 import { readMdPerformance } from "./kb-loader";
 import { readPhysiology } from "./physiology";
@@ -140,4 +140,14 @@ export async function readDispositions(): Promise<DispositionLog> {
 
 export async function writeDispositions(log: DispositionLog): Promise<void> {
   await writeJson("dispositions.json", log);
+}
+
+const DEFAULT_MORNING_CHECKS: MorningCheckLog = { entries: [], updatedAt: new Date(0).toISOString() };
+
+export async function readMorningChecks(): Promise<MorningCheckLog> {
+  return readJson<MorningCheckLog>("morning-check.json", DEFAULT_MORNING_CHECKS);
+}
+
+export async function writeMorningChecks(log: MorningCheckLog): Promise<void> {
+  await writeJson("morning-check.json", log);
 }

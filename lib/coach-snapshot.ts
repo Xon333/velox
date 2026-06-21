@@ -12,6 +12,7 @@ import type {
   DispositionEntry,
   FitnessMetrics,
   LoadRampAlert,
+  MorningCheckEntry,
   ReadinessSignal,
   TodayAnalysis,
   WorkoutType,
@@ -33,6 +34,14 @@ export interface CoachSnapshot {
       powerPct: number | null; // avg power adherence
       durationPct: number | null; // avg duration completion
       structuralMismatch: boolean; // plan-vs-detection mismatch guard
+    } | null;
+    // The athlete's pre-session subjective read (ROADMAP #3), null until they check in today.
+    morningCheck: {
+      fatigue: number;
+      sleep: number;
+      soreness: number;
+      illness: MorningCheckEntry["illness"];
+      decision: MorningCheckEntry["decision"];
     } | null;
   };
   form: {
@@ -72,6 +81,7 @@ export interface CoachSnapshotInput {
   weightTrend7dKg: number | null;
   directives: string | null;
   disposition: DispositionEntry | null;
+  morningCheck: MorningCheckEntry | null;
 }
 
 // Quality session types — TSB carries more decision weight before these than before easy work.
@@ -154,6 +164,15 @@ export function buildCoachSnapshot(input: CoachSnapshotInput): CoachSnapshot {
               structuralMismatch: ic?.structuralMismatch ?? false,
             }
           : null,
+      morningCheck: input.morningCheck
+        ? {
+            fatigue: input.morningCheck.fatigue,
+            sleep: input.morningCheck.sleep,
+            soreness: input.morningCheck.soreness,
+            illness: input.morningCheck.illness,
+            decision: input.morningCheck.decision,
+          }
+        : null,
     },
     form: {
       tsb: input.fitness?.tsb ?? null,
@@ -221,6 +240,13 @@ export function formatCoachSnapshot(s: CoachSnapshot): string {
     if (parts.length > 0) {
       lines.push(`- Execution (today): ${parts.join(" · ")}${ex.structuralMismatch ? " · ⚠ plan/detection mismatch — duration is unreliable, judge on power" : ""}.`);
     }
+  }
+
+  const mc = s.today.morningCheck;
+  if (mc) {
+    lines.push(
+      `- Reported this morning: fatigue ${mc.fatigue}/5 · sleep ${mc.sleep}/5 · soreness ${mc.soreness}/5${mc.illness !== "none" ? ` · illness ${mc.illness}` : ""} → ${mc.decision === "downgrade" ? "recommended a downgrade" : "cleared to proceed"}.`
+    );
   }
 
   const f = s.form;

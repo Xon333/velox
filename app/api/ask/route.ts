@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAnthropicConfigured, streamAskCoach, type AskCoachContext } from "@/lib/anthropic-api";
-import { readCurrentBlock, readDispositions, readInterventionLog, readLastSync, readRollingBaselines, readScoreLog, readTodayAnalysis } from "@/lib/data-store";
+import { readCurrentBlock, readDispositions, readInterventionLog, readLastSync, readMorningChecks, readRollingBaselines, readScoreLog, readTodayAnalysis } from "@/lib/data-store";
 import { readPhysiology } from "@/lib/physiology";
 import { computeAcwr, computeLoadRamp, computeReadiness } from "@/lib/readiness";
 import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   if (query.length > 600) return NextResponse.json({ error: "Question is too long (max 600 chars)." }, { status: 400 });
 
   const today = new Date().toISOString().slice(0, 10);
-  const [block, sync, physStore, todayAnalysis, dispositions, scoreLog, baselines, interventionLog] = await Promise.all([
+  const [block, sync, physStore, todayAnalysis, dispositions, scoreLog, baselines, interventionLog, morningChecks] = await Promise.all([
     readCurrentBlock(),
     readLastSync(),
     readPhysiology(),
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
     readScoreLog(),
     readRollingBaselines(),
     readInterventionLog(),
+    readMorningChecks(),
   ]);
 
   // Today's + next prescribed sessions — the exact rep detail the snapshot only names by type, so
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
     weightTrend7dKg: sync ? weightTrendFromWellness(sync.wellness) : null,
     directives: synthesizeCoachingDirectives(deriveInsights(athleteModel), summariseValidation(interventionLog)),
     disposition: dispositions.entries.find((e) => e.date === today) ?? null,
+    morningCheck: morningChecks.entries.find((e) => e.date === today) ?? null,
   });
 
   const context: AskCoachContext = { snapshot, session, upcoming };

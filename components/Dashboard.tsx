@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isStale, nextMonday } from "@/lib/client-api";
 import AskCoach from "./AskCoach";
 import AthleteStateCard from "./AthleteStateCard";
+import MorningCheckIn from "./MorningCheckIn";
 import RescheduleBanner from "./RescheduleBanner";
 import type { AthleteMdSnapshot } from "@/lib/kb-loader";
 import type {
@@ -243,6 +244,8 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
       {mode === "today" && (
         <>
           <Zone rank={1} title="Readiness — can I go hard?">
+            {/* Proactive "not feeling it?" check-in (ROADMAP #3) — prominent before a quality session. */}
+            <MorningCheckIn />
             {/* §5 signal-fusion glance — the second brain's overall read, above the individual signals. */}
             {state.athleteState && (
               <div className="mb-2">

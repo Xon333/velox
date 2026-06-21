@@ -146,6 +146,7 @@ export async function POST(req: Request) {
       weightTrend7dKg: sync ? weightTrendFromWellness(sync.wellness) : null,
       directives: directivesContext,
       disposition: null,
+      morningCheck: null,
     });
     const formFuelLine = formatFormFuelLine(snapshot);
     const formFuelContext = formFuelLine ? `\n${formFuelLine}` : "";
