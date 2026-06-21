@@ -160,6 +160,31 @@ export async function readMdPowerZones(): Promise<Zone[]> {
 }
 
 const KB_DIR = path.join(process.cwd(), "knowledge-base");
+// Committed skeleton (schema + the section anchors the prompt cites). The real KB under
+// knowledge-base/ is gitignored personal data and overrides this per-file; the defaults only fill
+// gaps, so a fresh clone / CI doesn't hard-fail and the repo documents the expected structure.
+const KB_DEFAULTS_DIR = path.join(process.cwd(), "knowledge-base-defaults");
+
+// .md files in a dir, or [] if the dir is absent (a fresh clone has no knowledge-base/).
+async function listMd(dir: string): Promise<string[]> {
+  try {
+    return (await fs.readdir(dir)).filter((f) => f.endsWith(".md"));
+  } catch {
+    return [];
+  }
+}
+
+// Read a KB file, preferring the user's local copy and falling back to the committed default.
+async function readKbWithFallback(name: string): Promise<string | null> {
+  for (const dir of [KB_DIR, KB_DEFAULTS_DIR]) {
+    try {
+      return await fs.readFile(path.join(dir, name), "utf-8");
+    } catch {
+      // try the next source
+    }
+  }
+  return null;
+}
 
 // Concatenation order required by the spec; bikefit is optional.
 const KB_ORDER = [
@@ -177,9 +202,14 @@ function assertSafeName(name: string): void {
 }
 
 export async function listKnowledgeFiles(): Promise<string[]> {
-  const entries = await fs.readdir(KB_DIR);
-  const mdFiles = entries.filter((f) => f.endsWith(".md"));
-  return mdFiles.sort((a, b) => {
+  // Union of the user's local files (any .md) and the committed defaults — so the editor + generation
+  // see the full set even before a coach has dropped in their own KB, and never throw on a missing
+  // dir. The defaults contribution is restricted to the canonical KB names so the defaults' README
+  // (and any non-KB file) never lands in the prompt or the editor list.
+  const local = await listMd(KB_DIR);
+  const defaults = (await listMd(KB_DEFAULTS_DIR)).filter((f) => KB_ORDER.includes(f));
+  const names = new Set([...local, ...defaults]);
+  return [...names].sort((a, b) => {
     const ia = KB_ORDER.indexOf(a);
     const ib = KB_ORDER.indexOf(b);
     if (ia === -1 && ib === -1) return a.localeCompare(b);
@@ -191,16 +221,20 @@ export async function listKnowledgeFiles(): Promise<string[]> {
 
 export async function readKnowledgeFile(name: string): Promise<string> {
   assertSafeName(name);
-  return fs.readFile(path.join(KB_DIR, name), "utf-8");
+  const content = await readKbWithFallback(name);
+  if (content === null) throw new Error(`Knowledge base file not found: ${name}`);
+  return content;
 }
 
-// Editing only — the manager deliberately supports no create/delete.
+// Editing only — the manager deliberately supports no create/delete. Editing a file that currently
+// exists only as a default writes a local override (the first local file may need the dir created).
 export async function writeKnowledgeFile(name: string, content: string): Promise<void> {
   assertSafeName(name);
   const existing = await listKnowledgeFiles();
   if (!existing.includes(name)) {
     throw new Error(`Unknown knowledge base file: ${name}. Creating new files is not supported.`);
   }
+  await fs.mkdir(KB_DIR, { recursive: true });
   await fs.writeFile(path.join(KB_DIR, name), content, "utf-8");
 }
 
@@ -213,8 +247,8 @@ export async function loadKnowledgeBaseContext(): Promise<string> {
   );
   const sections: string[] = [];
   for (const file of ordered) {
-    const content = await fs.readFile(path.join(KB_DIR, file), "utf-8");
-    sections.push(`===== FILE: ${file} =====\n\n${content.trim()}`);
+    const content = await readKbWithFallback(file);
+    if (content !== null) sections.push(`===== FILE: ${file} =====\n\n${content.trim()}`);
   }
   return sections.join("\n\n");
 }
@@ -321,6 +355,7 @@ ${list(profile.weakpoints)}
 }
 
 export async function writeAthleteProfileMd(profile: AthleteProfile): Promise<void> {
+  await fs.mkdir(KB_DIR, { recursive: true }); // first write on a fresh setup creates the dir
   await fs.writeFile(
     path.join(KB_DIR, "athlete_profile.md"),
     athleteProfileToMarkdown(profile),
