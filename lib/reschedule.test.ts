@@ -82,6 +82,7 @@ describe("suggestProactiveReschedule / applyProactiveReschedule", () => {
     expect(s).toMatchObject({ from: TODAY, fromType: "VO2max", to: "2026-06-18", toWasRest: true });
 
     const applied = applyProactiveReschedule(b, TODAY)!;
+    expect(applied.deferred).toBeNull(); // a slot was found — nothing dropped
     const byDate = Object.fromEntries(applied.days.map((d) => [d.date, d]));
     expect(byDate[TODAY]).toMatchObject({ type: "Recovery" });
     expect(byDate[TODAY].name).toContain("downgraded from VO2max");
@@ -112,6 +113,7 @@ describe("suggestProactiveReschedule / applyProactiveReschedule", () => {
     expect(s.to).toBeNull();
     const applied = applyProactiveReschedule(b, TODAY)!;
     expect(applied.to).toBeNull();
+    expect(applied.deferred).toContain("VO2max"); // CR-6: the dropped stimulus is carried, not lost
     const byDate = Object.fromEntries(applied.days.map((d) => [d.date, d]));
     expect(byDate[TODAY]).toMatchObject({ type: "Recovery" });
     expect(byDate["2026-06-18"]).toMatchObject({ type: "Threshold", durationMin: 75 }); // untouched

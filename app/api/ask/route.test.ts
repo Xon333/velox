@@ -12,6 +12,7 @@ vi.mock("@/lib/data-store", () => ({
   readRollingBaselines: vi.fn(),
   readInterventionLog: vi.fn(),
   readMorningChecks: vi.fn(),
+  readBlockSettings: vi.fn(),
 }));
 vi.mock("@/lib/physiology", () => ({ readPhysiology: vi.fn() }));
 vi.mock("@/lib/anthropic-api", () => ({
@@ -25,7 +26,7 @@ import * as store from "@/lib/data-store";
 import { readPhysiology } from "@/lib/physiology";
 import { streamAskCoach } from "@/lib/anthropic-api";
 import { POST } from "@/app/api/ask/route";
-import type { SyncData, TodayAnalysis } from "@/lib/types";
+import { DEFAULT_BLOCK_SETTINGS, type SyncData, type TodayAnalysis } from "@/lib/types";
 
 const TODAY = "2026-06-20";
 const sync = { syncedAt: "", activities: [], wellness: [], powerCurve: [], fitness: { ctl: 50, atl: 60, tsb: -12 } } as unknown as SyncData;
@@ -47,6 +48,7 @@ beforeEach(() => {
   vi.mocked(store.readRollingBaselines).mockResolvedValue({} as never);
   vi.mocked(store.readInterventionLog).mockResolvedValue({ records: [], updatedAt: "" });
   vi.mocked(store.readMorningChecks).mockResolvedValue({ entries: [], updatedAt: "" });
+  vi.mocked(store.readBlockSettings).mockResolvedValue(DEFAULT_BLOCK_SETTINGS);
   vi.mocked(readPhysiology).mockResolvedValue({ current: { ftp: 280 } } as never);
 });
 

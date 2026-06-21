@@ -107,7 +107,7 @@ export function suggestProactiveReschedule(block: CurrentBlock | null, today: st
 export function applyProactiveReschedule(
   block: CurrentBlock,
   today: string
-): { days: CurrentBlockDay[]; to: string | null; toWasRest: boolean } | null {
+): { days: CurrentBlockDay[]; to: string | null; toWasRest: boolean; deferred: string | null } | null {
   const sug = suggestProactiveReschedule(block, today);
   if (!sug) return null;
   const todayDay = block.days.find((d) => d.date === today);
@@ -134,5 +134,8 @@ export function applyProactiveReschedule(
     if (sug.to && d.date === sug.to) return { date: d.date, ...quality };
     return d;
   });
-  return { days, to: sug.to, toWasRest: sug.toWasRest };
+  // No make-up slot left → today is downgraded and the stimulus would otherwise be lost; report it so
+  // the caller can carry it forward to the next block rather than silently dropping it (CR-6).
+  const deferred = sug.to === null ? `${todayDay.type} (planned ${today})` : null;
+  return { days, to: sug.to, toWasRest: sug.toWasRest, deferred };
 }

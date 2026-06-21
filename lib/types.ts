@@ -234,6 +234,9 @@ export interface CurrentBlock {
   model?: string;
   promptVersion?: number;
   durabilityTemplate?: string; // Track B: the durability template (A–E) this block's long ride uses
+  // Quality sessions dropped mid-block (a proactive downgrade with no make-up slot) — surfaced to the
+  // next generation as a carry-forward priority so the stimulus isn't silently lost (CR-6).
+  deferredQuality?: string[];
 }
 
 // ---------- Block generation settings (data/block-settings.json) ----------

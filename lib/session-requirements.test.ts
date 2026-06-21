@@ -33,6 +33,13 @@ describe("deriveSessionRequirements", () => {
     expect(r.requireRaceSim).toBe(false);
     expect(r.tags).toEqual([]);
   });
+
+  it("respects negation — 'avoid hills' / 'no racing' don't trigger a requirement (CR-7)", () => {
+    expect(deriveSessionRequirements("Base block — avoid hills, no racing this build", []).requireRaceSim).toBe(false);
+    expect(deriveSessionRequirements("Build FTP, without climbing", []).tags).not.toContain("climbing");
+    // a genuine mention still counts even with a negation elsewhere
+    expect(deriveSessionRequirements("No rest weeks — peak for the hilly KOM race", []).requireRaceSim).toBe(true);
+  });
 });
 
 describe("formatSessionRequirements", () => {

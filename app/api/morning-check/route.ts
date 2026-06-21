@@ -4,7 +4,7 @@ import { decideMorningCheck, mergeMorningCheck, proactiveApplyBlock, type Mornin
 import { applyProactiveReschedule, suggestProactiveReschedule } from "@/lib/reschedule";
 import { computeAcwr, computeReadiness } from "@/lib/readiness";
 import { resolveToday } from "@/lib/date";
-import type { IllnessLevel, MorningCheckEntry, WorkoutType } from "@/lib/types";
+import type { CurrentBlock, IllnessLevel, MorningCheckEntry, WorkoutType } from "@/lib/types";
 
 const QUALITY = new Set<WorkoutType>(["Threshold", "VO2max", "SIT", "RaceSim"]);
 const ILLNESS: IllnessLevel[] = ["none", "mild", "sick"];
@@ -100,7 +100,10 @@ export async function PUT(req: Request) {
 
   const applied = applyProactiveReschedule(block, date);
   if (!applied) return NextResponse.json({ error: "Today isn't a quality day to downgrade." }, { status: 400 });
-  await writeCurrentBlock({ ...block, days: applied.days });
+  const updated: CurrentBlock = { ...block, days: applied.days };
+  // No make-up slot → carry the dropped stimulus forward so the next block re-prioritises it (CR-6).
+  if (applied.deferred) updated.deferredQuality = [...(block.deferredQuality ?? []), applied.deferred];
+  await writeCurrentBlock(updated);
   return NextResponse.json({
     ok: true,
     to: applied.to,

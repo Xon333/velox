@@ -14,9 +14,10 @@ P2 high-value UX/feature · P3 polish/education · Type: `bug` `ux` `feat` `audi
 
 ## ⛔ Hardening gate — clear before new ROADMAP features
 
-From a self-review of the §5 / #1 / #3 / Track B work. **The P1 merge-blockers `CR-1..3` are cleared
-(✅ shipped, verified). No new ROADMAP feature (#2, the CoachSnapshot Today-surfacing WIP, etc.) until
-the P2/P3 connective tissue below also clears.**
+From a self-review of the §5 / #1 / #3 / Track B work. **`CR-1..8` are cleared (✅ shipped, verified) —
+the P1 merge-blockers, route/integration coverage, and the KB-resilience fix. The remaining
+`CR-9..16` are lower-risk P2/P3; clear them before resuming ROADMAP features (#2, the CoachSnapshot
+Today-surfacing WIP, etc.).**
 
 | ID | S | Pri | Type | Item |
 |----|---|-----|------|------|
@@ -24,9 +25,9 @@ the P2/P3 connective tissue below also clears.**
 | CR-2 | ☑ | P1 | bug | **DONE.** `PUT /api/morning-check` now guards via `proactiveApplyBlock` ([`morning-check.ts`](lib/morning-check.ts)) — refuses unless today's stored check recommended `downgrade` and no ride is logged. |
 | CR-3 | ☑ | P1 | bug | **DONE.** `/api/ask` + `/api/morning-check` resolve the client's local date (`resolveToday`); `AskCoach` + `MorningCheckIn` thread `localToday()` on every call. UTC-boundary disagreement closed. |
 | CR-4 | ☑ | P2 | audit | **DONE (rescoped per discussion — crash fix + thin skeleton, no generic encyclopedia).** Committed `knowledge-base-defaults/` (schema + the §4/§10/§11/§12 anchors the prompt cites). [`kb-loader.ts`](lib/kb-loader.ts) now reads local-else-default and never throws on a missing dir (the `readdir` 502 is gone); a fresh clone / CI runs. Your real `knowledge-base/` stays gitignored + preferred — unchanged. |
-| CR-5 | ☐ | P2 | bug | **ACWR computed two ways.** `/api/ask` uses bare `computeAcwr` (population bands) while Today/generate use `resolveAcwrBands(settings)` → Ask-Coach can contradict the readiness strip. Use calibrated bands wherever the snapshot is built. [`ask/route.ts`](app/api/ask/route.ts) |
-| CR-6 | ☐ | P2 | bug | **No make-up slot ⇒ stimulus evaporates.** When no rest/easy day is free, the proactive path downgrades today and "carry to next block" is a comment, not code — the quality work is just lost. Persist it (retro seed / flag) or warn. [`reschedule.ts applyProactiveReschedule`](lib/reschedule.ts) |
-| CR-7 | ☐ | P2 | bug | **Goal matcher has no negation.** "avoid hills" / "no racing" force a false RaceSim requirement; "granfondo"/"racecourse" false-negative. Tighten or document. [`session-requirements.ts`](lib/session-requirements.ts) |
+| CR-5 | ☑ | P2 | bug | **DONE.** `/api/ask` now computes ACWR with `resolveAcwrBands(settings.acwrBands)` — the same calibrated bands Today + generation use, so Ask-Coach can't contradict the readiness strip. [`ask/route.ts`](app/api/ask/route.ts) |
+| CR-6 | ☑ | P2 | bug | **DONE.** No-slot proactive downgrade now records the dropped session on `CurrentBlock.deferredQuality` (via `applyProactiveReschedule`'s `deferred`), and generation injects it as a carry-forward priority — the stimulus is carried, not silently lost. [`reschedule.ts`](lib/reschedule.ts), [`morning-check/route.ts`](app/api/morning-check/route.ts), [`generate/route.ts`](app/api/generate/route.ts) |
+| CR-7 | ☑ | P2 | bug | **DONE.** `deriveSessionRequirements` is negation-aware — a tag within ~15 chars after no/not/avoid/without/skip/… doesn't count, so "avoid hills" / "no racing" no longer force a RaceSim. ("granfondo"/"racecourse" variants left as accepted false-negatives.) [`session-requirements.ts`](lib/session-requirements.ts) |
 | CR-8 | ☑ | P2 | audit | **DONE.** Added a vitest `@/` alias config + integration tests (IO + LLM mocked) for the three LLM-facing routes: morning-check GET/POST/PUT incl. the CR-2 apply guard; ask CoachSnapshot assembly + disposition guard (#1); generate Track-B RaceSim requirement + durability stamp. +11 tests. (The thin `/api/write` path is left uncovered for now.) |
 | CR-9 | ☐ | P2 | audit | **CoachSnapshot assembled twice, by hand.** Ask passes real today-data, generate passes nulls — drift risk. Extract one `buildCoachSnapshotFromStores()` both call. [`coach-snapshot.ts`](lib/coach-snapshot.ts) |
 | CR-10 | ☐ | P2 | ux | **"Load-preserving" overclaimed.** Only the easy-day swap preserves load; the rest-day branch hardcodes 45-min Recovery (drops a 4 h day's volume + eats the rest day). Scale the downgrade to the volume target; soften the ROADMAP claim. [`reschedule.ts RECOVERY_DOWNGRADE_MIN`](lib/reschedule.ts) |

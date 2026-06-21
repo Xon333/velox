@@ -22,9 +22,23 @@ const TAG_PATTERNS: Array<{ tag: string; re: RegExp }> = [
   { tag: "gravel", re: /\bgravel\b/ },
 ];
 
+// Negation words that flip a nearby tag keyword ("avoid hills", "no racing", "without climbs").
+const NEGATION = /\b(?:no|not|avoid|without|skip|minimal|less|few|fewer)\b/;
+
+// A tag counts only if it appears at least once *not* immediately preceded (within ~15 chars) by a
+// negation word — so "avoid hills" / "no racing this block" don't wrongly require a RaceSim.
+function tagPresent(haystack: string, re: RegExp): boolean {
+  const scan = new RegExp(re.source, "g");
+  let m: RegExpExecArray | null;
+  while ((m = scan.exec(haystack)) !== null) {
+    if (!NEGATION.test(haystack.slice(Math.max(0, m.index - 15), m.index))) return true;
+  }
+  return false;
+}
+
 export function deriveSessionRequirements(goal: string, weakpoints: string[]): SessionRequirements {
   const haystack = [goal, ...weakpoints].join(" \n ").toLowerCase();
-  const tags = TAG_PATTERNS.filter((p) => p.re.test(haystack)).map((p) => p.tag);
+  const tags = TAG_PATTERNS.filter((p) => tagPresent(haystack, p.re)).map((p) => p.tag);
   const terrainRace = tags.length > 0;
   return {
     terrainRace,

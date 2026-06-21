@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { isAnthropicConfigured, streamAskCoach, type AskCoachContext } from "@/lib/anthropic-api";
-import { readCurrentBlock, readDispositions, readInterventionLog, readLastSync, readMorningChecks, readRollingBaselines, readScoreLog, readTodayAnalysis } from "@/lib/data-store";
+import { readBlockSettings, readCurrentBlock, readDispositions, readInterventionLog, readLastSync, readMorningChecks, readRollingBaselines, readScoreLog, readTodayAnalysis } from "@/lib/data-store";
 import { readPhysiology } from "@/lib/physiology";
 import { computeAcwr, computeLoadRamp, computeReadiness } from "@/lib/readiness";
+import { resolveAcwrBands } from "@/lib/calibration";
 import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
 import { athleteStateInputsFrom, computeAthleteState } from "@/lib/athlete-state";
 import { summariseValidation } from "@/lib/intervention";
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
   if (query.length > 600) return NextResponse.json({ error: "Question is too long (max 600 chars)." }, { status: 400 });
 
   const today = resolveToday((body as Record<string, unknown>)?.today);
-  const [block, sync, physStore, todayAnalysis, dispositions, scoreLog, baselines, interventionLog, morningChecks] = await Promise.all([
+  const [block, sync, physStore, todayAnalysis, dispositions, scoreLog, baselines, interventionLog, morningChecks, settings] = await Promise.all([
     readCurrentBlock(),
     readLastSync(),
     readPhysiology(),
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
     readRollingBaselines(),
     readInterventionLog(),
     readMorningChecks(),
+    readBlockSettings(),
   ]);
 
   // Today's + next prescribed sessions — the exact rep detail the snapshot only names by type, so
@@ -69,7 +71,8 @@ export async function POST(req: Request) {
   // Resolve the situational signals (all deterministic) and fold them into the one CoachSnapshot
   // the prompt reads — so the coach answers from resolved numbers it can't invent or override.
   const athleteModel = buildAthleteModel(scoreLog.entries);
-  const acwr = sync ? computeAcwr(sync.activities) : null;
+  // Calibrated ACWR bands (same as Today + generation) so Ask-Coach can't contradict the readiness strip (CR-5).
+  const acwr = sync ? computeAcwr(sync.activities, resolveAcwrBands(settings.acwrBands)) : null;
   const snapshot = buildCoachSnapshot({
     date: today,
     ftp: physStore?.current.ftp ?? null,

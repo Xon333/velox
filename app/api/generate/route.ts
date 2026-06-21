@@ -161,6 +161,10 @@ export async function POST(req: Request) {
     const sessionReqContext = sessionReqLine ? `\n${sessionReqLine}` : "";
     const durability = selectDurabilityTemplate(insights, currentBlock?.durabilityTemplate ?? null);
     const durabilityContext = `\n${formatDurabilityForPrompt(durability)}`;
+    // Carry-forward (CR-6): quality dropped mid-block with no make-up slot — re-prioritise it here.
+    const deferredContext = currentBlock?.deferredQuality?.length
+      ? `\nCARRY-FORWARD (quality the athlete had to drop last block with no make-up slot — re-prioritise): ${currentBlock.deferredQuality.join("; ")}.`
+      : "";
 
     // Live training zones from the physiology store, rendered for the prompt (these used to
     // live in athlete_profile.md but are now synced from Intervals.icu).
@@ -184,7 +188,7 @@ export async function POST(req: Request) {
     // don't invalidate the cached prefix.
     const { cached, dynamic } = buildSystemPrompt(
       kbContext,
-      seedsContext + stateContext + directivesContext + formFuelContext + sessionReqContext + durabilityContext,
+      seedsContext + stateContext + directivesContext + formFuelContext + sessionReqContext + durabilityContext + deferredContext,
       buildAthleteDataSection(profile, sync, zonesText),
       blockParams
     );
