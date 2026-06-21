@@ -23,6 +23,7 @@ import type {
 import { computeAcwr, computeLoadRamp, computeReadiness } from "./readiness";
 import { athleteStateInputsFrom, computeAthleteState } from "./athlete-state";
 import { weightTrendFromWellness } from "./nutrition";
+import { resolveAcwrBands, type AcwrBands } from "./calibration";
 
 export interface CoachSnapshot {
   date: string;
@@ -73,26 +74,9 @@ export interface CoachSnapshot {
   disposition: { kind: DispositionEntry["disposition"]; reason: DispositionEntry["reason"] } | null;
 }
 
-export interface CoachSnapshotInput {
-  date: string; // resolved "today" (local)
-  ftp: number | null;
-  block: CurrentBlock | null;
-  todaySessionType: WorkoutType | null;
-  fitness: FitnessMetrics | null;
-  readiness: ReadinessSignal | null;
-  acwr: AcwrResult | null;
-  loadRamp: LoadRampAlert | null;
-  athleteState: AthleteState | null;
-  todayAnalysis: TodayAnalysis | null;
-  weightTrend7dKg: number | null;
-  directives: string | null;
-  disposition: DispositionEntry | null;
-  morningCheck: MorningCheckEntry | null;
-}
-
 // The form/fuel/state half of the snapshot input — the signals both /api/ask and /api/generate
-// resolve identically from the loaded stores. Extracted so the two routes can't drift (CR-9). Keys
-// match CoachSnapshotInput so the caller can spread it in. Deterministic; the route does the IO.
+// resolve identically from the loaded stores (via resolveCoachSignals). Extracted so the two routes
+// can't drift (CR-9). Deterministic; the route does the IO.
 export interface CoachSignals {
   fitness: FitnessMetrics | null;
   readiness: ReadinessSignal | null;
@@ -102,14 +86,29 @@ export interface CoachSignals {
   weightTrend7dKg: number | null;
 }
 
+// The non-signal half (the IO/context the route owns); the form/fuel/state signals are inherited from
+// CoachSignals so the two halves can't drift apart — the compiler now enforces what was a comment (RR-6).
+export interface CoachSnapshotInput extends CoachSignals {
+  date: string; // resolved "today" (local)
+  ftp: number | null;
+  block: CurrentBlock | null;
+  todaySessionType: WorkoutType | null;
+  todayAnalysis: TodayAnalysis | null;
+  directives: string | null;
+  disposition: DispositionEntry | null;
+  morningCheck: MorningCheckEntry | null;
+}
+
+// `acwrBandsOverride` is the raw per-athlete override (settings.acwrBands); resolution to the full
+// bands lives here so callers don't each repeat resolveAcwrBands() and drift (RR-5/RR-7).
 export function resolveCoachSignals(
   sync: SyncData | null,
   athleteModel: AthleteModel,
   baselines: RollingBaselines,
-  acwrBands: Parameters<typeof computeAcwr>[1]
+  acwrBandsOverride?: Partial<AcwrBands> | null
 ): CoachSignals {
   if (!sync) return { fitness: null, readiness: null, acwr: null, loadRamp: null, athleteState: null, weightTrend7dKg: null };
-  const acwr = computeAcwr(sync.activities, acwrBands);
+  const acwr = computeAcwr(sync.activities, resolveAcwrBands(acwrBandsOverride));
   return {
     fitness: sync.fitness,
     readiness: computeReadiness(sync.fitness, sync.wellness),

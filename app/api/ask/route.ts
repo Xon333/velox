@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { isAnthropicConfigured, streamAskCoach, type AskCoachContext } from "@/lib/anthropic-api";
 import { readBlockSettings, readCurrentBlock, readDispositions, readInterventionLog, readLastSync, readMorningChecks, readRollingBaselines, readScoreLog, readTodayAnalysis } from "@/lib/data-store";
 import { readPhysiology } from "@/lib/physiology";
-import { resolveAcwrBands } from "@/lib/calibration";
 import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
 import { summariseValidation } from "@/lib/intervention";
 import { synthesizeCoachingDirectives } from "@/lib/synthesis";
@@ -69,8 +68,8 @@ export async function POST(req: Request) {
   // the prompt reads — so the coach answers from resolved numbers it can't invent or override.
   const athleteModel = buildAthleteModel(scoreLog.entries);
   // Form/fuel/state signals (incl. calibrated ACWR bands — CR-5) resolved by the shared helper so
-  // Ask-Coach + generation can't drift (CR-9).
-  const signals = resolveCoachSignals(sync, athleteModel, baselines, resolveAcwrBands(settings.acwrBands));
+  // Ask-Coach + generation can't drift (CR-9); the helper owns the band resolution (RR-5).
+  const signals = resolveCoachSignals(sync, athleteModel, baselines, settings.acwrBands);
   const snapshot = buildCoachSnapshot({
     date: today,
     ftp: physStore?.current.ftp ?? null,
