@@ -73,18 +73,19 @@ export function suggestReschedule(
 
 // ---------- Proactive reschedule (roadmap #3) ----------
 // The mirror of suggestReschedule: today IS a quality day and the morning check-in says the athlete
-// can't deliver it. Find where to move the stimulus *before* it's wasted. Targets the next rest day,
-// else an easy (Z2/Recovery) day — implementing the §3 "wider target slots" sliver with a
-// load-preserving swap.
+// can't deliver it. Unlike the reactive path (a logistics miss → move onto a rest day), the proactive
+// trigger means the athlete is *compromised today* — so the only load-neutral move is a swap with an
+// upcoming EASY (Z2/Recovery) day. We deliberately don't raid a rest day (that adds load when the
+// athlete can least afford it): with no easy slot, today is an honest deload and the stimulus carries
+// forward (CR-6 / RR-1). So "only the easy-day swap preserves load" holds by construction.
 
-const RECOVERY_DOWNGRADE_MIN = 45; // an easy spin replaces today's quality when the target is a rest day
+const RECOVERY_DOWNGRADE_MIN = 45; // recovery spin replacing today's quality when there's no easy day to swap with
 
 export interface ProactiveReschedule {
   from: string; // today
   fromName: string;
   fromType: WorkoutType;
-  to: string | null; // target day; null = no slot left → downgrade only, carry to next block
-  toWasRest: boolean; // rest target → today becomes Recovery; easy target → swap (load preserved)
+  to: string | null; // the easy-day swap target; null = no easy slot → honest deload, carry to next block
 }
 
 export function suggestProactiveReschedule(block: CurrentBlock | null, today: string): ProactiveReschedule | null {
@@ -92,22 +93,22 @@ export function suggestProactiveReschedule(block: CurrentBlock | null, today: st
   const days = [...block.days].sort((a, b) => a.date.localeCompare(b.date));
   const todayDay = days.find((d) => d.date === today);
   if (!todayDay || !isQuality(todayDay.type, todayDay.durationMin)) return null; // only meaningful on a quality day
-  const slot = findMakeUpSlot(days, today, today, ["rest", "easy"]);
+  const slot = findMakeUpSlot(days, today, today, ["easy"]); // easy-only — never consume a rest day (RR-1)
   return {
     from: today,
     fromName: todayDay.name,
     fromType: todayDay.type,
     to: slot?.date ?? null,
-    toWasRest: slot?.kind === "rest",
   };
 }
 
-// Pure block transform: move today's quality work to the target; today becomes the swapped easy
-// session (easy target → weekly load preserved) or a recovery downgrade (rest target, or no slot).
+// Pure block transform: with an easy-day target, swap (today takes the easy session, the easy day
+// takes today's quality — weekly load preserved). With no target, today is an honest deload to a
+// recovery spin and the quality stimulus carries forward.
 export function applyProactiveReschedule(
   block: CurrentBlock,
   today: string
-): { days: CurrentBlockDay[]; to: string | null; toWasRest: boolean; deferred: string | null } | null {
+): { days: CurrentBlockDay[]; to: string | null; deferred: string | null } | null {
   const sug = suggestProactiveReschedule(block, today);
   if (!sug) return null;
   const todayDay = block.days.find((d) => d.date === today);
@@ -122,11 +123,11 @@ export function applyProactiveReschedule(
     ...(src.prescription ? { prescription: src.prescription } : {}),
   });
 
-  // What today becomes: the target's easy session swapped back (load preserved), else a recovery spin.
-  const todayReplacement =
-    targetDay && !sug.toWasRest
-      ? carry(targetDay)
-      : { name: `Recovery (downgraded from ${todayDay.type})`, type: "Recovery" as WorkoutType, durationMin: Math.min(RECOVERY_DOWNGRADE_MIN, todayDay.durationMin) };
+  // What today becomes: the target's easy session swapped back (load preserved), else a recovery spin
+  // capped so it's never longer than the quality session it replaces (CR-10).
+  const todayReplacement = targetDay
+    ? carry(targetDay)
+    : { name: `Recovery (downgraded from ${todayDay.type})`, type: "Recovery" as WorkoutType, durationMin: Math.min(RECOVERY_DOWNGRADE_MIN, todayDay.durationMin) };
 
   const quality = carry(todayDay);
   const days = block.days.map((d) => {
@@ -134,8 +135,8 @@ export function applyProactiveReschedule(
     if (sug.to && d.date === sug.to) return { date: d.date, ...quality };
     return d;
   });
-  // No make-up slot left → today is downgraded and the stimulus would otherwise be lost; report it so
-  // the caller can carry it forward to the next block rather than silently dropping it (CR-6).
+  // No easy slot → today deloads and the stimulus would otherwise be lost; report it so the caller can
+  // carry it forward to the next block rather than silently dropping it (CR-6).
   const deferred = sug.to === null ? `${todayDay.type} (planned ${today})` : null;
-  return { days, to: sug.to, toWasRest: sug.toWasRest, deferred };
+  return { days, to: sug.to, deferred };
 }

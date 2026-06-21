@@ -107,9 +107,8 @@ export async function PUT(req: Request) {
   return NextResponse.json({
     ok: true,
     to: applied.to,
-    toWasRest: applied.toWasRest,
     note: applied.to
-      ? "Moved in the app plan. Mirror it on your Intervals.icu calendar."
-      : "Downgraded today; no make-up slot left this block — it's a priority for your next block.",
+      ? "Swapped with that day's easy ride in the app plan. Mirror it on your Intervals.icu calendar."
+      : "Deloaded today; no easy day to swap with this block — it's a priority for your next block.",
   });
 }

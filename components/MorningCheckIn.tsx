@@ -11,7 +11,6 @@ interface Suggestion {
   fromName: string;
   fromType: string;
   to: string | null;
-  toWasRest: boolean;
 }
 interface CheckState {
   check: { decision: "proceed" | "downgrade"; strain: number } | null;
@@ -115,11 +114,10 @@ export default function MorningCheckIn() {
           <p className="mt-1.5 text-[11px] leading-snug text-zinc-600 dark:text-zinc-300">
             {s.to ? (
               <>
-                Move your {s.fromType} ({s.fromName}) to <span className="font-medium">{s.to}</span>
-                {s.toWasRest ? " (a rest day) — today becomes an easy spin." : " — swap it with that day's easy ride."}
+                Move your {s.fromType} ({s.fromName}) to <span className="font-medium">{s.to}</span> — swap it with that day&apos;s easy ride.
               </>
             ) : (
-              <>No make-up slot left this block — today downgrades to recovery and it&apos;s a priority next block.</>
+              <>No easy day to swap with this block — today deloads to recovery and it&apos;s a priority next block.</>
             )}
           </p>
         )}
