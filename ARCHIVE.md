@@ -85,9 +85,34 @@ The keystone framework + its first calibrated parameter. Three commits; tests gr
   (spread-ready — absent when no wellness covers the date or no resolver passed → byte-identical). The
   sync route builds the lookup from `lastSync.wellness`. **Provenance only — `formState` never feeds the
   entry's own `executionScore`** (it's the input for a *future* correlation, kept out of the score it
-  describes to avoid circularity). Backfill + the live-today re-score preserve it via `...e`. _Still to
-  stamp:_ readiness + morning-check context. Tested (same-day / carry-forward / missing / rounding +
-  the stamp present-and-absent); full suite green (826).
+  describes to avoid circularity). Backfill + the live-today re-score preserve it via `...e`. Tested
+  (same-day / carry-forward / missing / rounding + the stamp present-and-absent).
+
+- **Morning-check context stamped + resolver generalized (ROADMAP #2 — input side completed).** The
+  subjective half of the context stamp: `RideScoreEntry.morningCheck = { fatigue, sleep, soreness }`
+  (1–5, same-day only — no carry-forward; the first-person signal not captured by objective load). The
+  `buildRideScores` resolver was generalized from `formStateForDate` → `contextForDate: (date) =>
+  RideEntryContext | null` (`{ formState?, morningCheck? }`), each field stamped independently and
+  spread-ready (byte-identical when absent). The sync route builds the combined resolver from
+  `lastSync.wellness` + a `readMorningChecks()` map. **Readiness deliberately NOT stamped** — it's a
+  derived composite of form + HRV, reconstructable from what's already frozen, so storing it would
+  duplicate derivable state. Tested (form + morning-check together, form-only, absent).
+
+- **First auto-derivation off the stamped context: the TSB deep-fatigue edge (ROADMAP #2 — payoff of
+  the data play).** `deriveTsbDeepFatigue(entries)` (`lib/calibration.ts`) recenters the deep-fatigue
+  edge on the **median TSB of the athlete's under-executed quality sessions** (Threshold/VO2max/SIT/
+  RaceSim, `executionScore ≤ 4`; legacy + compromised excluded). **Two honesty guards**, both falling
+  back to the population default: a confidence gate on the failure count (`confidenceFromN`, never applied
+  below medium), and a **discrimination guard** — failures must sit ≥4 TSB points deeper than successes,
+  else fatigue isn't the driver and we don't pretend to derive an edge from it. Derived value clamped to
+  `[-45, -12]`. `resolveTsbEdgesOverride(entries, settingsOverride)` layers the derived edge as the new
+  default **under** any manual override (precedence: manual > derived > population), returning a partial
+  that flows through the existing `resolveTsbModifierEdges`. Wired at every snapshot site
+  (`buildCoachSnapshotFromSources` + generate). No-signal/no-formState athletes resolve to the population
+  edges → byte-identical classification. This is the first override-only edge to become *learned*, exactly
+  the roadmap worked example — turning the 2b override-only TSB window into a derived one once the data
+  earns it. Tested (derivation, both guards, exclusions, clamp, precedence, low-confidence fallback);
+  full suite green (834).
 
 ---
 

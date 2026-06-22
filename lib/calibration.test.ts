@@ -1,6 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { autoEwmaAlpha, confidenceFromN, defaultParameter, DEFAULT_ACWR_BANDS, DEFAULT_POWER_ZONE_TOPS_PCT, DEFAULT_TSB_MODIFIER_EDGES, deriveDecouplingGood, deriveIfBandOffsets, emptyCalibration, isAcwrBandsOverridden, isTsbModifierEdgesOverridden, resolveAcwrBands, resolveCalibratedValue, resolveTsbModifierEdges } from "./calibration";
-import type { CalibratedParameter } from "./types";
+import { autoEwmaAlpha, confidenceFromN, defaultParameter, DEFAULT_ACWR_BANDS, DEFAULT_POWER_ZONE_TOPS_PCT, DEFAULT_TSB_MODIFIER_EDGES, deriveDecouplingGood, deriveIfBandOffsets, deriveTsbDeepFatigue, emptyCalibration, isAcwrBandsOverridden, isTsbModifierEdgesOverridden, resolveAcwrBands, resolveCalibratedValue, resolveTsbEdgesOverride, resolveTsbModifierEdges } from "./calibration";
+import type { CalibratedParameter, RideScoreEntry } from "./types";
+
+// Minimal quality-session ledger entry with a stamped TSB, for the deep-fatigue derivation tests.
+function qEntry(tsb: number, executionScore: number, over: Partial<RideScoreEntry> = {}): RideScoreEntry {
+  return {
+    date: "2026-01-01",
+    executionScore,
+    plannedType: "VO2max",
+    inferredType: "VO2max",
+    planned: true,
+    legacy: false,
+    compliancePct: 100,
+    intensityFactor: 1.0,
+    ftpUsed: 250,
+    durationMin: 60,
+    tss: 80,
+    formState: { tsb, ctl: 50, atl: 50 - tsb },
+    ...over,
+  };
+}
 
 describe("autoEwmaAlpha", () => {
   it("is more responsive with little history and smoother as it accumulates", () => {
@@ -76,6 +95,61 @@ describe("isTsbModifierEdgesOverridden", () => {
     expect(isTsbModifierEdgesOverridden(null)).toBe(false);
     expect(isTsbModifierEdgesOverridden({})).toBe(false);
     expect(isTsbModifierEdgesOverridden({ deepFatigue: -30 })).toBe(true);
+  });
+});
+
+describe("deriveTsbDeepFatigue (ROADMAP #2 — auto-derive from stamped TSB context)", () => {
+  it("derives the edge from under-executed quality sessions when fatigue discriminates", () => {
+    const entries = [
+      ...Array.from({ length: 4 }, () => qEntry(-30, 3)), // failed quality at deep fatigue
+      qEntry(-5, 7), // nailed quality when fresh
+      qEntry(-6, 8),
+    ];
+    const p = deriveTsbDeepFatigue(entries);
+    expect(p.source).toBe("derived");
+    expect(p.value).toBe(-30); // median TSB of the failures
+    expect(p.dataPoints).toBe(4);
+  });
+
+  it("stays on the default when there are no quality failures to learn from", () => {
+    expect(deriveTsbDeepFatigue([qEntry(-5, 8), qEntry(-8, 7)]).source).toBe("default");
+  });
+
+  it("refuses to derive when fatigue does NOT discriminate (failures aren't deeper than successes)", () => {
+    // Failures at −10, successes at −12 → fatigue isn't the driver, so no honest edge.
+    const entries = [...Array.from({ length: 4 }, () => qEntry(-10, 3)), qEntry(-12, 7), qEntry(-13, 8)];
+    expect(deriveTsbDeepFatigue(entries).source).toBe("default");
+  });
+
+  it("excludes legacy + compromised entries and non-quality types", () => {
+    const entries = [
+      qEntry(-30, 3, { legacy: true }),
+      qEntry(-32, 3, { compromised: true }),
+      qEntry(-31, 3, { inferredType: "Z2", plannedType: "Z2" }),
+    ];
+    expect(deriveTsbDeepFatigue(entries).source).toBe("default"); // nothing eligible
+  });
+
+  it("clamps the derived edge to a sane deep-fatigue range", () => {
+    const entries = [...Array.from({ length: 4 }, () => qEntry(-70, 2)), qEntry(-5, 8)];
+    expect(deriveTsbDeepFatigue(entries).value).toBe(-45); // clamped from −70
+  });
+});
+
+describe("resolveTsbEdgesOverride (derived edge + manual override precedence)", () => {
+  it("falls back to the population deep-fatigue default with no signal", () => {
+    expect(resolveTsbEdgesOverride([])).toEqual({ deepFatigue: DEFAULT_TSB_MODIFIER_EDGES.deepFatigue });
+  });
+
+  it("does not apply a low-confidence derivation (too few failures)", () => {
+    const entries = [...Array.from({ length: 3 }, () => qEntry(-30, 3)), qEntry(-5, 8)];
+    expect(resolveTsbEdgesOverride(entries)).toEqual({ deepFatigue: -25 }); // derived but low conf → default
+  });
+
+  it("applies a confident derived edge, with any manual override winning", () => {
+    const entries = [...Array.from({ length: 8 }, () => qEntry(-30, 3)), qEntry(-5, 8), qEntry(-6, 7)];
+    expect(resolveTsbEdgesOverride(entries)).toEqual({ deepFatigue: -30 }); // medium confidence (n=8)
+    expect(resolveTsbEdgesOverride(entries, { deepFatigue: -18 })).toEqual({ deepFatigue: -18 }); // manual wins
   });
 });
 

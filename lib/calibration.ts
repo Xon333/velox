@@ -4,7 +4,7 @@
 // overridden (auto-deriving injury-risk bands isn't possible without injury data, so we don't
 // pretend to). Pure + deterministic + defensive — every output is clamped to a sane range.
 
-import type { CalibratedParameter, CalibrationStore, WorkoutType } from "./types";
+import type { CalibratedParameter, CalibrationStore, RideScoreEntry, WorkoutType } from "./types";
 
 export interface AcwrBands {
   optimalLow: number; // below this = under-reaching ("low")
@@ -86,6 +86,73 @@ export function isTsbModifierEdgesOverridden(override?: Partial<TsbModifierEdges
   return (["deepFatigue", "productiveOverload", "balanced"] as const).some(
     (k) => typeof override[k] === "number" && Number.isFinite(override[k] as number)
   );
+}
+
+// ---------- Derive the TSB deep-fatigue edge from stamped ledger context (ROADMAP #2) ----------
+// Now that each entry freezes the TSB the athlete carried into the session (formState), the deep-fatigue
+// edge becomes honestly derivable: the form level at which THIS athlete's quality work falls apart.
+// Two guards keep it honest, both of which fall back to the population default when unmet:
+//   1) enough under-executed quality sessions to trust the signal (confidence gate), and
+//   2) fatigue actually DISCRIMINATES — failures sit meaningfully deeper (lower TSB) than successes.
+// Without (2) we'd be calibrating to where the athlete trains, not where they adapt — the exact trap
+// the override-only v1 avoided. Quality intent only (Threshold/VO2max/SIT/RaceSim); legacy + compromised
+// excluded (must not teach the model). Provenance comes from the immutable ledger, so this re-derives
+// deterministically each read — no separate persisted copy to drift.
+
+const TSB_QUALITY_TYPES = new Set<string>(["Threshold", "VO2max", "SIT", "RaceSim"]);
+const TSB_UNDER_BAR = 4; // quality executionScore ≤ this = under-executed
+const TSB_GOOD_BAR = 6; // executionScore ≥ this = nailed it
+const TSB_DISCRIMINATION_MARGIN = 4; // failures must sit ≥ this many TSB points deeper than successes
+const TSB_DEEP_MIN = -45; // clamp the derived edge to a sane deep-fatigue range
+const TSB_DEEP_MAX = -12;
+
+function median(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+export function deriveTsbDeepFatigue(entries: RideScoreEntry[]): CalibratedParameter {
+  const now = new Date().toISOString();
+  const quality = entries.filter(
+    (e) =>
+      !e.legacy &&
+      !e.compromised &&
+      e.formState != null &&
+      Number.isFinite(e.formState.tsb) &&
+      TSB_QUALITY_TYPES.has(e.inferredType)
+  );
+  const under = quality.filter((e) => e.executionScore <= TSB_UNDER_BAR).map((e) => e.formState!.tsb);
+  const good = quality.filter((e) => e.executionScore >= TSB_GOOD_BAR).map((e) => e.formState!.tsb);
+  const n = under.length;
+  if (n === 0) return { ...defaultParameter(), lastUpdated: now }; // no failures to learn from
+  const medUnder = median(under);
+  // Guard 2: if we have successes to compare against and the failures aren't at meaningfully deeper TSB,
+  // fatigue isn't the driver — don't pretend to derive a fatigue edge from it.
+  if (good.length > 0 && medUnder >= median(good) - TSB_DISCRIMINATION_MARGIN) {
+    return { ...defaultParameter(), dataPoints: n, lastUpdated: now };
+  }
+  return {
+    value: clamp(medUnder, TSB_DEEP_MIN, TSB_DEEP_MAX),
+    source: "derived",
+    confidence: confidenceFromN(n),
+    dataPoints: n,
+    lastUpdated: now,
+    locked: false, // keep re-deriving as the rolling ledger window evolves
+    manualOverride: null,
+  };
+}
+
+// The effective TSB-edge override to feed resolveTsbModifierEdges: the derived deep-fatigue edge as the
+// new default (only when it clears the confidence gate), with any manual settings override layered on
+// top — manual wins. Precedence: manual override > derived > population default. When neither applies the
+// result resolves to the population edges, so an athlete with no signal is classified byte-identically.
+export function resolveTsbEdgesOverride(
+  entries: RideScoreEntry[],
+  settingsOverride?: Partial<TsbModifierEdges> | null
+): Partial<TsbModifierEdges> {
+  const derivedDeep = resolveCalibratedValue(deriveTsbDeepFatigue(entries), DEFAULT_TSB_MODIFIER_EDGES.deepFatigue);
+  return { deepFatigue: derivedDeep, ...(settingsOverride ?? {}) };
 }
 
 // ---------- Per-parameter calibration framework (ROADMAP #2) ----------

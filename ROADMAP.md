@@ -21,20 +21,22 @@ Bring more parameters under the same `parameterise → derive-with-fallback → 
 - **Fold in the CR-11 constants** (population fallback, opportunistic): morning-check strain bands +
   TSB-deep cutoff; durability `88%` floor + `≤122%/≤20m` insert envelope; athlete-state fusion weights (§5).
 - **Context-stamp the ledger → unlock honest auto-derivation** ⭐ (the data play that turns the
-  override-only edges into *learned* ones). Several parameters can only be manually overridden today —
-  not derived — because the ledger records the *value* an entry scored against but not the athlete-state
-  **context** at that moment, so there's nothing to correlate an outcome against.
-  - *Input side — TSB/CTL/ATL form-state shipped (ARCHIVE):* `buildFormStateLookup` + `RideScoreEntry.formState`
-    freeze the form the athlete carried into each session, from intervals.icu's own per-day CTL/ATL. _Still
-    to stamp:_ readiness + morning-check (fatigue/sleep/soreness) context, same frozen pattern.
-  - *Then* build a **state → subsequent-execution-quality** correlation (same engine shape as Track C's
-    carbs play) that converts a "no honest signal yet" param from population-default-+-override into a
-    confidence-gated *derived* value. Worked example — the **TSB adaptation window** (override-only today):
-    with TSB-at-the-time now stamped, find the TSB depth below which THIS athlete's *next* quality session
-    reliably under-executes and recenter the deep-fatigue edge there — calibrating to where they **adapt**,
-    not merely where they **train** (the distinction that makes auto-derivation dishonest before the data
-    exists). Gated + reversible + never auto-applied below medium confidence; the manual override stays as
-    the floor. Ties **#4** (the validation loop reads the same stamped context) + **Track C** (shared engine).
+  override-only edges into *learned* ones). Several parameters could only be manually overridden because
+  the ledger recorded the *value* an entry scored against but not the athlete-state **context** at that
+  moment — nothing to correlate an outcome against. Now fixed on both the input and the first derivation:
+  - *Input side — form + morning-check context stamped (ARCHIVE):* `buildFormStateLookup` +
+    `RideScoreEntry.formState` freeze the objective form (intervals.icu's own per-day CTL/ATL); the
+    subjective morning-check (fatigue/sleep/soreness) is frozen alongside. _Readiness deliberately NOT
+    stamped_ — it's a derived composite of form + HRV, reconstructable from what's already frozen.
+  - *First auto-derivation — TSB deep-fatigue edge (ARCHIVE):* `deriveTsbDeepFatigue` recenters the edge
+    on the TSB depth where THIS athlete's quality sessions actually fall apart (median TSB of their
+    under-executed quality work), **guarded** so it only fires when fatigue genuinely discriminates
+    (failures deeper than successes) and clears the confidence gate — else it stays on the population
+    default. `resolveTsbEdgesOverride` layers it under the manual override (manual wins) at every snapshot
+    site. Calibrates to where they **adapt**, not where they **train**.
+  - _Open:_ extend the same derive-from-stamped-context move to the other override-only params (e.g. the
+    `productiveOverload`/`balanced` edges, #3 reschedule thresholds) via the **shared state→execution
+    correlation engine** — now grouped with **Track C** and built there (ties **#4**).
 - **Pattern (follow per param):** default = today's literal value; derive with confidence-gated
   fallback; stamp on any ledger entry it scores; test that a fresh athlete scores identically.
 - *Owned elsewhere:* optimal carbs g/h `→ Track C`; ACWR band + EWMA α stay on their current path.
@@ -76,11 +78,16 @@ Per-template scoring loop (grade each long ride vs its template's expected signa
 `durabilityTemplate` stamp is in place; ties #4 + Track C); tighten per-loading-week RaceSim only if real
 use shows the LLM under-delivering.
 
-### Track C · Fueling intelligence  (inputs already synced — high value)
-All open. Turn fueling from a static formula into a learned signal:
+### Track C · Fueling intelligence + the shared correlation engine  (inputs already synced — high value)
+All open. Turn fueling from a static formula into a learned signal — and build the **general
+state→subsequent-execution correlation engine** here (grouped in from #2's context-stamp play): the
+ledger now freezes state context (form + morning-check) per entry, so one engine can correlate *any*
+stamped signal against the next session's quality and feed the override-only params (the `← #2`
+auto-derivations beyond the TSB deep-fatigue edge already shipped). Build the derivation once, reuse it
+for carbs **and** the calibration edges.
 - **Correlation engine** — per ride type, correlate synced carbs g/h against decoupling, RPE-vs-IF
   divergence, interval completion, next-day TSB → converge on the athlete's optimal g/h, stored as a
-  calibrated parameter `← #2`.
+  calibrated parameter `← #2`. Same machinery serves #2's remaining state→execution derivations.
 - **Contextual post-ride prompts** (deterministic thresholds, LLM phrases the number).
 - **Pre-ride loading loop** — day-before carb bump before long durability, then *learn whether it
   helped* (loaded vs baseline decoupling) and stop if it doesn't move the signal.

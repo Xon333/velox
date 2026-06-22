@@ -19,6 +19,7 @@ import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
 import { summariseValidation } from "@/lib/intervention";
 import { synthesizeCoachingDirectives } from "@/lib/synthesis";
 import { buildCoachSnapshot, formatFormFuelLine, resolveCoachSignals } from "@/lib/coach-snapshot";
+import { resolveTsbEdgesOverride } from "@/lib/calibration";
 import type { Zone } from "@/lib/zones";
 import {
   buildNutritionReferenceRows,
@@ -160,7 +161,7 @@ export async function POST(req: Request) {
       directives: directivesContext,
       disposition: null,
       morningCheck: null,
-      tsbModifierEdgesOverride: blockSettings.tsbModifierEdges,
+      tsbModifierEdgesOverride: resolveTsbEdgesOverride(scoreLog.entries, blockSettings.tsbModifierEdges),
     });
     const formFuelLine = formatFormFuelLine(snapshot);
     const formFuelContext = formFuelLine ? `\n${formFuelLine}` : "";

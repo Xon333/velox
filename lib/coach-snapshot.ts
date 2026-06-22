@@ -26,7 +26,7 @@ import { computeAcwr, computeLoadRamp, computeReadiness } from "./readiness";
 import { timeAboveZ2Fraction } from "./execution-score";
 import { athleteStateInputsFrom, computeAthleteState } from "./athlete-state";
 import { weightTrendFromWellness } from "./nutrition";
-import { DEFAULT_TSB_MODIFIER_EDGES, resolveAcwrBands, resolveTsbModifierEdges, type AcwrBands, type TsbModifierEdges } from "./calibration";
+import { DEFAULT_TSB_MODIFIER_EDGES, resolveAcwrBands, resolveTsbEdgesOverride, resolveTsbModifierEdges, type AcwrBands, type TsbModifierEdges } from "./calibration";
 import { buildAthleteModel, deriveInsights } from "./athlete-model";
 import { synthesizeCoachingDirectives } from "./synthesis";
 import { summariseValidation } from "./intervention";
@@ -295,7 +295,8 @@ export function buildCoachSnapshotFromSources(s: CoachSnapshotSources): CoachSna
     directives: synthesizeCoachingDirectives(deriveInsights(athleteModel), summariseValidation(s.interventionLog)),
     disposition: s.dispositions.find((e) => e.date === s.date) ?? null,
     morningCheck: s.morningChecks.find((e) => e.date === s.date) ?? null,
-    tsbModifierEdgesOverride: s.tsbModifierEdgesOverride,
+    // Derived deep-fatigue edge (from the ledger's stamped TSB context) under any manual override (ROADMAP #2).
+    tsbModifierEdgesOverride: resolveTsbEdgesOverride(s.scoreEntries, s.tsbModifierEdgesOverride),
   });
 }
 
