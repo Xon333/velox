@@ -26,6 +26,20 @@ record is in [ARCHIVE.md](ARCHIVE.md). Ordered roughly by leverage. `← X` = bl
   TSB-deep cutoff; durability `88%` floor + `≤122%/≤20m` insert envelope; athlete-state fusion weights
   (§5). _`resolveTsbModifier` edges (the TSB adaptation window) — shipped (ARCHIVE): population-validated
   defaults + manual override, the ACWR-bands pattern (not auto-derived — no honest per-athlete signal)._
+- **Context-stamp the ledger → unlock honest auto-derivation** ⭐ (the data play that turns the
+  override-only edges into *learned* ones). Several parameters can only be manually overridden today —
+  not derived — because the ledger records the *value* an entry scored against but not the athlete-state
+  **context** at that moment, so there's nothing to correlate an outcome against. Fix the input side
+  first: freeze the state-at-scoring-time onto each entry (TSB + ATL/CTL, readiness, morning-check
+  fatigue/sleep/soreness — frozen like `ftpUsed`/`calibration`). Then build a **state →
+  subsequent-execution-quality** correlation (same engine shape as Track C's carbs play) that converts a
+  "no honest signal yet" param from population-default-+-override into a confidence-gated *derived* value.
+  Worked example — the **TSB adaptation window** (#1, shipped as override-only): once TSB-at-the-time is
+  stamped, find the TSB depth below which THIS athlete's *next* quality session reliably under-executes
+  and recenter the deep-fatigue edge there — calibrating to where they **adapt**, not merely where they
+  **train** (the distinction that made auto-derivation dishonest before). Gated + reversible + never
+  auto-applied below medium confidence; the manual override stays as the floor. Ties **#4** (the
+  validation loop reads the same stamped context) + **Track C** (shared correlation engine).
 - **Pattern (follow per param):** default = today's literal value; derive with confidence-gated
   fallback; stamp on any ledger entry it scores; test that a fresh athlete scores identically.
 - *Owned elsewhere:* optimal carbs g/h `→ Track C`; ACWR band + EWMA α stay on their current path.
