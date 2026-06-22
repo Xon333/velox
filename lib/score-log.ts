@@ -4,7 +4,7 @@
 // on intrinsic quality (decoupling, pacing) against an inferred type. Each entry records the
 // FTP it used so the immutable ledger never re-shifts when FTP later changes.
 
-import { computeExecutionScore, resolveCompliance, type ScoringCalibration } from "./execution-score";
+import { computeExecutionScore, resolveCompliance, timeAboveZ2Fraction, type ScoringCalibration } from "./execution-score";
 import { inferWorkoutType } from "./ride-classify";
 import type { ActivitySummary, BehaviourSummary, CurrentBlock, CurrentBlockDay, RideScoreEntry } from "./types";
 
@@ -57,6 +57,8 @@ export function buildRideScores(
       act.normalizedPower !== null && act.avgWatts !== null && act.avgWatts > 0
         ? round2(act.normalizedPower / act.avgWatts)
         : null;
+    // Easy-ride discipline signal (Z2/Recovery only, applied in computeExecutionScore).
+    const aboveZ2Frac = timeAboveZ2Fraction(act.powerZoneTimes);
 
     const planned = plannedByDate.get(act.date);
     let entry: RideScoreEntry | null = null;
@@ -69,6 +71,7 @@ export function buildRideScores(
         plannedType: planned.type,
         decoupling: act.decoupling,
         variabilityIndex,
+        aboveZ2Frac,
         calibration,
       });
       if (executionScore !== null) {
@@ -99,6 +102,7 @@ export function buildRideScores(
         plannedType: inferredType,
         decoupling: act.decoupling,
         variabilityIndex,
+        aboveZ2Frac, // gated to prescribed Z2/Recovery in computeExecutionScore — inert here (intrinsic)
         intrinsic: true,
         calibration,
       });

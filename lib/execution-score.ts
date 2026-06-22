@@ -25,6 +25,11 @@ export interface ExecutionScoreInput {
   variabilityIndex: number | null; // NP / avg power; ~1.0 = perfectly steady
   adherencePct?: number | null; // avg interval power vs prescribed target (interval days)
   rpe?: number | null; // perceived exertion 1-10
+  // Fraction (0–1) of the ride's measured time spent ABOVE the Z2 aerobic cap (power zones 3+), for
+  // easy aerobic days. The "dialed-in" discipline signal: an easy ride that repeatedly drifts into
+  // Tempo+ isn't truly Z2 even when its AVERAGE IF looks fine. Only scored for prescribed Z2/Recovery;
+  // absent → no effect (older rides without zone data score unchanged). See timeAboveZ2Fraction.
+  aboveZ2Frac?: number | null;
   // Off-plan ride: the type was inferred FROM intensity, so scoring intensity against that
   // type would be circular. When set, the intensity-vs-type branch is skipped and the score
   // rests on the intent-independent signals (decoupling, pacing, RPE).
@@ -120,6 +125,25 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
     }
   }
 
+  // --- Easy-ride discipline: time above the Z2 aerobic cap (±2) --- prescribed Z2/Recovery only.
+  // Complements the IF-vs-type band, which sees only the AVERAGE: a ride can average a textbook Z2 IF
+  // yet spend a fifth of itself surging into Tempo+, which the mean hides and VI only blurs. Repeated
+  // time above the aerobic cap means the "easy" ride wasn't dialed in. Skipped for off-plan rides
+  // (the type was inferred from intensity — no plan to be disciplined against) and when zone data is
+  // absent, so existing rides without power-zone times score exactly as before.
+  if (
+    input.aboveZ2Frac != null &&
+    Number.isFinite(input.aboveZ2Frac) &&
+    !intrinsic &&
+    (plannedType === "Z2" || plannedType === "Recovery")
+  ) {
+    const f = input.aboveZ2Frac;
+    if (f <= 0.05) score += 1; // genuinely dialed in — almost all time in Z1–Z2
+    else if (f <= 0.15) score += 0; // fine — the odd roller or surge
+    else if (f <= 0.3) score -= 1; // drifted above the aerobic cap repeatedly
+    else score -= 2; // spent so long above zone it wasn't really an easy ride
+  }
+
   // --- Pacing smoothness via variability index (±1) ---
   // VI = NP / avg power. ~1.0 means perfectly steady; higher means surgy.
   // Only meaningful for steady session types — intervals (VO2max/SIT) are meant
@@ -150,6 +174,20 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
   }
 
   return Math.min(10, Math.max(1, Math.round(score)));
+}
+
+// Fraction (0–1) of measured in-zone time spent ABOVE the Z2 aerobic cap — power zones 3+ (Tempo and
+// harder) — from synced power-zone seconds [z1..z7]. The direct measure of easy-ride discipline that a
+// ride's AVERAGE IF hides: a Z2 ride can average 0.68 while spending a fifth of its time surging into
+// Z4. Returns null when there's no usable zone data, so scoring falls back to its other signals.
+// Pure + defensive: ignores non-finite/negative buckets; a missing top zone simply isn't counted.
+export function timeAboveZ2Fraction(powerZoneTimes: number[] | null | undefined): number | null {
+  if (!Array.isArray(powerZoneTimes) || powerZoneTimes.length < 3) return null;
+  const secs = powerZoneTimes.map((s) => (typeof s === "number" && Number.isFinite(s) && s > 0 ? s : 0));
+  const total = secs.reduce((a, b) => a + b, 0);
+  if (total <= 0) return null;
+  const aboveCap = secs.slice(2).reduce((a, b) => a + b, 0); // zones 3+ (index 2 onward) = above the Z2 cap
+  return aboveCap / total;
 }
 
 export function executionScoreLabel(score: number): string {

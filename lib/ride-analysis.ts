@@ -4,7 +4,7 @@
 // assembles the TodayAnalysis. Splitting it out makes the hardest part of the sync (execution scoring,
 // compliance capping, advised intake, coach-note preservation) unit-testable without mocking HTTP.
 import { adjustBuffer } from "./nutrition";
-import { computeExecutionScore, resolveCompliance, type ScoringCalibration } from "./execution-score";
+import { computeExecutionScore, resolveCompliance, timeAboveZ2Fraction, type ScoringCalibration } from "./execution-score";
 import type {
   ActivitySummary,
   CurrentBlockDay,
@@ -112,6 +112,8 @@ export function buildTodayAnalysis(input: TodayAnalysisInputs): TodayAnalysisRes
         ? intervalComparison.effectiveAdherencePct
         : null,
     rpe: activity.rpe,
+    // Easy-ride discipline (Z2/Recovery only) from the route-rebucketed zone times.
+    aboveZ2Frac: timeAboveZ2Fraction(input.powerZoneTimes),
     calibration: input.resolvedCal,
   });
 

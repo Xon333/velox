@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeExecutionScore, executionScoreLabel, resolveCompliance, type ExecutionScoreInput } from "./execution-score";
+import { computeExecutionScore, executionScoreLabel, resolveCompliance, timeAboveZ2Fraction, type ExecutionScoreInput } from "./execution-score";
 
 const base: ExecutionScoreInput = {
   compliancePct: null,
@@ -235,5 +235,65 @@ describe("computeExecutionScore — per-type IF-band offset (ROADMAP #2)", () =>
   it("only shifts the matching type's bands, leaving others on population constants", () => {
     // A VO2max offset must not touch a Threshold ride.
     expect(threshold(0.95, { ifBandOffsets: { VO2max: 0.05 } })).toBe(threshold(0.95));
+  });
+});
+
+describe("computeExecutionScore — easy-ride discipline (time above the Z2 cap)", () => {
+  // A clean-on-average Z2 ride (IF 0.68); only aboveZ2Frac varies.
+  const z2 = (aboveZ2Frac?: number | null, type = "Z2"): number =>
+    computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.68, plannedType: type, decoupling: 3, aboveZ2Frac })!;
+
+  it("is inert when zone data is absent — scoring is unchanged", () => {
+    const baseline = z2(); // no aboveZ2Frac at all
+    expect(z2(null)).toBe(baseline);
+    expect(z2(undefined)).toBe(baseline);
+  });
+
+  it("rewards a dialed-in easy ride and grades down as it drifts above zone", () => {
+    expect(z2(0.02)).toBeGreaterThan(z2(0.1)); // dialed in > merely fine
+    expect(z2(0.1)).toBeGreaterThan(z2(0.25)); // fine > drifted
+    expect(z2(0.25)).toBeGreaterThan(z2(0.45)); // drifted > blew it
+  });
+
+  it("penalises a Z2 ride that hid its spikes behind a clean AVERAGE IF (the whole point)", () => {
+    // Identical textbook 0.68 avg IF; the one that spent 40% above the cap must score lower.
+    expect(z2(0.4)).toBeLessThan(z2(0.03));
+  });
+
+  it("applies to Recovery as well as Z2", () => {
+    expect(z2(0.4, "Recovery")).toBeLessThan(z2(0.02, "Recovery"));
+  });
+
+  it("does not touch non-easy types — a Threshold ride ignores time-above-Z2", () => {
+    const args = { ...base, compliancePct: 100, intensityFactor: 0.9, plannedType: "Threshold", decoupling: 3 };
+    expect(computeExecutionScore({ ...args, aboveZ2Frac: 0.5 })).toBe(computeExecutionScore(args));
+  });
+
+  it("does not apply off-plan (intrinsic) — there was no plan to be disciplined against", () => {
+    const args = { ...base, intensityFactor: 0.68, plannedType: "Z2", decoupling: 3, intrinsic: true };
+    expect(computeExecutionScore({ ...args, aboveZ2Frac: 0.5 })).toBe(computeExecutionScore(args));
+  });
+});
+
+describe("timeAboveZ2Fraction", () => {
+  it("returns null without usable zone data", () => {
+    expect(timeAboveZ2Fraction(null)).toBeNull();
+    expect(timeAboveZ2Fraction(undefined)).toBeNull();
+    expect(timeAboveZ2Fraction([10, 20])).toBeNull(); // too short to carry a Z3
+    expect(timeAboveZ2Fraction([0, 0, 0, 0, 0, 0, 0])).toBeNull(); // no time logged at all
+  });
+
+  it("is 0 when all time sits in Z1–Z2", () => {
+    expect(timeAboveZ2Fraction([1800, 1800, 0, 0, 0, 0, 0])).toBe(0);
+  });
+
+  it("is the share of time in zones 3+ (above the Z2 cap)", () => {
+    // total 4000s, 1000s above the cap → 0.25
+    expect(timeAboveZ2Fraction([0, 3000, 600, 400, 0, 0, 0])).toBe(0.25);
+  });
+
+  it("ignores non-finite / negative buckets defensively", () => {
+    // z1=2000 ok, z2=NaN→0, z3=2000 ok, z4=-50→0 → total 4000, above 2000 → 0.5
+    expect(timeAboveZ2Fraction([2000, NaN, 2000, -50, 0, 0, 0])).toBe(0.5);
   });
 });
