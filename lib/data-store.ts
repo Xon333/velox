@@ -6,7 +6,7 @@ import { DEFAULT_BLOCK_SETTINGS } from "./types";
 import { emptyCalibration } from "./calibration";
 import { readMdPerformance } from "./kb-loader";
 import { readPhysiology } from "./physiology";
-import { readJsonFile as readJson, writeJsonFile as writeJson } from "./json-store";
+import { readJsonFile as readJson, updateJsonFile as updateJson, writeJsonFile as writeJson } from "./json-store";
 
 export const DEFAULT_PROFILE: AthleteProfile = {
   performance: {
@@ -144,6 +144,19 @@ export async function writeScoreLog(log: ScoreLog): Promise<void> {
   await writeJson("score-log.json", log);
 }
 
+// Transactional read-modify-write on the ledger (CR-A). The read happens inside the per-file lock,
+// so a sync, a disposition POST and the deferred analyze step can't read the same base and clobber
+// one another's entries. `mutate` receives the current entries and returns the next set; updatedAt
+// is stamped here so callers can't forget it.
+export async function updateScoreLog(
+  mutate: (entries: ScoreLog["entries"]) => ScoreLog["entries"]
+): Promise<ScoreLog> {
+  return updateJson<ScoreLog>("score-log.json", DEFAULT_SCORE_LOG, (log) => ({
+    entries: mutate(log.entries),
+    updatedAt: new Date().toISOString(),
+  }));
+}
+
 const DEFAULT_INTERVENTION_LOG: InterventionLog = { records: [], updatedAt: new Date(0).toISOString() };
 
 export async function readInterventionLog(): Promise<InterventionLog> {
@@ -162,6 +175,17 @@ export async function readDispositions(): Promise<DispositionLog> {
 
 export async function writeDispositions(log: DispositionLog): Promise<void> {
   await writeJson("dispositions.json", log);
+}
+
+// Transactional read-modify-write on the disposition log (CR-A) — guards two near-simultaneous
+// disposition POSTs from clobbering each other.
+export async function updateDispositions(
+  mutate: (entries: DispositionLog["entries"]) => DispositionLog["entries"]
+): Promise<DispositionLog> {
+  return updateJson<DispositionLog>("dispositions.json", DEFAULT_DISPOSITIONS, (log) => ({
+    entries: mutate(log.entries),
+    updatedAt: new Date().toISOString(),
+  }));
 }
 
 const DEFAULT_MORNING_CHECKS: MorningCheckLog = { entries: [], updatedAt: new Date(0).toISOString() };

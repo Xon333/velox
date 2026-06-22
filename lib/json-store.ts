@@ -48,23 +48,48 @@ export async function readJsonFile<T>(file: string, fallback: T): Promise<T> {
   return fallback;
 }
 
-// Per-file write serialization. Two concurrent writes to the same store (e.g. a sync and a
-// disposition POST both touching score-log.json) share one temp path and would otherwise interleave
-// the copy→write→rename steps and clobber each other. Each write chains onto the previous write of
-// the *same* file so they apply one-at-a-time (last-write-wins); different files stay parallel.
-const writeChains = new Map<string, Promise<void>>();
+// Per-file critical section. Two concurrent operations on the same store (e.g. a sync and a
+// disposition POST both touching score-log.json) would otherwise interleave and clobber each other.
+// Each operation chains onto the previous one for the *same* file so they run one-at-a-time;
+// different files stay parallel.
+//
+// This guards the WHOLE operation, not just the byte-write: `updateJsonFile` reads INSIDE the lock,
+// so a read-modify-write transaction can't lose an update to a concurrent writer (CR-A). A plain
+// `writeJsonFile` is just the degenerate case — last-write-wins, no read.
+const fileLocks = new Map<string, Promise<unknown>>();
 
-export function writeJsonFile(file: string, value: unknown): Promise<void> {
-  // `.catch` so a prior failed write doesn't poison the chain for the next caller; the returned
-  // promise still rejects if *this* write fails (preserving the throw-on-error contract).
-  const prev = writeChains.get(file) ?? Promise.resolve();
-  const next = prev.catch(() => {}).then(() => atomicWrite(file, value));
-  writeChains.set(file, next);
+function withFileLock<T>(file: string, op: () => Promise<T>): Promise<T> {
+  // `.catch` so a prior failed op doesn't poison the chain for the next caller; the returned
+  // promise still rejects if *this* op fails (preserving the throw-on-error contract).
+  const prev = fileLocks.get(file) ?? Promise.resolve();
+  const next = prev.catch(() => {}).then(op);
+  fileLocks.set(file, next);
   // Drop the entry once it's settled and still the tail, so the map can't grow unbounded.
   void next.catch(() => {}).finally(() => {
-    if (writeChains.get(file) === next) writeChains.delete(file);
+    if (fileLocks.get(file) === next) fileLocks.delete(file);
   });
   return next;
+}
+
+export function writeJsonFile(file: string, value: unknown): Promise<void> {
+  return withFileLock(file, () => atomicWrite(file, value));
+}
+
+// Read → transform → write as ONE critical section. The read happens while the lock is held, so two
+// concurrent updaters (or an updater racing a plain write) can never both read the same base and
+// clobber each other's changes. `mutate` may be async. Returns the value actually written. If
+// `mutate` throws, nothing is written and the lock is released for the next caller.
+export function updateJsonFile<T>(
+  file: string,
+  fallback: T,
+  mutate: (current: T) => T | Promise<T>
+): Promise<T> {
+  return withFileLock(file, async () => {
+    const current = await readJsonFile(file, fallback); // readJsonFile takes no lock — safe to nest
+    const nextValue = await mutate(current);
+    await atomicWrite(file, nextValue);
+    return nextValue;
+  });
 }
 
 async function atomicWrite(file: string, value: unknown): Promise<void> {

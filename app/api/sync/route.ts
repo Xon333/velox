@@ -16,6 +16,7 @@ import {
   readMorningChecks,
   readRollingBaselines,
   readScoreLog,
+  updateScoreLog,
   writeCalibration,
   writeInterventionLog,
   writeQuirks,
@@ -23,7 +24,6 @@ import {
   writeCurrentBlock,
   writeLastSync,
   writeRollingBaselines,
-  writeScoreLog,
   readTodayAnalysis,
 } from "@/lib/data-store";
 import { extractQuirks } from "@/lib/quirks";
@@ -41,6 +41,12 @@ import { deriveDecouplingGood, resolveAcwrBands, resolveCalibratedValue } from "
 import { buildCoachSnapshotFromSources } from "@/lib/coach-snapshot";
 import { resolveToday } from "@/lib/date";
 import type { ExecutedInterval, TodayAnalysis } from "@/lib/types";
+
+// A sync fires several sequential Intervals.icu requests (each network-bounded to 20s in the API
+// client) plus, on a ride day, per-ride stream/interval fetches. Cap the whole handler so a slow
+// upstream surfaces as an error rather than an open-ended request (CR-B). The slow LLM coach note is
+// deferred to /api/analyze, so this ceiling doesn't need to cover model latency.
+export const maxDuration = 120;
 
 // GET returns the cached app state; it never hits Intervals.icu. `?today=` is the client's local date
 // (so the CoachSnapshot resolves against the calendar day the athlete sees); falls back to UTC.
@@ -205,27 +211,27 @@ export async function POST(req: Request) {
       );
       const offPlanFloor = blockStarts.length ? blockStarts.sort()[0] : null;
 
-      const log = await readScoreLog();
-      const backfilled = log.entries.map((e) => {
-        const planned = e.planned ?? e.plannedType != null;
-        return {
-          ...e,
-          ftpUsed: e.ftpUsed ?? ftpForDate(e.date),
-          planned,
-          inferredType: e.inferredType ?? e.plannedType ?? "Z2",
-          durationMin: e.durationMin ?? 0,
-          tss: e.tss ?? null,
-          // Off-plan rides before structured training began are kept as history but flagged
-          // legacy so they're excluded from the execution metric + drift.
-          legacy: e.legacy ?? (!planned && (offPlanFloor === null || e.date < offPlanFloor)),
-        };
-      });
       const fresh = buildRideScores(block, lastSync.activities, ftpForDate, today, offPlanFloor, resolvedCal);
       // Stamp the athlete's compromised attributions onto the ledger (re-derived each sync).
       const dispositions = (await readDispositions()).entries;
-      await writeScoreLog({
-        entries: applyDispositions(mergeScoreLog(backfilled, fresh), dispositions),
-        updatedAt: new Date().toISOString(),
+      // Transactional (CR-A): the backfill is computed from the ledger read INSIDE the lock, so a
+      // concurrent disposition POST (or the deferred analyze patch) can't clobber these scores.
+      await updateScoreLog((entries) => {
+        const backfilled = entries.map((e) => {
+          const planned = e.planned ?? e.plannedType != null;
+          return {
+            ...e,
+            ftpUsed: e.ftpUsed ?? ftpForDate(e.date),
+            planned,
+            inferredType: e.inferredType ?? e.plannedType ?? "Z2",
+            durationMin: e.durationMin ?? 0,
+            tss: e.tss ?? null,
+            // Off-plan rides before structured training began are kept as history but flagged
+            // legacy so they're excluded from the execution metric + drift.
+            legacy: e.legacy ?? (!planned && (offPlanFloor === null || e.date < offPlanFloor)),
+          };
+        });
+        return applyDispositions(mergeScoreLog(backfilled, fresh), dispositions);
       });
     }
 
@@ -400,13 +406,15 @@ export async function POST(req: Request) {
           // Today card, the Plan calendar, the trend pulse, and Trends.
           try {
             if (executionScore !== null) {
-              const log = await readScoreLog();
-              const patched = log.entries.map((e) =>
-                e.date === today && !e.legacy
-                  ? { ...e, executionScore, compliancePct: resolvedCompliancePct, calibration: { decouplingGood: resolvedCal.decouplingGood } }
-                  : e
+              // Transactional (CR-A): re-read + patch today's entry inside the per-file lock so this
+              // richer interval-aware score can't clobber (or be clobbered by) a concurrent write.
+              await updateScoreLog((entries) =>
+                entries.map((e) =>
+                  e.date === today && !e.legacy
+                    ? { ...e, executionScore, compliancePct: resolvedCompliancePct, calibration: { decouplingGood: resolvedCal.decouplingGood } }
+                    : e
+                )
               );
-              await writeScoreLog({ entries: patched, updatedAt: new Date().toISOString() });
             }
           } catch {
             // Best-effort — the ledger already has a coarse entry from buildRideScores.

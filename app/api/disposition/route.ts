@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readDispositions, readScoreLog, writeDispositions, writeScoreLog } from "@/lib/data-store";
+import { readDispositions, updateDispositions, updateScoreLog } from "@/lib/data-store";
 import { applyDispositions, mergeDisposition } from "@/lib/disposition";
 import type { CompromiseReason, DispositionEntry, SessionDisposition } from "@/lib/types";
 
@@ -35,15 +35,15 @@ export async function POST(req: Request) {
       : null;
 
   const entry: DispositionEntry = { date, disposition, reason, setAt: new Date().toISOString() };
-  const log = await readDispositions();
-  const entries = mergeDisposition(log.entries, entry);
-  await writeDispositions({ entries, updatedAt: new Date().toISOString() });
+  // Transactional (CR-A): read+merge+write inside the per-file lock so concurrent disposition POSTs
+  // can't clobber each other.
+  const { entries } = await updateDispositions((cur) => mergeDisposition(cur, entry));
 
   // Re-stamp the ledger immediately so the learning gate + metrics reflect this without
-  // waiting for the next sync (sync re-derives the same flag, idempotently).
+  // waiting for the next sync (sync re-derives the same flag, idempotently). Transactional so it
+  // can't lose a concurrent sync's freshly-written scores.
   try {
-    const scoreLog = await readScoreLog();
-    await writeScoreLog({ entries: applyDispositions(scoreLog.entries, entries), updatedAt: new Date().toISOString() });
+    await updateScoreLog((cur) => applyDispositions(cur, entries));
   } catch {
     // best-effort — the next sync will re-derive
   }

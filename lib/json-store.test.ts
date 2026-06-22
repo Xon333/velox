@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
-import { readJsonFile, writeJsonFile } from "./json-store";
+import { readJsonFile, updateJsonFile, writeJsonFile } from "./json-store";
 
 // Point the store at a throwaway dir so tests never touch real ledger data.
 let dir: string;
@@ -70,5 +70,52 @@ describe("json-store concurrent writes (the per-file mutex)", () => {
     await expect(writeJsonFile("chain.json", circular)).rejects.toThrow();
     await writeJsonFile("chain.json", { ok: true });
     expect(await readJsonFile("chain.json", null)).toEqual({ ok: true });
+  });
+});
+
+describe("json-store transactional update (read-modify-write under the lock)", () => {
+  it("does not lose updates when concurrent read-modify-writes interleave", async () => {
+    // Each updater appends its own id. With a plain read→write this races and loses entries;
+    // updateJsonFile reads INSIDE the lock so every append survives (the CR-A guarantee).
+    await writeJsonFile("ledger.json", { ids: [] as number[] });
+    await Promise.all(
+      Array.from({ length: 30 }, (_, n) =>
+        updateJsonFile<{ ids: number[] }>("ledger.json", { ids: [] }, (cur) => ({ ids: [...cur.ids, n] }))
+      )
+    );
+    const final = await readJsonFile<{ ids: number[] }>("ledger.json", { ids: [] });
+    expect(final.ids).toHaveLength(30);
+    expect([...final.ids].sort((a, b) => a - b)).toEqual(Array.from({ length: 30 }, (_, n) => n));
+  });
+
+  it("a plain writeJsonFile and an updateJsonFile to the same file do not interleave", async () => {
+    await writeJsonFile("mixed.json", { ids: [1] });
+    await Promise.all([
+      updateJsonFile<{ ids: number[] }>("mixed.json", { ids: [] }, (cur) => ({ ids: [...cur.ids, 2] })),
+      writeJsonFile("mixed.json", { ids: [99] }),
+      updateJsonFile<{ ids: number[] }>("mixed.json", { ids: [] }, (cur) => ({ ids: [...cur.ids, 3] })),
+    ]);
+    // Whatever the final value, it must be one coherent state — never a torn/partial object.
+    const raw = await fs.readFile(p("mixed.json"), "utf-8");
+    expect(() => JSON.parse(raw)).not.toThrow();
+    expect(Array.isArray(JSON.parse(raw).ids)).toBe(true);
+  });
+
+  it("returns the written value and uses the fallback when the file is absent", async () => {
+    const next = await updateJsonFile<{ n: number }>("fresh.json", { n: 0 }, (cur) => ({ n: cur.n + 5 }));
+    expect(next).toEqual({ n: 5 });
+    expect(await readJsonFile("fresh.json", null)).toEqual({ n: 5 });
+  });
+
+  it("a throwing mutator rejects without writing and frees the lock for the next caller", async () => {
+    await writeJsonFile("guard.json", { v: "intact" });
+    await expect(
+      updateJsonFile("guard.json", { v: "intact" }, () => {
+        throw new Error("mutator blew up");
+      })
+    ).rejects.toThrow("mutator blew up");
+    expect(await readJsonFile("guard.json", null)).toEqual({ v: "intact" }); // unchanged
+    await updateJsonFile<{ v: string }>("guard.json", { v: "intact" }, () => ({ v: "next" }));
+    expect(await readJsonFile("guard.json", null)).toEqual({ v: "next" }); // chain not poisoned
   });
 });

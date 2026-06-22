@@ -15,6 +15,11 @@ import { parseSportSettings } from "./physiology";
 
 const BASE_URL = "https://intervals.icu/api/v1";
 
+// Per-request network timeout (CR-B). Without it a hung Intervals.icu socket hangs the whole sync
+// indefinitely — and with auto-sync-on-open that's a spinner that never resolves. 20s is generous
+// for the largest list (6 months of activities) while still failing fast on a dead connection.
+const REQUEST_TIMEOUT_MS = 20_000;
+
 // Best-effort durations requested by the spec: 5s … 60min.
 export const POWER_CURVE_DURATIONS_SEC = [5, 15, 30, 60, 120, 300, 1200, 1800, 3600];
 
@@ -44,15 +49,28 @@ async function icuFetch(pathname: string, init?: RequestInit): Promise<unknown> 
     );
   }
   const auth = Buffer.from(`API_KEY:${config.apiKey}`).toString("base64");
-  const res = await fetch(`${BASE_URL}${pathname}`, {
-    ...init,
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${pathname}`, {
+      ...init,
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/json",
+        ...init?.headers,
+      },
+      cache: "no-store",
+      // Abort a stalled request instead of hanging forever (CR-B). The caller's own catch turns
+      // this into the same IntervalsApiError path as any other network failure.
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (e) {
+    const timedOut = e instanceof DOMException && e.name === "TimeoutError";
+    throw new IntervalsApiError(
+      timedOut
+        ? `Intervals.icu request timed out after ${REQUEST_TIMEOUT_MS / 1000}s for ${pathname}.`
+        : `Intervals.icu request failed for ${pathname}: ${e instanceof Error ? e.message : "network error"}`
+    );
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new IntervalsApiError(

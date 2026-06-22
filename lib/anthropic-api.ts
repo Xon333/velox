@@ -24,9 +24,12 @@ const TEMPERATURE = 0.3;
 // One client, lazily constructed. Lazy so importing this module never requires the API key
 // (every call site guards with isAnthropicConfigured() first); reused so calls share one
 // keep-alive agent (connection pooling) instead of spinning up a client per request.
+// Bounded timeout + retries (CR-B) so a stalled model request fails within the route's maxDuration
+// instead of hanging on the SDK's 10-minute default. 240s comfortably covers a full 4-week block
+// generation (the longest call) while still failing fast on a dead connection.
 let _client: Anthropic | null = null;
 function getClient(): Anthropic {
-  return (_client ??= new Anthropic());
+  return (_client ??= new Anthropic({ timeout: 240_000, maxRetries: 2 }));
 }
 
 export function isAnthropicConfigured(): boolean {
