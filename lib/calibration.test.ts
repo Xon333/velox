@@ -121,6 +121,17 @@ describe("deriveTsbDeepFatigue (ROADMAP #2 — auto-derive from stamped TSB cont
     expect(deriveTsbDeepFatigue(entries).source).toBe("default");
   });
 
+  it("refuses to derive without any successful sessions to contrast against", () => {
+    // Under-executes ALL quality work, deep — but with no successes there's no contrast, so deriving
+    // would calibrate to where they train, not where they adapt.
+    expect(deriveTsbDeepFatigue(Array.from({ length: 8 }, () => qEntry(-30, 3))).source).toBe("default");
+  });
+
+  it("excludes off-plan rides — only prescribed quality counts (intrinsic scoring is a different axis)", () => {
+    const offPlan = Array.from({ length: 8 }, () => qEntry(-30, 3, { planned: false, plannedType: null }));
+    expect(deriveTsbDeepFatigue([...offPlan, qEntry(-5, 8)]).source).toBe("default");
+  });
+
   it("excludes legacy + compromised entries and non-quality types", () => {
     const entries = [
       qEntry(-30, 3, { legacy: true }),

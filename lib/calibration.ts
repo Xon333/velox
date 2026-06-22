@@ -95,9 +95,10 @@ export function isTsbModifierEdgesOverridden(override?: Partial<TsbModifierEdges
 //   1) enough under-executed quality sessions to trust the signal (confidence gate), and
 //   2) fatigue actually DISCRIMINATES — failures sit meaningfully deeper (lower TSB) than successes.
 // Without (2) we'd be calibrating to where the athlete trains, not where they adapt — the exact trap
-// the override-only v1 avoided. Quality intent only (Threshold/VO2max/SIT/RaceSim); legacy + compromised
-// excluded (must not teach the model). Provenance comes from the immutable ledger, so this re-derives
-// deterministically each read — no separate persisted copy to drift.
+// the override-only v1 avoided. **Planned** quality sessions only (Threshold/VO2max/SIT/RaceSim) — an
+// off-plan ride is scored intrinsically (decoupling/pacing), a different failure than missing prescribed
+// targets, so its score must not enter this regression. Legacy + compromised excluded (must not teach the
+// model). Provenance comes from the immutable ledger, so this re-derives deterministically each read.
 
 const TSB_QUALITY_TYPES = new Set<string>(["Threshold", "VO2max", "SIT", "RaceSim"]);
 const TSB_UNDER_BAR = 4; // quality executionScore ≤ this = under-executed
@@ -116,20 +117,25 @@ export function deriveTsbDeepFatigue(entries: RideScoreEntry[]): CalibratedParam
   const now = new Date().toISOString();
   const quality = entries.filter(
     (e) =>
+      e.planned && // prescribed sessions only — off-plan rides are scored on a different axis
       !e.legacy &&
       !e.compromised &&
       e.formState != null &&
       Number.isFinite(e.formState.tsb) &&
-      TSB_QUALITY_TYPES.has(e.inferredType)
+      e.plannedType != null &&
+      TSB_QUALITY_TYPES.has(e.plannedType)
   );
   const under = quality.filter((e) => e.executionScore <= TSB_UNDER_BAR).map((e) => e.formState!.tsb);
   const good = quality.filter((e) => e.executionScore >= TSB_GOOD_BAR).map((e) => e.formState!.tsb);
   const n = under.length;
-  if (n === 0) return { ...defaultParameter(), lastUpdated: now }; // no failures to learn from
+  // Need both failures to learn from AND successes to contrast against — without contrast (e.g. an
+  // athlete who under-executes ALL quality work, for fatigue or otherwise) we'd be calibrating to where
+  // they train, not where they adapt, which is the whole trap. No contrast → stay on the default.
+  if (n === 0 || good.length === 0) return { ...defaultParameter(), dataPoints: n, lastUpdated: now };
   const medUnder = median(under);
-  // Guard 2: if we have successes to compare against and the failures aren't at meaningfully deeper TSB,
-  // fatigue isn't the driver — don't pretend to derive a fatigue edge from it.
-  if (good.length > 0 && medUnder >= median(good) - TSB_DISCRIMINATION_MARGIN) {
+  // Guard 2: the failures must sit at meaningfully deeper TSB than the successes, else fatigue isn't the
+  // driver — don't pretend to derive a fatigue edge from it.
+  if (medUnder >= median(good) - TSB_DISCRIMINATION_MARGIN) {
     return { ...defaultParameter(), dataPoints: n, lastUpdated: now };
   }
   return {

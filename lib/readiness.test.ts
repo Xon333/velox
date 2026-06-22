@@ -127,20 +127,27 @@ describe("buildFormStateLookup (ROADMAP #2 — ledger context-stamp)", () => {
     { date: "2026-01-05", ctl: 53, atl: 48 }, // tsb +5
   ];
 
-  it("returns same-day form when the date carries CTL & ATL (tsb = ctl − atl)", () => {
-    expect(buildFormStateLookup(wellness)("2026-01-03")).toEqual({ tsb: -18, ctl: 52, atl: 70 });
+  it("uses the most recent STRICTLY-PRIOR day (form carried in), not same-day (post-session) values", () => {
+    // 01-03's own row is post-session; the form going INTO 01-03 is 01-01's end-of-day value.
+    expect(buildFormStateLookup(wellness)("2026-01-03")).toEqual({ tsb: -5, ctl: 50, atl: 55 });
   });
 
   it("carries the most recent prior day forward across a gap", () => {
     expect(buildFormStateLookup(wellness)("2026-01-04")).toEqual({ tsb: -18, ctl: 52, atl: 70 });
   });
 
-  it("returns null before any wellness exists, and ignores rows missing CTL/ATL", () => {
+  it("returns null when no prior wellness exists, and ignores rows missing CTL/ATL", () => {
+    expect(buildFormStateLookup(wellness)("2026-01-01")).toBeNull(); // nothing strictly before it
     expect(buildFormStateLookup(wellness)("2025-12-31")).toBeNull();
     expect(buildFormStateLookup([{ date: "2026-01-01", ctl: null, atl: 55 }])("2026-01-02")).toBeNull();
   });
 
+  it("rejects a stale carry-forward beyond the cap (CTL/ATL drift over weeks)", () => {
+    expect(buildFormStateLookup([{ date: "2026-01-01", ctl: 50, atl: 40 }])("2026-01-20")).toBeNull(); // 19d > 10d
+    expect(buildFormStateLookup([{ date: "2026-01-01", ctl: 50, atl: 40 }])("2026-01-08")).not.toBeNull(); // 7d ok
+  });
+
   it("rounds TSB to one decimal", () => {
-    expect(buildFormStateLookup([{ date: "2026-01-01", ctl: 50.06, atl: 40 }])("2026-01-01")!.tsb).toBe(10.1);
+    expect(buildFormStateLookup([{ date: "2026-01-01", ctl: 50.06, atl: 40 }])("2026-01-02")!.tsb).toBe(10.1);
   });
 });

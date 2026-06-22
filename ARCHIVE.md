@@ -78,10 +78,12 @@ The keystone framework + its first calibrated parameter. Three commits; tests gr
   freeze the athlete-state context an entry was scored under, so a later state→subsequent-execution
   correlation has something to correlate against. First parameter stamped = **form** (CTL/ATL/TSB).
   `buildFormStateLookup(wellness)` (`lib/readiness.ts`) returns a per-date resolver over intervals.icu's
-  OWN per-day CTL/ATL (authoritative, not reconstructed): same-day if present, else carried forward from
-  the most recent prior day (load moves slowly), `tsb = round1(ctl − atl)` matching the current-fitness
-  convention, null before any wellness exists. `buildRideScores` gained a 7th optional
-  `formStateForDate` resolver and stamps `RideScoreEntry.formState = { tsb, ctl, atl }` on each entry
+  OWN per-day CTL/ATL (authoritative, not reconstructed): the most recent **strictly-prior** day (the form
+  carried IN — not same-day, whose end-of-day CTL/ATL already absorbed that day's ride, which would leak
+  the session's own load into the signal; also matches the PMC "form = yesterday's CTL−ATL" convention),
+  carried forward across gaps up to a 10-day staleness cap (CTL drifts over weeks), `tsb = round1(ctl −
+  atl)`, null when nothing recent enough exists. _[review-hardened: strictly-prior + staleness cap.]_
+  `buildRideScores` gained a 7th optional resolver and stamps `RideScoreEntry.formState = { tsb, ctl, atl }` on each entry
   (spread-ready — absent when no wellness covers the date or no resolver passed → byte-identical). The
   sync route builds the lookup from `lastSync.wellness`. **Provenance only — `formState` never feeds the
   entry's own `executionScore`** (it's the input for a *future* correlation, kept out of the score it
@@ -100,11 +102,14 @@ The keystone framework + its first calibrated parameter. Three commits; tests gr
 
 - **First auto-derivation off the stamped context: the TSB deep-fatigue edge (ROADMAP #2 — payoff of
   the data play).** `deriveTsbDeepFatigue(entries)` (`lib/calibration.ts`) recenters the deep-fatigue
-  edge on the **median TSB of the athlete's under-executed quality sessions** (Threshold/VO2max/SIT/
-  RaceSim, `executionScore ≤ 4`; legacy + compromised excluded). **Two honesty guards**, both falling
-  back to the population default: a confidence gate on the failure count (`confidenceFromN`, never applied
-  below medium), and a **discrimination guard** — failures must sit ≥4 TSB points deeper than successes,
-  else fatigue isn't the driver and we don't pretend to derive an edge from it. Derived value clamped to
+  edge on the **median TSB of the athlete's under-executed quality sessions** — **prescribed** quality only
+  (`planned && plannedType ∈ {Threshold,VO2max,SIT,RaceSim}`; off-plan rides are scored intrinsically, a
+  different failure axis, so they're excluded), `executionScore ≤ 4`, legacy + compromised excluded.
+  **Honesty guards**, all falling back to the population default: a confidence gate on the failure count
+  (`confidenceFromN`, never applied below medium); a **contrast requirement** — needs ≥1 successful quality
+  session, else there's nothing to discriminate against; and a **discrimination guard** — failures must sit
+  ≥4 TSB points deeper than the successes' median, else fatigue isn't the driver. _[review-hardened:
+  planned-only + required success contrast.]_ Derived value clamped to
   `[-45, -12]`. `resolveTsbEdgesOverride(entries, settingsOverride)` layers the derived edge as the new
   default **under** any manual override (precedence: manual > derived > population), returning a partial
   that flows through the existing `resolveTsbModifierEdges`. Wired at every snapshot site

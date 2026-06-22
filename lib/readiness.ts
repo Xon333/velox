@@ -6,11 +6,16 @@ import { DEFAULT_ACWR_BANDS, type AcwrBands } from "./calibration";
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-// Form (CTL/ATL/TSB) as of a given date, from the synced wellness stream — intervals.icu's OWN per-day
-// values (authoritative, not reconstructed). Returns a resolver: same-day if that date carries both
-// CTL & ATL, else carried forward from the most recent prior day (load moves slowly, so a ride on a gap
-// day still gets the right form). TSB = CTL − ATL, matching the current-fitness summary convention.
-// Null before any wellness with both values exists. Pure; sorts once, then each lookup is a short scan.
+// The form (CTL/ATL/TSB) the athlete carried INTO a given date, from the synced wellness stream —
+// intervals.icu's OWN per-day values (authoritative, not reconstructed). Deliberately the most recent
+// STRICTLY-PRIOR day, not same-day: intervals.icu's per-day CTL/ATL are end-of-day values that already
+// absorb that day's ride, so same-day TSB is post-session fatigue — using it would leak the session's
+// own load into "the form going in" (and bias any state→execution correlation). Prior-day also matches
+// the PMC convention (form = yesterday's CTL − ATL). Carried forward across gaps up to MAX_FORM_CARRY_DAYS
+// (CTL decays over weeks — a stale value isn't "current form"); null when nothing recent enough exists.
+// Pure; sorts once, then each lookup is a short scan.
+const MAX_FORM_CARRY_DAYS = 10;
+
 export function buildFormStateLookup(
   wellness: Array<{ date: string; ctl: number | null; atl: number | null }>
 ): (date: string) => RideFormState | null {
@@ -19,12 +24,16 @@ export function buildFormStateLookup(
     .map((w) => ({ date: w.date, ctl: w.ctl as number, atl: w.atl as number }))
     .sort((a, b) => a.date.localeCompare(b.date));
   return (date: string) => {
-    let found: { ctl: number; atl: number } | null = null;
+    let found: { date: string; ctl: number; atl: number } | null = null;
     for (const w of series) {
-      if (w.date <= date) found = w;
-      else break; // sorted ascending — nothing further can be ≤ date
+      if (w.date < date) found = w; // strictly prior — form BEFORE this date's session
+      else break; // sorted ascending — nothing further can be < date
     }
-    return found ? { tsb: round1(found.ctl - found.atl), ctl: found.ctl, atl: found.atl } : null;
+    if (!found) return null;
+    // Reject a stale carry-forward (long layoff / sparse wellness window): CTL/ATL drift over weeks.
+    const ageDays = (Date.parse(date) - Date.parse(found.date)) / 86_400_000;
+    if (!Number.isFinite(ageDays) || ageDays > MAX_FORM_CARRY_DAYS) return null;
+    return { tsb: round1(found.ctl - found.atl), ctl: found.ctl, atl: found.atl };
   };
 }
 
