@@ -97,8 +97,10 @@ confidence-weighted modeling, which is **folded into #2's** confidence/lock laye
   trend). Fix TSS-vs-Load naming + the weekly-hours window (todo `MR-2`); split NP from Avg + annotate-or-
   demote IF; verify tiles populate post-sync (todo `TR-4`, avg-speed `RC-1`).
 - **Pw:HR × fuel Trends overlay** — carb-intake g/h on the existing `efSeries` chart (build w/ Track C).
-- **Page density** — decision-critical content above the fold on open (Today/Plan/Trends/Profile).
-- **MetricTip hovers** on unexplained metrics (todo `TR-3`); **mobile zero-horizontal-overflow** audit.
+- **Page density** — Profile + Plan shipped (ARCHIVE); **Trends** (~1.6/2.2 folds) and **Today on mobile**
+  still run over the fold — tighten card rhythm / collapse there next.
+
+*Shipped (ARCHIVE): MetricTip hovers incl. TR-3, mobile zero-horizontal-overflow audit, Profile/Plan density.*
 
 ---
 
