@@ -95,9 +95,9 @@ describe("deriveDecouplingGood", () => {
     expect(resolveCalibratedValue(p, 4)).toBe(4);
   });
 
-  it("derives from the 90-day mean with sample-size confidence", () => {
+  it("derives from the 90-day mean with sample-size confidence (never auto-locks)", () => {
     const p = deriveDecouplingGood(undefined, 6, 25);
-    expect(p).toMatchObject({ source: "derived", value: 6, confidence: "high", locked: true, dataPoints: 25 });
+    expect(p).toMatchObject({ source: "derived", value: 6, confidence: "high", locked: false, dataPoints: 25 });
     expect(resolveCalibratedValue(p, 4)).toBe(6);
 
     const low = deriveDecouplingGood(undefined, 6, 5);
@@ -110,9 +110,26 @@ describe("deriveDecouplingGood", () => {
     expect(deriveDecouplingGood(undefined, 99, 30).value).toBe(8);
   });
 
-  it("freezes once locked and preserves a manual override", () => {
-    const locked = deriveDecouplingGood(undefined, 6, 25); // locked at 6
-    expect(deriveDecouplingGood(locked, 3, 40).value).toBe(6); // new data ignored once locked
-    expect(deriveDecouplingGood({ ...locked, manualOverride: 5 }, 3, 40).manualOverride).toBe(5);
+  it("keeps adapting to the rolling window instead of freezing (CR-E)", () => {
+    const high = deriveDecouplingGood(undefined, 6, 25); // high confidence, value 6
+    // A fitter athlete's window drops to 3 — the cutoff must follow, not stay stuck at 6.
+    const next = deriveDecouplingGood(high, 3, 40);
+    expect(next.value).toBe(3);
+    expect(resolveCalibratedValue(next, 4)).toBe(3);
+  });
+
+  it("keeps the last derived value when a window carries no new signal (no jitter to default)", () => {
+    const high = deriveDecouplingGood(undefined, 6, 25);
+    const gap = deriveDecouplingGood(high, null, 0); // a window with no decoupling readings
+    expect(gap.value).toBe(6);
+    expect(gap.source).toBe("derived");
+    expect(resolveCalibratedValue(gap, 4)).toBe(6);
+  });
+
+  it("preserves a manual override across re-derivation", () => {
+    const high = deriveDecouplingGood(undefined, 6, 25);
+    const next = deriveDecouplingGood({ ...high, manualOverride: 5 }, 3, 40);
+    expect(next.manualOverride).toBe(5);
+    expect(resolveCalibratedValue(next, 4)).toBe(5); // manual override still wins at resolve
   });
 });

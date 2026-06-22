@@ -127,9 +127,13 @@ export function buildRideScores(
   return [...byDate.values()];
 }
 
-// The score log is an immutable historical ledger: once a date is scored it is frozen, so a
-// later FTP change never rewrites the past. Existing entries win on a date collision; fresh
-// entries only fill in dates not yet recorded.
+// The score log is an append-only historical ledger: a PAST date, once scored, is frozen here, so a
+// later FTP change never rewrites it. Existing entries win on a date collision; fresh entries only
+// fill in dates not yet recorded.
+//
+// The one deliberate exception is TODAY (CR-E): while the current day is still "live", the sync route
+// re-derives today's entry each run (it has interval-aware data this merge can't see — see the patch
+// in app/api/sync/route.ts), so today's score can move until the day rolls over. Past dates never do.
 export function mergeScoreLog(existing: RideScoreEntry[], fresh: RideScoreEntry[]): RideScoreEntry[] {
   const byDate = new Map<string, RideScoreEntry>();
   for (const e of fresh) byDate.set(e.date, e);

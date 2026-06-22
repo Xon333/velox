@@ -83,8 +83,13 @@ export function emptyCalibration(): CalibrationStore {
 // Derive the decoupling "good" threshold from the athlete's own 90-day mean decoupling (ROADMAP #2):
 // their typical decoupling becomes the +1/0 boundary, so a structurally-drifty rider isn't punished
 // to the floor and a flat-TT rider is graded tightly — instead of a fixed 4%. `n` is how many rides
-// in the window carried a decoupling reading (drives confidence). Preserves a prior manual override,
-// and once locked (high confidence) the value freezes — only a manual override moves it after that.
+// in the window carried a decoupling reading (drives confidence). Preserves a prior manual override.
+//
+// Deliberately NOT frozen at high confidence (CR-E): the input is ALREADY a 90-day rolling mean, so
+// the derived value tracks the athlete's recent physiology and must keep re-deriving every sync — a
+// rider who gets fitter across a season drifts less, and a value latched in March must not govern
+// December scoring. The rolling window + the sample-size confidence gate (medium+ to take effect) are
+// what guard against chasing noise; a permanent lock would defeat the whole point of calibrating.
 export function deriveDecouplingGood(
   prior: CalibratedParameter | undefined | null,
   avgDecoupling90d: number | null,
@@ -92,19 +97,22 @@ export function deriveDecouplingGood(
 ): CalibratedParameter {
   const now = new Date().toISOString();
   const manualOverride = prior?.manualOverride ?? null;
-  // Locked derived value freezes — stop chasing new data (the manual override still wins at resolve).
-  if (prior?.locked && prior.source === "derived") return { ...prior, manualOverride, lastUpdated: now };
   if (avgDecoupling90d === null || !Number.isFinite(avgDecoupling90d) || n <= 0) {
+    // No usable signal this window. Keep a previously-derived value (refresh only the timestamp) so a
+    // transient gap doesn't snap the cutoff back to the population default and jitter scoring; with no
+    // prior derived value, start blank. (Adapting to new data ≠ discarding calibration on a gap.)
+    if (prior?.source === "derived" && Number.isFinite(prior.value)) {
+      return { ...prior, manualOverride, lastUpdated: now };
+    }
     return { ...defaultParameter(), manualOverride, lastUpdated: now };
   }
-  const confidence = confidenceFromN(n);
   return {
     value: clamp(avgDecoupling90d, 2.5, 8), // sanity-bounded so one weird window can't produce a silly cutoff
     source: "derived",
-    confidence,
+    confidence: confidenceFromN(n),
     dataPoints: n,
     lastUpdated: now,
-    locked: confidence === "high",
+    locked: false, // never auto-freeze — keep adapting to the rolling window
     manualOverride,
   };
 }
