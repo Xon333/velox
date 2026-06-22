@@ -38,7 +38,7 @@ import { backfillLedgerEntries } from "@/lib/sync-ledger";
 import { detectPowerPRs } from "@/lib/pr";
 import { buildRideScores, calStampFor, mergeScoreLog } from "@/lib/score-log";
 import { applyDispositions, compromisedDates } from "@/lib/disposition";
-import { computeAcwr, computeFatigueAlert, computeIntensityDistribution, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
+import { buildFormStateLookup, computeAcwr, computeFatigueAlert, computeIntensityDistribution, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
 import { deriveDecouplingGood, deriveIfBandOffsets, resolveAcwrBands, resolveCalibratedValue } from "@/lib/calibration";
 import { buildCoachSnapshotFromSources } from "@/lib/coach-snapshot";
 import { resolveToday } from "@/lib/date";
@@ -234,7 +234,10 @@ export async function POST(req: Request) {
       );
       const offPlanFloor = blockStarts.length ? blockStarts.sort()[0] : null;
 
-      const fresh = buildRideScores(block, lastSync.activities, ftpForDate, today, offPlanFloor, resolvedCal);
+      // Form (CTL/ATL/TSB) as of each ride's date, from the synced wellness stream — stamped onto each
+      // entry as state context for the future state→execution correlation (ROADMAP #2).
+      const formStateForDate = buildFormStateLookup(lastSync.wellness);
+      const fresh = buildRideScores(block, lastSync.activities, ftpForDate, today, offPlanFloor, resolvedCal, formStateForDate);
       // Stamp the athlete's compromised attributions onto the ledger (re-derived each sync).
       const dispositions = (await readDispositions()).entries;
       // Transactional (CR-A): the backfill is computed from the ledger read INSIDE the lock, so a

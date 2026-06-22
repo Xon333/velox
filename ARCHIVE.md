@@ -73,6 +73,22 @@ The keystone framework + its first calibrated parameter. Three commits; tests gr
   sites (sync ×2, ask, generate). Absent override → byte-identical classification (the fresh-athlete
   guarantee, tested across a TSB sweep). Tested (resolver clamp/order, override band shift); full suite green.
 
+- **Form-state context stamped onto the ledger (ROADMAP #2 — input side of the context-stamp data play).**
+  The play that makes the override-only edges (e.g. the TSB adaptation window) eventually *learnable*:
+  freeze the athlete-state context an entry was scored under, so a later state→subsequent-execution
+  correlation has something to correlate against. First parameter stamped = **form** (CTL/ATL/TSB).
+  `buildFormStateLookup(wellness)` (`lib/readiness.ts`) returns a per-date resolver over intervals.icu's
+  OWN per-day CTL/ATL (authoritative, not reconstructed): same-day if present, else carried forward from
+  the most recent prior day (load moves slowly), `tsb = round1(ctl − atl)` matching the current-fitness
+  convention, null before any wellness exists. `buildRideScores` gained a 7th optional
+  `formStateForDate` resolver and stamps `RideScoreEntry.formState = { tsb, ctl, atl }` on each entry
+  (spread-ready — absent when no wellness covers the date or no resolver passed → byte-identical). The
+  sync route builds the lookup from `lastSync.wellness`. **Provenance only — `formState` never feeds the
+  entry's own `executionScore`** (it's the input for a *future* correlation, kept out of the score it
+  describes to avoid circularity). Backfill + the live-today re-score preserve it via `...e`. _Still to
+  stamp:_ readiness + morning-check context. Tested (same-day / carry-forward / missing / rounding +
+  the stamp present-and-absent); full suite green (826).
+
 ---
 
 ## Scoring-core — Z2 "dialed-in" discipline signal

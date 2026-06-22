@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeAcwr, computeIntensityDistribution, computeLoadRamp } from "./readiness";
+import { buildFormStateLookup, computeAcwr, computeIntensityDistribution, computeLoadRamp } from "./readiness";
 
 // Build a date `n` days ago in YYYY-MM-DD (local), matching computeLoadRamp's basis.
 function daysAgo(n: number): string {
@@ -117,5 +117,30 @@ describe("computeIntensityDistribution", () => {
 
   it("returns null when FTP is unknown", () => {
     expect(computeIntensityDistribution([{ date: daysAgo(1), movingTimeSec: 100, avgWatts: 150 }], 0)).toBeNull();
+  });
+});
+
+describe("buildFormStateLookup (ROADMAP #2 — ledger context-stamp)", () => {
+  const wellness = [
+    { date: "2026-01-01", ctl: 50, atl: 55 }, // tsb -5
+    { date: "2026-01-03", ctl: 52, atl: 70 }, // tsb -18
+    { date: "2026-01-05", ctl: 53, atl: 48 }, // tsb +5
+  ];
+
+  it("returns same-day form when the date carries CTL & ATL (tsb = ctl − atl)", () => {
+    expect(buildFormStateLookup(wellness)("2026-01-03")).toEqual({ tsb: -18, ctl: 52, atl: 70 });
+  });
+
+  it("carries the most recent prior day forward across a gap", () => {
+    expect(buildFormStateLookup(wellness)("2026-01-04")).toEqual({ tsb: -18, ctl: 52, atl: 70 });
+  });
+
+  it("returns null before any wellness exists, and ignores rows missing CTL/ATL", () => {
+    expect(buildFormStateLookup(wellness)("2025-12-31")).toBeNull();
+    expect(buildFormStateLookup([{ date: "2026-01-01", ctl: null, atl: 55 }])("2026-01-02")).toBeNull();
+  });
+
+  it("rounds TSB to one decimal", () => {
+    expect(buildFormStateLookup([{ date: "2026-01-01", ctl: 50.06, atl: 40 }])("2026-01-01")!.tsb).toBe(10.1);
   });
 });

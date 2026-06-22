@@ -1,8 +1,32 @@
 // Deterministic daily readiness signal from TSB, ATL/CTL ratio, and HRV.
 // Returns a "Build / Hold / Recover" level with a plain-English reason.
 
-import type { AcwrResult, FatigueAlert, FitnessMetrics, IntensityDistribution, LoadRampAlert, ReadinessSignal, WellnessEntry } from "./types";
+import type { AcwrResult, FatigueAlert, FitnessMetrics, IntensityDistribution, LoadRampAlert, ReadinessSignal, RideFormState, WellnessEntry } from "./types";
 import { DEFAULT_ACWR_BANDS, type AcwrBands } from "./calibration";
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+// Form (CTL/ATL/TSB) as of a given date, from the synced wellness stream — intervals.icu's OWN per-day
+// values (authoritative, not reconstructed). Returns a resolver: same-day if that date carries both
+// CTL & ATL, else carried forward from the most recent prior day (load moves slowly, so a ride on a gap
+// day still gets the right form). TSB = CTL − ATL, matching the current-fitness summary convention.
+// Null before any wellness with both values exists. Pure; sorts once, then each lookup is a short scan.
+export function buildFormStateLookup(
+  wellness: Array<{ date: string; ctl: number | null; atl: number | null }>
+): (date: string) => RideFormState | null {
+  const series = wellness
+    .filter((w) => w.ctl !== null && w.atl !== null)
+    .map((w) => ({ date: w.date, ctl: w.ctl as number, atl: w.atl as number }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return (date: string) => {
+    let found: { ctl: number; atl: number } | null = null;
+    for (const w of series) {
+      if (w.date <= date) found = w;
+      else break; // sorted ascending — nothing further can be ≤ date
+    }
+    return found ? { tsb: round1(found.ctl - found.atl), ctl: found.ctl, atl: found.atl } : null;
+  };
+}
 
 export function computeFatigueAlert(fitness: FitnessMetrics): FatigueAlert {
   const { ctl, atl, tsb } = fitness;

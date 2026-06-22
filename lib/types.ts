@@ -397,6 +397,20 @@ export interface RideScoreEntry {
   // the per-type IF-band shift that scored THIS entry (planned rides only — off-plan rides skip the
   // intensity-vs-type branch). Each field is independently optional — only what actually applied is stamped.
   calibration?: { decouplingGood?: number; ifBandOffset?: number };
+  // Athlete-state CONTEXT frozen at scoring time (ROADMAP #2 — context-stamp the ledger): the form the
+  // athlete carried into this session, so a later state→subsequent-execution correlation can derive the
+  // override-only edges honestly (e.g. auto-derive the TSB adaptation window). From intervals.icu's own
+  // per-day CTL/ATL (authoritative, not reconstructed). Absent on pre-feature entries or when no wellness
+  // covers the date. This is provenance only — it never feeds the entry's own executionScore.
+  formState?: RideFormState;
+}
+
+// Form (fitness/fatigue/balance) as of a ride's date — the slow-moving load state from the synced
+// wellness stream. TSB = CTL − ATL (the app's convention). Stamped on each ledger entry as context.
+export interface RideFormState {
+  tsb: number;
+  ctl: number;
+  atl: number;
 }
 
 // ---------- Athlete model (the learning "second brain") ----------
