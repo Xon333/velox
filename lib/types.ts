@@ -397,12 +397,14 @@ export interface RideScoreEntry {
   // the per-type IF-band shift that scored THIS entry (planned rides only — off-plan rides skip the
   // intensity-vs-type branch). Each field is independently optional — only what actually applied is stamped.
   calibration?: { decouplingGood?: number; ifBandOffset?: number };
-  // Athlete-state CONTEXT frozen at scoring time (ROADMAP #2 — context-stamp the ledger): the form the
+  // Athlete-state CONTEXT frozen at scoring time (ROADMAP #2 — context-stamp the ledger): the state the
   // athlete carried into this session, so a later state→subsequent-execution correlation can derive the
-  // override-only edges honestly (e.g. auto-derive the TSB adaptation window). From intervals.icu's own
-  // per-day CTL/ATL (authoritative, not reconstructed). Absent on pre-feature entries or when no wellness
-  // covers the date. This is provenance only — it never feeds the entry's own executionScore.
+  // override-only edges honestly (e.g. auto-derive the TSB adaptation window). Both are provenance only —
+  // they never feed the entry's own executionScore.
+  // `formState`: objective load (intervals.icu's own per-day CTL/ATL, authoritative). `morningCheck`: the
+  // day's subjective self-report. Each absent on pre-feature entries or when no data covers the date.
   formState?: RideFormState;
+  morningCheck?: RideMorningContext;
 }
 
 // Form (fitness/fatigue/balance) as of a ride's date — the slow-moving load state from the synced
@@ -411,6 +413,21 @@ export interface RideFormState {
   tsb: number;
   ctl: number;
   atl: number;
+}
+
+// The subjective morning self-report on a ride's date (1–5; fatigue/soreness higher = worse, sleep
+// higher = better). The first-person signal not captured by objective load. Stamped as context.
+export interface RideMorningContext {
+  fatigue: number;
+  sleep: number;
+  soreness: number;
+}
+
+// Everything stamped onto a ledger entry as athlete-state context for a given date (ROADMAP #2). Resolved
+// per-date and frozen onto the entry; any field absent when no data covers that date.
+export interface RideEntryContext {
+  formState?: RideFormState;
+  morningCheck?: RideMorningContext;
 }
 
 // ---------- Athlete model (the learning "second brain") ----------

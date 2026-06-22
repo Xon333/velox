@@ -6,7 +6,7 @@
 
 import { computeExecutionScore, resolveCompliance, timeAboveZ2Fraction, type ScoringCalibration } from "./execution-score";
 import { inferWorkoutType } from "./ride-classify";
-import type { ActivitySummary, BehaviourSummary, CurrentBlock, CurrentBlockDay, RideFormState, RideScoreEntry } from "./types";
+import type { ActivitySummary, BehaviourSummary, CurrentBlock, CurrentBlockDay, RideEntryContext, RideScoreEntry } from "./types";
 
 const MAX_ENTRIES = 400; // ~6 months of all rides
 
@@ -52,9 +52,9 @@ export function buildRideScores(
   // so the immutable ledger stays reproducible (past entries stay frozen via mergeScoreLog regardless).
   // Omitted → population defaults.
   calibration?: ScoringCalibration | null,
-  // ROADMAP #2 context-stamp: the athlete's form (CTL/ATL/TSB) as of a ride's date, frozen onto each
-  // entry as provenance for a later state→execution correlation. Omitted → no formState stamp.
-  formStateForDate?: ((date: string) => RideFormState | null) | null
+  // ROADMAP #2 context-stamp: the athlete-state context (form + morning-check) as of a ride's date,
+  // frozen onto each entry as provenance for a later state→execution correlation. Omitted → no stamp.
+  contextForDate?: ((date: string) => RideEntryContext | null) | null
 ): RideScoreEntry[] {
   // Prescribed sessions, by date (only days that actually plan a ride).
   const plannedByDate = new Map<string, CurrentBlockDay>();
@@ -77,10 +77,13 @@ export function buildRideScores(
         : null;
     // Easy-ride discipline signal (Z2/Recovery only, applied in computeExecutionScore).
     const aboveZ2Frac = timeAboveZ2Fraction(act.powerZoneTimes);
-    // Context-stamp (ROADMAP #2): the form the athlete carried into this date. Spread-ready so an
-    // entry stays formState-free when no wellness covers the date (byte-identical to before).
-    const formState = formStateForDate?.(act.date) ?? null;
-    const formStamp = formState ? { formState } : {};
+    // Context-stamp (ROADMAP #2): the state the athlete carried into this date (form + morning-check).
+    // Spread-ready so an entry stays context-free when no data covers the date (byte-identical to before).
+    const ctx = contextForDate?.(act.date) ?? null;
+    const contextStamp = {
+      ...(ctx?.formState ? { formState: ctx.formState } : {}),
+      ...(ctx?.morningCheck ? { morningCheck: ctx.morningCheck } : {}),
+    };
 
     const planned = plannedByDate.get(act.date);
     let entry: RideScoreEntry | null = null;
@@ -111,7 +114,7 @@ export function buildRideScores(
           durationMin: actualMin,
           tss: act.trainingLoad,
           ...calStampFor(calibration, planned.type, false),
-          ...formStamp,
+          ...contextStamp,
         };
       }
     } else {
@@ -143,7 +146,7 @@ export function buildRideScores(
           durationMin: actualMin,
           tss: act.trainingLoad,
           ...calStampFor(calibration, inferredType, true),
-          ...formStamp,
+          ...contextStamp,
         };
       }
     }

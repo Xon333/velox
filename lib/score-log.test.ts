@@ -114,16 +114,23 @@ describe("buildRideScores", () => {
     expect(entry.calibration).toEqual({ decouplingGood: 6 }); // offset omitted — it never moved this score
   });
 
-  it("freezes the athlete's form-state context as of the ride date (ROADMAP #2 context-stamp)", () => {
+  it("freezes the athlete-state context (form + morning-check) as of the ride date (ROADMAP #2)", () => {
     const b = block([{ date: "2026-01-03", type: "Z2", durationMin: 60 }]);
     const acts = [activity({ date: "2026-01-03", avgWatts: 135, normalizedPower: 138 })];
-    const formStateForDate = (date: string) => (date === "2026-01-03" ? { tsb: -12, ctl: 50, atl: 62 } : null);
-    expect(buildRideScores(b, acts, ftp200, "2026-01-10", null, null, formStateForDate)[0].formState).toEqual({
-      tsb: -12,
-      ctl: 50,
-      atl: 62,
-    });
-    // Absent when no resolver, or when the resolver has no form for that date (byte-identical to before).
+    const contextForDate = (date: string) =>
+      date === "2026-01-03"
+        ? { formState: { tsb: -12, ctl: 50, atl: 62 }, morningCheck: { fatigue: 3, sleep: 4, soreness: 2 } }
+        : null;
+    const entry = buildRideScores(b, acts, ftp200, "2026-01-10", null, null, contextForDate)[0];
+    expect(entry.formState).toEqual({ tsb: -12, ctl: 50, atl: 62 });
+    expect(entry.morningCheck).toEqual({ fatigue: 3, sleep: 4, soreness: 2 });
+    // Each field is independent — a resolver may carry only one (form here, no morning-check).
+    const formOnly = buildRideScores(b, acts, ftp200, "2026-01-10", null, null, () => ({
+      formState: { tsb: 5, ctl: 50, atl: 45 },
+    }))[0];
+    expect(formOnly.formState).toEqual({ tsb: 5, ctl: 50, atl: 45 });
+    expect(formOnly.morningCheck).toBeUndefined();
+    // Absent when no resolver, or when the resolver has nothing for that date (byte-identical to before).
     expect(buildRideScores(b, acts, ftp200, "2026-01-10")[0].formState).toBeUndefined();
     expect(buildRideScores(b, acts, ftp200, "2026-01-10", null, null, () => null)[0].formState).toBeUndefined();
   });

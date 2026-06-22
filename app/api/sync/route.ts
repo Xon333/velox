@@ -42,7 +42,7 @@ import { buildFormStateLookup, computeAcwr, computeFatigueAlert, computeIntensit
 import { deriveDecouplingGood, deriveIfBandOffsets, resolveAcwrBands, resolveCalibratedValue } from "@/lib/calibration";
 import { buildCoachSnapshotFromSources } from "@/lib/coach-snapshot";
 import { resolveToday } from "@/lib/date";
-import type { ExecutedInterval, TodayAnalysis } from "@/lib/types";
+import type { ExecutedInterval, RideEntryContext, TodayAnalysis } from "@/lib/types";
 
 // A sync fires several sequential Intervals.icu requests (each network-bounded to 20s in the API
 // client) plus, on a ride day, per-ride stream/interval fetches. Cap the whole handler so a slow
@@ -234,10 +234,18 @@ export async function POST(req: Request) {
       );
       const offPlanFloor = blockStarts.length ? blockStarts.sort()[0] : null;
 
-      // Form (CTL/ATL/TSB) as of each ride's date, from the synced wellness stream — stamped onto each
-      // entry as state context for the future state→execution correlation (ROADMAP #2).
+      // Athlete-state context as of each ride's date, stamped onto each entry for the future
+      // state→execution correlation (ROADMAP #2): form (CTL/ATL/TSB, carried-forward from the synced
+      // wellness stream) + the day's subjective morning-check (same-day only — no carry-forward).
       const formStateForDate = buildFormStateLookup(lastSync.wellness);
-      const fresh = buildRideScores(block, lastSync.activities, ftpForDate, today, offPlanFloor, resolvedCal, formStateForDate);
+      const morningByDate = new Map((await readMorningChecks()).entries.map((m) => [m.date, m]));
+      const contextForDate = (date: string): RideEntryContext | null => {
+        const formState = formStateForDate(date) ?? undefined;
+        const mc = morningByDate.get(date);
+        const morningCheck = mc ? { fatigue: mc.fatigue, sleep: mc.sleep, soreness: mc.soreness } : undefined;
+        return formState || morningCheck ? { formState, morningCheck } : null;
+      };
+      const fresh = buildRideScores(block, lastSync.activities, ftpForDate, today, offPlanFloor, resolvedCal, contextForDate);
       // Stamp the athlete's compromised attributions onto the ledger (re-derived each sync).
       const dispositions = (await readDispositions()).entries;
       // Transactional (CR-A): the backfill is computed from the ledger read INSIDE the lock, so a
