@@ -16,7 +16,7 @@ import { prDurationLabel } from "@/lib/pr";
 import { isoDaysAgo, localToday as todayIso } from "@/lib/date";
 import RideTrace from "../RideTrace";
 import SessionDisposition from "../SessionDisposition";
-import { Card, MetricTip } from "../ui";
+import { Card, InfoDot, MetricTip } from "../ui";
 import { ACWR_COLOR, READINESS_STYLES, ZoneBars, trendArrow } from "./shared";
 
 // ---------- Readiness badge ----------
@@ -271,11 +271,12 @@ export function TodayRideCard({
                     </span>
                   ))}
                 </div>
-                <span
-                  className="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-200"
-                  title="reps that held ≥90% of prescribed duration · power × duration completion"
-                >
+                <span className="flex items-center gap-1 font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-200">
                   {analysis.intervalComparison.completed}/{analysis.intervalComparison.total} · {analysis.intervalComparison.effectiveAdherencePct}%
+                  <InfoDot
+                    align="right"
+                    text="Reps that held ≥90% of the prescribed duration, then the session's power × duration completion against the plan — the duration-aware adherence the execution score reads."
+                  />
                 </span>
               </div>
               {analysis.intervalComparison.structuralMismatch && (

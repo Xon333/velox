@@ -18,6 +18,17 @@ export function MetricTip({ text, align = "left" }: { text: string; align?: "lef
   );
 }
 
+// Small ⓘ hover affordance next to a label/value — shows a MetricTip on hover. The consistent
+// "what is this number?" hint used across cards, tiles, and stats.
+export function InfoDot({ text, align }: { text: string; align?: "left" | "right" }) {
+  return (
+    <span className="group relative inline-flex cursor-help align-middle text-zinc-400 dark:text-zinc-500">
+      <span className="text-[10px] opacity-60">ⓘ</span>
+      <MetricTip text={text} align={align} />
+    </span>
+  );
+}
+
 // Eyebrow-titled surface card (muted title + optional right-aligned hint + optional ⓘ hover tip).
 export function Card({
   title,
@@ -45,12 +56,7 @@ export function Card({
           {title && (
             <h2 className="flex items-center gap-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
               {title}
-              {tip && (
-                <span className="group relative inline-flex cursor-help text-zinc-400 dark:text-zinc-500">
-                  <span className="text-[10px] opacity-60">ⓘ</span>
-                  <MetricTip text={tip} />
-                </span>
-              )}
+              {tip && <InfoDot text={tip} />}
             </h2>
           )}
           {hint && <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{hint}</span>}
@@ -185,12 +191,14 @@ export function TrendTile({
   points,
   delta,
   onClick,
+  tip,
 }: {
   label: string;
   value: string;
   points: number[];
   delta?: "up" | "down" | "flat";
   onClick?: () => void;
+  tip?: string;
 }) {
   const W = 80;
   const H = 22;
@@ -208,7 +216,10 @@ export function TrendTile({
       onClick={onClick}
       className="rounded-md bg-zinc-50 px-2.5 py-2 text-left transition-colors hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
-      <p className="text-[10px] uppercase tracking-wide text-zinc-400">{label}</p>
+      <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-400">
+        {label}
+        {tip && <InfoDot text={tip} />}
+      </p>
       {path && (
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" className="my-0.5" aria-hidden>
           <path d={path} fill="none" strokeWidth="1.5" vectorEffect="non-scaling-stroke" className="stroke-zinc-400 dark:stroke-synced/70" />

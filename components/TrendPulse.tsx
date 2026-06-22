@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client-api";
-import { TrendTile } from "./ui";
+import { InfoDot, TrendTile } from "./ui";
 
 interface Pt {
   value: number;
@@ -24,13 +24,16 @@ function delta(points: number[]): "up" | "down" | "flat" | undefined {
   return b - a > eps ? "up" : b - a < -eps ? "down" : "flat";
 }
 
-function Tile({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+function Tile({ label, tip, onClick, children }: { label: string; tip?: string; onClick: () => void; children: ReactNode }) {
   return (
     <button
       onClick={onClick}
       className="rounded-md bg-zinc-50 px-2.5 py-2 text-left transition-colors hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
-      <p className="text-[10px] uppercase tracking-wide text-zinc-400">{label}</p>
+      <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-400">
+        {label}
+        {tip && <InfoDot text={tip} />}
+      </p>
       {children}
     </button>
   );
@@ -42,7 +45,7 @@ function VolumeTile({ weeks, onClick }: { weeks: TrendsResp["weeklyHours"]; onCl
   const latest = hours.length ? hours[hours.length - 1] : null;
   const max = Math.max(...hours, 1);
   return (
-    <Tile label="Weekly volume" onClick={onClick}>
+    <Tile label="Weekly volume" tip="Total ride hours per complete week (recent weeks; the in-progress week is excluded). Bar height tracks your weekly training volume — consistency and ramp at a glance." onClick={onClick}>
       <div className="my-0.5 flex h-[22px] items-end gap-[2px]">
         {weeks.map((w, i) => (
           <div
@@ -71,7 +74,7 @@ function ZoneTile({ zones, onClick }: { zones: number[]; onClick: () => void }) 
   const hard = (zones[3] ?? 0) + (zones[4] ?? 0) + (zones[5] ?? 0) + (zones[6] ?? 0);
   const pct = (x: number) => Math.round((x / total) * 100);
   return (
-    <Tile label="Time in zones · 28d" onClick={onClick}>
+    <Tile label="Time in zones · 28d" tip="Share of the last 28 days' riding time spent easy / moderate / hard (power zones collapsed to the polarization split). ~80% easy is the endurance-base target." onClick={onClick}>
       <div className="my-1 flex h-2.5 overflow-hidden rounded-full">
         <div style={{ width: `${pct(easy)}%` }} className="bg-blue-400 dark:bg-blue-500/70" />
         <div style={{ width: `${pct(mod)}%` }} className="bg-amber-400 dark:bg-amber-500/70" />
@@ -118,7 +121,7 @@ export default function TrendPulse({ vertical }: { vertical?: boolean }) {
   const ctl = data.ctl.map((p) => p.value);
   return (
     <div className={`grid gap-2 ${vertical ? "grid-cols-2 lg:grid-cols-1" : "grid-cols-3"}`}>
-      <TrendTile label="CTL — fitness" value={ctl.length ? ctl[ctl.length - 1].toFixed(0) : "—"} points={ctl} delta={delta(ctl)} onClick={go} />
+      <TrendTile label="CTL — fitness" tip="Chronic Training Load — your ~42-day rolling average daily training stress; the standard fitness proxy. Rising = building fitness, falling = detraining." value={ctl.length ? ctl[ctl.length - 1].toFixed(0) : "—"} points={ctl} delta={delta(ctl)} onClick={go} />
       <VolumeTile weeks={data.weeklyHours} onClick={go} />
       <ZoneTile zones={data.zones} onClick={go} />
     </div>
