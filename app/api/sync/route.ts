@@ -152,7 +152,9 @@ export async function POST(req: Request) {
     // The power curve as it stood BEFORE this sync — the baseline a new PR must beat (the fresh
     // sync absorbs today's ride into the curve, so the comparison has to use the prior one).
     const prevSync = await readLastSync();
-    const lastSync = await runFullSync();
+    // Pass the prior all-time curve so it's preserved + kept monotonic when the fresh all-time fetch
+    // is unavailable or partial, instead of being mislabelled by the 84-day curve (CR-H).
+    const lastSync = await runFullSync(prevSync?.powerCurveAllTime ?? []);
     // CR-C: never let a garbage/empty upstream response overwrite a healthy store. A sync that comes
     // back with no activities AND no wellness when we had data before is an upstream problem, not a
     // reset — refuse loudly (the client shows the error) and keep the previous data intact.

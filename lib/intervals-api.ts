@@ -338,7 +338,30 @@ function latestFitness(wellness: WellnessEntry[]): FitnessMetrics {
 // per sync — no extra per-activity stream calls — so app performance is unaffected.
 export const SYNC_WINDOW_DAYS = 182;
 
-export async function runFullSync(): Promise<SyncData> {
+// All-time best efforts only ever rise, so the stored all-time curve must be monotonic — PR detection
+// and the Profile "all-time PRs" both depend on it. Merge the fresh fetch with the previous all-time,
+// taking the higher watts per duration: this preserves every known best even if a fetch is missing or
+// returns a partial/regressed curve, which the old `fresh || 84-day` fallback did not (it mislabelled
+// recent efforts as all-time and could surface a false PR "drop"). The 84-day recent curve is used
+// only as a last resort on the very first sync, when there's no prior all-time yet. (CR-H)
+export function resolveAllTimeCurve(
+  freshAllTime: PowerCurvePoint[],
+  prevAllTime: PowerCurvePoint[],
+  recentCurve: PowerCurvePoint[]
+): PowerCurvePoint[] {
+  if (freshAllTime.length === 0 && prevAllTime.length === 0) return recentCurve;
+  const best = new Map<number, number>();
+  for (const p of prevAllTime) best.set(p.durationSec, p.watts);
+  for (const p of freshAllTime) {
+    const cur = best.get(p.durationSec);
+    if (cur === undefined || p.watts > cur) best.set(p.durationSec, p.watts);
+  }
+  return [...best.entries()]
+    .map(([durationSec, watts]) => ({ durationSec, watts }))
+    .sort((a, b) => a.durationSec - b.durationSec);
+}
+
+export async function runFullSync(prevAllTime: PowerCurvePoint[] = []): Promise<SyncData> {
   const newest = new Date().toISOString().slice(0, 10);
   const oldestDate = new Date(Date.now() - SYNC_WINDOW_DAYS * 24 * 3600 * 1000);
   const oldest = oldestDate.toISOString().slice(0, 10);
@@ -355,8 +378,7 @@ export async function runFullSync(): Promise<SyncData> {
     activities,
     wellness,
     powerCurve,
-    // Fall back to the 84-day curve if the all-time fetch is unavailable, so PRs/profile still work.
-    powerCurveAllTime: allTime.length > 0 ? allTime : powerCurve,
+    powerCurveAllTime: resolveAllTimeCurve(allTime, prevAllTime, powerCurve),
     fitness: latestFitness(wellness),
   };
 }

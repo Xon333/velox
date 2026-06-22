@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchActivities, IntervalsApiError, isSuspectEmptySync } from "./intervals-api";
-import type { SyncData } from "./types";
+import { fetchActivities, IntervalsApiError, isSuspectEmptySync, resolveAllTimeCurve } from "./intervals-api";
+import type { PowerCurvePoint, SyncData } from "./types";
 
 const mkSync = (over: Partial<SyncData> = {}): SyncData => ({
   syncedAt: "2026-06-22T00:00:00.000Z",
@@ -37,6 +37,38 @@ describe("isSuspectEmptySync (CR-C don't wipe good data)", () => {
     const wellnessOnly = mkSync({ wellness: [{ date: "2026-06-20" } as SyncData["wellness"][number]] });
     expect(isSuspectEmptySync(wellnessOnly, mkSync())).toBe(true); // had wellness, now nothing → suspect
     expect(isSuspectEmptySync(withData, wellnessOnly)).toBe(false); // still has wellness → fine
+  });
+});
+
+describe("resolveAllTimeCurve (CR-H monotonic all-time)", () => {
+  const pt = (durationSec: number, watts: number): PowerCurvePoint => ({ durationSec, watts });
+
+  it("uses the fresh fetch when present", () => {
+    const fresh = [pt(5, 1000), pt(300, 320)];
+    expect(resolveAllTimeCurve(fresh, [pt(5, 900)], [pt(5, 100)])).toEqual(fresh);
+  });
+
+  it("never drops below a previously-known all-time best (monotonic merge)", () => {
+    const prev = [pt(5, 1100), pt(300, 330)];
+    const fresh = [pt(5, 1000), pt(300, 350)]; // 5s regressed (API glitch), 300s is a real PR
+    expect(resolveAllTimeCurve(fresh, prev, [])).toEqual([pt(5, 1100), pt(300, 350)]);
+  });
+
+  it("carries forward the previous all-time when the fresh fetch is empty (not the 84-day curve)", () => {
+    const prev = [pt(5, 1100)];
+    const recent84d = [pt(5, 800)];
+    expect(resolveAllTimeCurve([], prev, recent84d)).toEqual(prev);
+  });
+
+  it("falls back to the recent curve only on the first sync (no prior all-time)", () => {
+    const recent84d = [pt(5, 800)];
+    expect(resolveAllTimeCurve([], [], recent84d)).toEqual(recent84d);
+  });
+
+  it("merges durations that exist on only one side", () => {
+    const prev = [pt(60, 400)];
+    const fresh = [pt(5, 1000)];
+    expect(resolveAllTimeCurve(fresh, prev, [])).toEqual([pt(5, 1000), pt(60, 400)]);
   });
 });
 
