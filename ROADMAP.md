@@ -30,8 +30,10 @@ record is in [ARCHIVE.md](ARCHIVE.md). Ordered roughly by leverage. `← X` = bl
 - *Owned elsewhere:* optimal carbs g/h `→ Track C`; ACWR band + EWMA α stay on their current path.
 
 ### Scoring-core gaps (route through #2 — they touch `execution-score.ts`)
-- **Z2 "dialed-in" overstated** — Z2 scores on avg IF + decoupling, not *time above zone*. Add a
-  Z2-discipline signal (% time above the Z2 cap, from synced `powerZoneTimes`) into the score + CoachSnapshot.
+- **Z2 "dialed-in" overstated** — *shipped (ARCHIVE).* `timeAboveZ2Fraction` + a bounded ±2 discipline
+  band score the share of an easy ride spent above the aerobic cap (power zones 3+), the spikes a clean
+  *average* IF hides; surfaced in CoachSnapshot (% above cap). _Open sliver:_ a Recovery-specific cap
+  (above Z1, not Z2) if the lenient shared cap proves too soft.
 - **Power-zone source of truth** — decide: keep zones strictly Intervals.icu vs. a sanctioned local
   override in the calibration framework. (Lean strict-consistency.)
 

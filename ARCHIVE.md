@@ -51,6 +51,28 @@ The keystone framework + its first calibrated parameter. Three commits; tests gr
 
 ---
 
+## Scoring-core — Z2 "dialed-in" discipline signal
+
+Closed the ROADMAP scoring-core gap: easy aerobic rides were scored on *average* IF + decoupling, so a
+Z2 ride that averaged a textbook 0.68 IF while repeatedly surging into Tempo+ read as disciplined — the
+mean hid the spikes and the variability index only blurred them.
+
+- **The measure.** `timeAboveZ2Fraction(powerZoneTimes)` (`lib/execution-score.ts`, pure + defensive)
+  returns the share of measured in-zone time spent in **power zones 3+** (above the Z2 aerobic cap),
+  from the already-synced `ActivitySummary.powerZoneTimes` — `null` when there's no usable zone data so
+  scoring falls back to its other signals.
+- **The score.** A bounded **±2** band in `computeExecutionScore` (`aboveZ2Frac` input): ≤5% above cap
+  → +1 (genuinely dialed in), ≤15% → 0, ≤30% → −1, >30% → −2. Gated to **prescribed Z2/Recovery** and
+  skipped for off-plan (intrinsic) rides — no plan to be disciplined against — and absent-safe, so every
+  existing ride without zone data scores byte-identically (the execution-score suite stayed green
+  unchanged). Threaded through both score call sites: `buildRideScores` (the ledger; past entries stay
+  frozen via `mergeScoreLog`, so only new rides see it) and `buildTodayAnalysis` (today, re-scored live).
+- **Surfaced.** `CoachSnapshot.today.execution.aboveZ2Pct` (% above cap, Z2/Recovery only) renders in
+  `formatCoachSnapshot` with a qualitative tag (dialed in / drifted / drifted hard) so Ask-Coach reads
+  the resolved discipline number instead of inferring it. 12 new tests (helper + band + surfacing); suite 394 → 406.
+
+---
+
 ## Code-review hardening sweep (CR-A..H)
 
 A "senior dev who hates this implementation" pass over the whole repo, 2026-06-22 — eight findings,
