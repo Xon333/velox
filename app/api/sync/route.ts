@@ -10,11 +10,13 @@ import {
   readBlockSettings,
   readCurrentBlock,
   readDispositions,
+  readCalibration,
   readInterventionLog,
   readLastSync,
   readMorningChecks,
   readRollingBaselines,
   readScoreLog,
+  writeCalibration,
   writeInterventionLog,
   writeQuirks,
   writeTodayAnalysis,
@@ -30,12 +32,12 @@ import { buildAthleteModel } from "@/lib/athlete-model";
 import { athleteStateInputsFrom, computeAthleteState } from "@/lib/athlete-state";
 import { overallCoachAccuracy, validateInterventions } from "@/lib/intervention";
 import { adjustBuffer, weightTrendFromWellness } from "@/lib/nutrition";
-import { computeExecutionScore, resolveCompliance } from "@/lib/execution-score";
+import { computeExecutionScore, DEFAULT_DECOUPLING_GOOD, resolveCompliance } from "@/lib/execution-score";
 import { detectPowerPRs } from "@/lib/pr";
 import { buildRideScores, mergeScoreLog } from "@/lib/score-log";
 import { applyDispositions, compromisedDates } from "@/lib/disposition";
 import { computeAcwr, computeFatigueAlert, computeIntensityDistribution, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
-import { resolveAcwrBands } from "@/lib/calibration";
+import { deriveDecouplingGood, resolveAcwrBands, resolveCalibratedValue } from "@/lib/calibration";
 import { buildCoachSnapshotFromSources } from "@/lib/coach-snapshot";
 import { resolveToday } from "@/lib/date";
 import type { ExecutedInterval, TodayAnalysis } from "@/lib/types";
@@ -44,7 +46,7 @@ import type { ExecutedInterval, TodayAnalysis } from "@/lib/types";
 // (so the CoachSnapshot resolves against the calendar day the athlete sees); falls back to UTC.
 export async function GET(req: Request) {
   const today = resolveToday(new URL(req.url).searchParams.get("today"));
-  const [lastSync, currentBlock, todayAnalysis, scoreLog, profile, settings, dispositions, interventionLog, baselines, morningChecks, physStore] =
+  const [lastSync, currentBlock, todayAnalysis, scoreLog, profile, settings, dispositions, interventionLog, baselines, morningChecks, physStore, calibration] =
     await Promise.all([
       readLastSync(),
       readCurrentBlock(),
@@ -57,6 +59,7 @@ export async function GET(req: Request) {
       readRollingBaselines(),
       readMorningChecks(),
       readPhysiology(),
+      readCalibration(),
     ]);
   const readiness = lastSync
     ? computeReadiness(lastSync.fitness, lastSync.wellness)
@@ -112,6 +115,8 @@ export async function GET(req: Request) {
     athleteState,
     // ROADMAP #1: the resolved-numbers snapshot the LLM reads, surfaced so the athlete sees the same.
     coachSnapshot,
+    // ROADMAP #2: the per-athlete calibration (read-only on Settings).
+    calibration,
   });
 }
 
@@ -160,6 +165,19 @@ export async function POST(req: Request) {
     const baselines = computeRollingBaselines(lastSync.activities, lastSync.wellness);
     await writeRollingBaselines({ ...baselines, updatedAt: new Date().toISOString() });
 
+    // Per-athlete calibration (ROADMAP #2): derive the decoupling "good" cutoff from the 90-day mean +
+    // how many rides in that window carried a decoupling reading (drives confidence), then resolve the
+    // effective value the scorer uses. Each new score entry below is frozen with what it scored against.
+    const cutoff90 = new Date(Date.parse(today) - 90 * 86_400_000).toISOString().slice(0, 10);
+    const decouplingN = lastSync.activities.filter((a) => a.decoupling !== null && a.date >= cutoff90).length;
+    const priorCal = await readCalibration();
+    const calibration = {
+      decouplingGood: deriveDecouplingGood(priorCal.decouplingGood, baselines.avgDecoupling90d, decouplingN),
+      updatedAt: new Date().toISOString(),
+    };
+    await writeCalibration(calibration);
+    const resolvedCal = { decouplingGood: resolveCalibratedValue(calibration.decouplingGood, DEFAULT_DECOUPLING_GOOD) };
+
     // Track D: mine ride notes for recurring quirks (deterministic, no AI). Regenerated in full each
     // sync. Best-effort — extraction must never break a sync.
     try {
@@ -202,7 +220,7 @@ export async function POST(req: Request) {
           legacy: e.legacy ?? (!planned && (offPlanFloor === null || e.date < offPlanFloor)),
         };
       });
-      const fresh = buildRideScores(block, lastSync.activities, ftpForDate, today, offPlanFloor);
+      const fresh = buildRideScores(block, lastSync.activities, ftpForDate, today, offPlanFloor, resolvedCal);
       // Stamp the athlete's compromised attributions onto the ledger (re-derived each sync).
       const dispositions = (await readDispositions()).entries;
       await writeScoreLog({
@@ -325,6 +343,7 @@ export async function POST(req: Request) {
                 ? intervalComparison.effectiveAdherencePct
                 : null,
             rpe: todayActivity.rpe,
+            calibration: resolvedCal,
           });
 
           // Compliance is the macro "did you complete the session" number, but capped by
@@ -384,7 +403,7 @@ export async function POST(req: Request) {
               const log = await readScoreLog();
               const patched = log.entries.map((e) =>
                 e.date === today && !e.legacy
-                  ? { ...e, executionScore, compliancePct: resolvedCompliancePct }
+                  ? { ...e, executionScore, compliancePct: resolvedCompliancePct, calibration: { decouplingGood: resolvedCal.decouplingGood } }
                   : e
               );
               await writeScoreLog({ entries: patched, updatedAt: new Date().toISOString() });
@@ -438,7 +457,7 @@ export async function POST(req: Request) {
       morningChecks: morningChecks.entries,
       acwrBandsOverride: settingsForSnap.acwrBands,
     });
-    return NextResponse.json({ lastSync, todayAnalysis, analysisPending, warnings, readiness, fatigueAlert, loadRamp, acwr, polarization, scores: scoreLog.entries.filter((e) => !e.legacy && !e.compromised), compromisedDates: [...compromisedDates(dispositions.entries)], partialDates: dispositions.entries.filter((e) => e.disposition === "partial").map((e) => e.date), athleteState, coachSnapshot });
+    return NextResponse.json({ lastSync, todayAnalysis, analysisPending, warnings, readiness, fatigueAlert, loadRamp, acwr, polarization, scores: scoreLog.entries.filter((e) => !e.legacy && !e.compromised), compromisedDates: [...compromisedDates(dispositions.entries)], partialDates: dispositions.entries.filter((e) => e.disposition === "partial").map((e) => e.date), athleteState, coachSnapshot, calibration });
   } catch (err) {
     const status = err instanceof IntervalsApiError && err.status === 401 ? 401 : 502;
     const message = err instanceof Error ? err.message : "Sync failed";

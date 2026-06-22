@@ -1,6 +1,7 @@
 import BlockSettingsForm from "@/components/BlockSettingsForm";
 import BackupRestore from "@/components/BackupRestore";
 import AiUsageCard from "@/components/AiUsageCard";
+import CalibrationPanel from "@/components/CalibrationPanel";
 import { readAiUsage } from "@/lib/ai-usage";
 
 // Read the usage store at request time (it changes as AI calls accrue).
@@ -17,6 +18,7 @@ export default async function SettingsPage() {
         </p>
       </div>
       <BlockSettingsForm />
+      <CalibrationPanel />
       <AiUsageCard usage={usage} />
       <BackupRestore />
     </div>

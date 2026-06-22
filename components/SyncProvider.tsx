@@ -12,6 +12,7 @@ import type {
   IntensityDistribution,
   LoadRampAlert,
   ReadinessSignal,
+  CalibrationStore,
   RideScoreEntry,
   SyncData,
   TodayAnalysis,
@@ -41,6 +42,8 @@ export interface AppState {
   // ROADMAP #1: the resolved-numbers snapshot the LLM is handed, surfaced on Today so the athlete
   // sees the same figures the coach reasons from.
   coachSnapshot?: CoachSnapshot | null;
+  // ROADMAP #2: per-athlete calibration (read-only on Settings).
+  calibration?: CalibrationStore | null;
 }
 
 interface SyncContextValue {
@@ -142,6 +145,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         partialDates: string[];
         athleteState: AthleteState | null;
         coachSnapshot: CoachSnapshot | null;
+        calibration: CalibrationStore | null;
         // Send the browser's LOCAL date so the server matches today's ride on the same calendar
         // day the athlete sees — not the server's UTC date.
       }>("/api/sync", { method: "POST", body: JSON.stringify({ today: localToday() }) });
@@ -161,6 +165,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
               partialDates: result.partialDates,
               athleteState: result.athleteState,
               coachSnapshot: result.coachSnapshot,
+              calibration: result.calibration,
             }
           : s
       );
