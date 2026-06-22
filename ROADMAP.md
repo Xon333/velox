@@ -7,25 +7,19 @@ Intervals.icu.**
 Companion docs: live bugs → [todo.md](todo.md) · **shipped detail** → [ARCHIVE.md](ARCHIVE.md) ·
 exploratory spikes → [research.md](research.md) · how it all works → [README.md](README.md).
 
-Shipped items appear here only as a one-line pointer with what's *still open* under them; the full
-record is in [ARCHIVE.md](ARCHIVE.md). Ordered roughly by leverage. `← X` = blocked-on / derives-from.
+Only open work appears here — anything shipped moves out to [ARCHIVE.md](ARCHIVE.md). Ordered roughly by
+leverage. `← X` = blocked-on / derives-from; numeric IDs (#1–4, §5–7) are stable cross-reference handles.
 
 ---
 
 ## Next up
 
 ### #2 · Per-athlete calibration — extend the framework  ⭐ (the keystone)
-*Framework + decoupling cutoff shipped (ARCHIVE).* Bring more parameters under the same
-`parameterise → derive-with-fallback → stamp` machinery:
-- **Per-type IF cutoffs** — *shipped (ARCHIVE).* `deriveIfBandOffsets` shifts the IF-vs-type bands to
-  the athlete's own power-zone %FTP edges, bounded + 0 for default zones (byte-identical scoring),
-  threaded through `resolvedCal` to both ledger + today scoring; the per-type offset is now also
-  **stamped onto each ledger entry** for provenance (ARCHIVE). _Open slivers:_ surface on Settings
-  (derived live from zones, not yet in `CalibrationStore`); anchor RaceSim. Shares the curve read with **Track A**.
+Bring more parameters under the same `parameterise → derive-with-fallback → stamp` machinery.
+- **Per-type IF cutoffs — open slivers:** surface the offsets on Settings (derived live from zones, not
+  yet in `CalibrationStore`); anchor RaceSim. Shares the curve read with **Track A**.
 - **Fold in the CR-11 constants** (population fallback, opportunistic): morning-check strain bands +
-  TSB-deep cutoff; durability `88%` floor + `≤122%/≤20m` insert envelope; athlete-state fusion weights
-  (§5). _`resolveTsbModifier` edges (the TSB adaptation window) — shipped (ARCHIVE): population-validated
-  defaults + manual override, the ACWR-bands pattern (not auto-derived — no honest per-athlete signal)._
+  TSB-deep cutoff; durability `88%` floor + `≤122%/≤20m` insert envelope; athlete-state fusion weights (§5).
 - **Context-stamp the ledger → unlock honest auto-derivation** ⭐ (the data play that turns the
   override-only edges into *learned* ones). Several parameters can only be manually overridden today —
   not derived — because the ledger records the *value* an entry scored against but not the athlete-state
@@ -34,21 +28,19 @@ record is in [ARCHIVE.md](ARCHIVE.md). Ordered roughly by leverage. `← X` = bl
   fatigue/sleep/soreness — frozen like `ftpUsed`/`calibration`). Then build a **state →
   subsequent-execution-quality** correlation (same engine shape as Track C's carbs play) that converts a
   "no honest signal yet" param from population-default-+-override into a confidence-gated *derived* value.
-  Worked example — the **TSB adaptation window** (#1, shipped as override-only): once TSB-at-the-time is
-  stamped, find the TSB depth below which THIS athlete's *next* quality session reliably under-executes
-  and recenter the deep-fatigue edge there — calibrating to where they **adapt**, not merely where they
-  **train** (the distinction that made auto-derivation dishonest before). Gated + reversible + never
-  auto-applied below medium confidence; the manual override stays as the floor. Ties **#4** (the
-  validation loop reads the same stamped context) + **Track C** (shared correlation engine).
+  Worked example — the **TSB adaptation window** (override-only today): once TSB-at-the-time is stamped,
+  find the TSB depth below which THIS athlete's *next* quality session reliably under-executes and
+  recenter the deep-fatigue edge there — calibrating to where they **adapt**, not merely where they
+  **train** (the distinction that makes auto-derivation dishonest before the data exists). Gated +
+  reversible + never auto-applied below medium confidence; the manual override stays as the floor.
+  Ties **#4** (the validation loop reads the same stamped context) + **Track C** (shared correlation engine).
 - **Pattern (follow per param):** default = today's literal value; derive with confidence-gated
   fallback; stamp on any ledger entry it scores; test that a fresh athlete scores identically.
 - *Owned elsewhere:* optimal carbs g/h `→ Track C`; ACWR band + EWMA α stay on their current path.
 
 ### Scoring-core gaps (route through #2 — they touch `execution-score.ts`)
-- **Z2 "dialed-in" overstated** — *shipped (ARCHIVE).* `timeAboveZ2Fraction` + a bounded ±2 discipline
-  band score the share of an easy ride spent above the aerobic cap (power zones 3+), the spikes a clean
-  *average* IF hides; surfaced in CoachSnapshot (% above cap). _Open sliver:_ a Recovery-specific cap
-  (above Z1, not Z2) if the lenient shared cap proves too soft.
+- **Recovery-specific Z2 cap** — give Recovery its own "dialed-in" cap (above Z1, not Z2) *if* the
+  lenient shared aerobic cap proves too soft in real use.
 - **Power-zone source of truth** — decide: keep zones strictly Intervals.icu vs. a sanctioned local
   override in the calibration framework. (Lean strict-consistency.)
 
@@ -59,31 +51,29 @@ planned-vs-actual per session type and, on a consistent gap, **flag an FTP re-te
 (never write FTP locally — `physiology.json` stays the synced SoT). Ties Track B template-scoring + #2.
 
 ### #1 · CoachSnapshot — fill the reserved slots
-*Foundations + Today card + per-athlete `form.tsbModifier` band edges shipped (ARCHIVE).* Open:
 `fuel.intakeVsNeed` + `fuel.fuelingState` are reserved `null` `← Track C / §6`.
 
 ### #3 · Proactive reschedule — slivers
-*Shipped (ARCHIVE).* Open: decision thresholds → per-athlete `← #2`; let the **reactive**
-`RescheduleBanner` adopt the shared `findMakeUpSlot` (still rest-only); calendar mirror `← §7`;
-possible fully-automatic fatigue-path downgrade (on `fatigueAlert`, before a miss).
+Decision thresholds → per-athlete `← #2`; let the **reactive** `RescheduleBanner` adopt the shared
+`findMakeUpSlot` (still rest-only); calendar mirror `← §7`; possible fully-automatic fatigue-path
+downgrade (on `fatigueAlert`, before a miss).
 
 ### §5 · Athlete-state — slivers
-*v1 fusion shipped (ARCHIVE).* Open: energy-availability evaluator `← Track C`; per-athlete fusion
-weights `← #2`; tune score→band thresholds + headline against real use; possible score-over-time trend.
+Energy-availability evaluator `← Track C`; per-athlete fusion weights `← #2`; tune score→band thresholds
++ headline against real use; possible score-over-time trend.
 
 ---
 
 ## Feature tracks (multi-session ⭐)
 
 ### Track A · Power-curve intelligence
-*Weak-point optimizer + plan-cue generalization shipped (ARCHIVE).* Open: the population reference
-multiples → `#2`; feed the rider profile into the **block review / retrospective** (read curve shape,
-not just compliance); optionally persist a snapshot if rider-type-over-time is wanted.
+The population reference multiples → `#2`; feed the rider profile into the **block review / retrospective**
+(read curve shape, not just compliance); optionally persist a snapshot if rider-type-over-time is wanted.
 
 ### Track B · Session selection & variety
-*Goal-driven selection + durability taxonomy shipped (ARCHIVE).* Open: per-template scoring loop
-(grade each long ride vs its template's expected signal — the `durabilityTemplate` stamp is in place;
-ties #4 + Track C); tighten per-loading-week RaceSim only if real use shows the LLM under-delivering.
+Per-template scoring loop (grade each long ride vs its template's expected signal — the
+`durabilityTemplate` stamp is in place; ties #4 + Track C); tighten per-loading-week RaceSim only if real
+use shows the LLM under-delivering.
 
 ### Track C · Fueling intelligence  (inputs already synced — high value)
 All open. Turn fueling from a static formula into a learned signal:
@@ -95,13 +85,9 @@ All open. Turn fueling from a static formula into a learned signal:
   helped* (loaded vs baseline decoupling) and stop if it doesn't move the signal.
 - Surfacing layer = **§6**; build the derivation once, reuse in §6 + the Today tile + the Trends overlay.
 
-### Track D · Second-brain learning
-*Structured retrospective reflection + athlete-quirk extraction shipped (ARCHIVE).* Open: only
-confidence-weighted modeling, which is **folded into #2's** confidence/lock layer — no standalone work.
-
 ---
 
-## Platform & performance  (local-first single-user; P4–P7 shipped — ARCHIVE)
+## Platform & performance  (local-first single-user)
 
 - **P8** — structured logging (`{route, step, status, ms}` instead of silent `catch`); AI-route cost
   guard (in-memory token-bucket on `/api/generate` + `/api/ask`).
@@ -109,7 +95,7 @@ confidence-weighted modeling, which is **folded into #2's** confidence/lock laye
 
 ---
 
-## UI refinements  (Images 1–5 audit mostly shipped — ARCHIVE)
+## UI refinements
 
 - **Nutrition-availability tile on Today** ⭐ — EA proxy `(intake − ride burn)/kg`; overlaps §6 / Track C;
   feeds `CoachSnapshot.fuel`. Deterministic.
@@ -117,10 +103,8 @@ confidence-weighted modeling, which is **folded into #2's** confidence/lock laye
   trend). Fix TSS-vs-Load naming + the weekly-hours window (todo `MR-2`); split NP from Avg + annotate-or-
   demote IF; verify tiles populate post-sync (todo `TR-4`, avg-speed `RC-1`).
 - **Pw:HR × fuel Trends overlay** — carb-intake g/h on the existing `efSeries` chart (build w/ Track C).
-- **Page density** — Profile + Plan shipped (ARCHIVE); **Trends** (~1.6/2.2 folds) and **Today on mobile**
-  still run over the fold — tighten card rhythm / collapse there next.
-
-*Shipped (ARCHIVE): MetricTip hovers incl. TR-3, mobile zero-horizontal-overflow audit, Profile/Plan density.*
+- **Page density** — **Trends** (~1.6/2.2 folds) and **Today on mobile** still run over the fold —
+  tighten card rhythm / collapse there next.
 
 ---
 
@@ -138,8 +122,8 @@ confidence-weighted modeling, which is **folded into #2's** confidence/lock laye
 ---
 
 ## Exploratory research → [research.md](research.md)
-The "Second Brain" spike (LangGraph / Mem0 / GraphRAG / HRV) — findings, not commitments. The real gap
-was signal fusion (§5, shipped); lean spin-offs worth pursuing: knowledge-connections, HRV-readiness.
+The "Second Brain" spike (LangGraph / Mem0 / GraphRAG / HRV) — findings, not commitments. Lean spin-offs
+worth pursuing: knowledge-connections, HRV-readiness.
 
 ---
 
