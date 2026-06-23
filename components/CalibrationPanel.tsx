@@ -1,6 +1,7 @@
 "use client";
 
 import { useSync } from "./SyncProvider";
+import { Card } from "./ui";
 import { resolveCalibratedValue } from "@/lib/calibration";
 import { DEFAULT_DECOUPLING_GOOD } from "@/lib/execution-score";
 import type { CalibratedParameter } from "@/lib/types";
@@ -32,16 +33,15 @@ export default function CalibrationPanel() {
   ];
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
-      <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Per-athlete calibration</h2>
-      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+    <Card title="Per-athlete calibration">
+      <p className="-mt-1 mb-3 text-xs text-zinc-500 dark:text-zinc-400">
         Scoring thresholds the app learns from your own data, with a population default until there&apos;s enough history.
         Updated on each sync. Read-only for now.
       </p>
       {!cal ? (
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">Sync to compute your calibration.</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">Sync to compute your calibration.</p>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ul className="space-y-3">
           {rows.map((r) => (
             <li key={r.label} className="border-t border-zinc-100 pt-3 first:border-t-0 first:pt-0 dark:border-zinc-700/60">
               <div className="flex items-baseline justify-between gap-3">
@@ -54,6 +54,6 @@ export default function CalibrationPanel() {
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

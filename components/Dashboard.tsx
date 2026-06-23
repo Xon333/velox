@@ -395,7 +395,7 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
 
       {/* Block generation — collapses to a thin bar when a block is active so it no longer
           cuts the page in half; always open when there's no block to generate against. */}
-      <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
+      <section className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
         {hasActiveBlock && !genOpen ? (
           <button
             onClick={() => setGenOpen(true)}

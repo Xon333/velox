@@ -29,11 +29,14 @@ export function InfoDot({ text, align }: { text: string; align?: "left" | "right
   );
 }
 
-// Eyebrow-titled surface card (muted title + optional right-aligned hint + optional ⓘ hover tip).
+// Eyebrow-titled surface card (muted title + optional right-aligned hint/action + optional ⓘ hover tip).
+// `action` is a right-aligned ReactNode (an Edit link, a small button) for the title row; `hint` is
+// the muted micro-text variant. Both sit on the right; title (or a spacer) holds the left.
 export function Card({
   title,
   hint,
   tip,
+  action,
   accentTop,
   className,
   children,
@@ -41,6 +44,7 @@ export function Card({
   title?: string;
   hint?: string;
   tip?: string;
+  action?: ReactNode;
   accentTop?: boolean;
   className?: string;
   children: ReactNode;
@@ -51,15 +55,22 @@ export function Card({
         accentTop ? "dark:[border-top-color:rgba(255,73,200,0.4)]" : ""
       } ${className ?? ""}`}
     >
-      {(title || hint) && (
+      {(title || hint || action) && (
         <div className="mb-2 flex items-baseline justify-between gap-3">
-          {title && (
+          {title ? (
             <h2 className="flex items-center gap-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
               {title}
               {tip && <InfoDot text={tip} />}
             </h2>
+          ) : (
+            <span />
           )}
-          {hint && <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{hint}</span>}
+          {(hint || action) && (
+            <div className="flex shrink-0 items-center gap-2">
+              {hint && <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{hint}</span>}
+              {action}
+            </div>
+          )}
         </div>
       )}
       {children}

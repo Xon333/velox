@@ -60,17 +60,28 @@ Tailwind **arbitrary literals with opacity** — that is the established convent
 - **All numeric & data values** (watts, %, TSB, scores, dates, durations): JetBrains Mono
   (`--font-jetbrains`, `font-mono`). If it's a number the athlete reads as data, it's mono.
 - **Wordmark only:** Warriot Tech Italic (`--font-warriot`) — used solely for "NodeVelo".
-- **Eyebrow / micro-label convention:** `text-[10px]`/`text-[11px]`, `uppercase`, `tracking-wide`,
-  muted (`text-zinc-400` / dark `text-zinc-500`). These are *labels*, not body copy — sub-12px is
-  allowed **only** in this uppercase-label form.
-- Section/card titles: `text-xs`/`text-sm`, `font-semibold`, `text-zinc-500` / dark `text-zinc-400`.
+**The type ladder (one tier per role — don't invent in-between sizes):**
+
+| Role | Treatment | Where |
+|---|---|---|
+| **Page title** (`h1`) | `text-lg font-semibold` foreground (`text-zinc-900` / dark `text-zinc-100`) | one per page |
+| **Card / section title** | `text-xs font-semibold` muted (`text-zinc-500` / dark `text-zinc-400`), **sentence case** | the `Card` primitive — the single card-title treatment on Settings/Profile/utility pages |
+| **Zone eyebrow** | `text-[11px] font-semibold uppercase tracking-wide` muted | the `Zone` primitive — dashboard command-center priority path **only** |
+| **Micro-label** | `text-[10px] uppercase tracking-wide` muted (`text-zinc-400`) | tile/datum labels (`StatTile`/`TrendTile`/`SectionDivider`) |
+| **Body** | `text-sm`/`text-xs` (`text-zinc-600` / dark `text-zinc-300`) | prose, hints |
+| **Mono value** | `font-mono` (size per context, default `text-sm`) | every number the athlete reads as data |
+
+- **Uppercase is reserved** for the Zone eyebrow + micro-labels (the only sub-12px forms allowed).
+  General card titles are sentence case. Section cards must come from the `Card` primitive — no
+  hand-rolled card chrome, so the title tier can't drift.
 
 ---
 
 ## 4 · Surfaces, radii, elevation
 
 - **Standard card:** `rounded-lg` + 1px border (`zinc-200` / dark `zinc-700`) + `bg-white` / dark
-  `bg-zinc-800`, padding `px-4 py-3`.
+  `bg-zinc-800`, padding `px-4 py-3`. This is the **only** card padding — get it from the `Card`
+  primitive. (Legacy `px-5 py-4` / `px-4 py-4` on Settings/Profile was drift, now converged.)
 - **Hero surface (the one emphasized card — active block):** the deliberate exception —
   `rounded-none border-2`, neon border + glow in dark
   (`dark:border-[#00d4ff]/55 dark:shadow-[0_0_28px_-8px_rgba(0,212,255,0.45)]`), wraps a `CyberFrame`.
@@ -123,6 +134,25 @@ Tailwind **arbitrary literals with opacity** — that is the established convent
   page is viewport-locked (`lg:h-[calc(100dvh-4rem)] lg:overflow-hidden`) with cards scrolling internally.
 - **Mobile:** sticky top bar (wordmark + sync + theme) + bottom tab bar (icon + tiny label).
 - **Decision-critical content above the fold** on open (esp. Today/Profile/Plan).
+
+### Per-page hierarchy (which data · why · where)
+
+Each page has **one job**. Fold-1 = the decision-critical glance that answers it; supporting data sits
+below; deep/per-datum detail is **collapsed or on-hover**, never deleted (the anti-black-box rule — the
+athlete can always reach what the brain knows, it just isn't shouting). Progressive disclosure is the
+default: summary first, detail on demand (`<details>` for blocks, `MetricTip`/`InfoDot` for per-datum).
+
+| Page | The one job | Leads (fold-1) | Supporting | Collapsed / drill-down |
+|---|---|---|---|---|
+| **Today** | "Can I go hard — and what's my session?" | Readiness (state · form · alerts), then the session summary (plan vs actual · execution score · key metrics · fuel) | Trend pulse · coach note · ask-coach | **Power execution** (per-rep · trace · zone bars) → `<details>`, adherence headline kept in the summary |
+| **Plan** | "What's my block, and what's next?" | Active block hero (calendar + progress) | Goals · this-week debrief | Block history → `<details>`; generation form collapses while a block is active |
+| **Trends** | "Am I improving over time?" | Last-7-days glance + coach insights | the trend charts (Pw:HR · CTL · execution · volume · fueling) — **review depth is intentional here** | Block-history long-view (hero) |
+| **Profile** | "Who am I — what does the coach plan around?" | Rider-profile read (power-curve shape) | PRs · goals · weakpoints · nutrition | "Edit →" routes to Knowledge |
+| **Settings** | "Tune generation + platform behaviour" | Block-generation knobs | calibration (read-only) · AI usage · backup | — |
+
+**Bespoke-per-use-case elements** (don't force these into a generic `StatTile`): the readiness gauge
+(`AthleteStateCard`), the coach's-read glance (`CoachSnapshotCard`), the prescription-vs-execution rep
+breakdown, the calibration learning-state. Each stays inside the token system above.
 
 ---
 

@@ -1,3 +1,4 @@
+import { Card } from "./ui";
 import type { AiUsageStore, AiUsageTotals } from "@/lib/ai-usage";
 
 // Presentational (server-rendered): shows running Anthropic token spend from data/ai-usage.json.
@@ -32,14 +33,14 @@ export default function AiUsageCard({ usage }: { usage: AiUsageStore }) {
   const hasData = usage.total.calls > 0;
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">AI usage &amp; cost</h2>
+    <Card>
+      <div className="mb-1 flex items-baseline justify-between gap-4">
+        <h2 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">AI usage &amp; cost</h2>
         <span className="font-mono text-lg font-bold text-zinc-900 dark:text-[#ff49c8]">
           {fmtUsd(usage.total.costUsd)}
         </span>
       </div>
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className="text-sm text-zinc-500">
         Estimated running Anthropic spend across all generation, ride-analysis, and ask-coach calls.
       </p>
 
@@ -61,6 +62,6 @@ export default function AiUsageCard({ usage }: { usage: AiUsageStore }) {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

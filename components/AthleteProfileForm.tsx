@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, timeAgo } from "@/lib/client-api";
+import { Card } from "./ui";
 import type { AthleteMdSnapshot } from "@/lib/kb-loader";
 import type { PowerCurvePoint, PowerProfile, PowerSystem } from "@/lib/types";
 
@@ -87,17 +88,18 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-zinc-100 pb-2 dark:border-zinc-700/60">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{title}</h2>
-        {editHref && (
-          <Link href={editHref} className="shrink-0 whitespace-nowrap text-xs text-cyan-700 hover:underline dark:text-[#00d4ff]">
+    <Card
+      title={title}
+      action={
+        editHref ? (
+          <Link href={editHref} className="whitespace-nowrap text-xs text-cyan-700 hover:underline dark:text-[#00d4ff]">
             Edit →
           </Link>
-        )}
-      </div>
+        ) : undefined
+      }
+    >
       {children}
-    </section>
+    </Card>
   );
 }
 

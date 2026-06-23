@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
+import { Card } from "./ui";
 import type { BlockSettings } from "@/lib/types";
 
 function Field({
@@ -126,8 +127,7 @@ export default function BlockSettingsForm() {
   return (
     <div className="space-y-6">
       {/* Weekly volume */}
-      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-        <h2 className="mb-4 text-sm font-semibold text-zinc-800 dark:text-zinc-200">Weekly volume targets</h2>
+      <Card title="Weekly volume targets">
         <div className="grid gap-5 sm:grid-cols-2">
           <Field
             label="Loading week: minimum hours"
@@ -179,11 +179,10 @@ export default function BlockSettingsForm() {
             />
           </Field>
         </div>
-      </section>
+      </Card>
 
       {/* Weekly structure */}
-      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-        <h2 className="mb-4 text-sm font-semibold text-zinc-800 dark:text-zinc-200">Weekly structure</h2>
+      <Card title="Weekly structure">
         <div className="grid gap-5 sm:grid-cols-2">
           <Field
             label="Quality sessions per loading week"
@@ -220,11 +219,10 @@ export default function BlockSettingsForm() {
             />
           </Field>
         </div>
-      </section>
+      </Card>
 
       {/* Training philosophy */}
-      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-        <h2 className="mb-4 text-sm font-semibold text-zinc-800 dark:text-zinc-200">Training philosophy</h2>
+      <Card title="Training philosophy">
         <Field
           label="Approach"
           hint="Polarised keeps easy days very easy and hard days very hard. Sweet spot mixes in 88–93% FTP work."
@@ -255,11 +253,10 @@ export default function BlockSettingsForm() {
             ))}
           </div>
         </Field>
-      </section>
+      </Card>
 
       {/* Platform behavior */}
-      <section className="rounded-lg border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-        <h2 className="mb-1 text-sm font-semibold text-zinc-800 dark:text-zinc-200">Platform behavior</h2>
+      <Card title="Platform behavior">
         <p className="mb-3 text-xs text-zinc-400 dark:text-zinc-500">How Nodevelo handles syncing and write-back.</p>
         <div className="space-y-2">
           <ToggleRow
@@ -275,7 +272,7 @@ export default function BlockSettingsForm() {
             onChange={(v) => set("autoPostCoachNote", v)}
           />
         </div>
-      </section>
+      </Card>
 
       {/* Save */}
       <div className="flex items-center gap-3">

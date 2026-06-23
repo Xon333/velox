@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Card } from "./ui";
 
 // Disaster-recovery UI: export the whole local store (data/ + knowledge-base/) as one JSON file,
 // or restore from one. Restore is destructive, so it's gated behind a confirm and a reload.
@@ -40,9 +41,8 @@ export default function BackupRestore() {
   }
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-      <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Backup &amp; restore</h2>
-      <p className="mt-1 text-sm text-zinc-500">
+    <Card title="Backup & restore">
+      <p className="text-sm text-zinc-500">
         Your training data and knowledge base live only on this machine. Export a snapshot you can
         re-import after a reset or a move to a new machine.
       </p>
@@ -79,6 +79,6 @@ export default function BackupRestore() {
           {status.msg}
         </p>
       )}
-    </div>
+    </Card>
   );
 }

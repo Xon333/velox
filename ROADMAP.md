@@ -109,6 +109,22 @@ could fire. What's left:
 
 ---
 
+## Tooling & workflow (operating decision — UI refinement program)
+
+The UI refinement program (consistency → density/IA → hybrid transparency) runs with a **broad
+design-tooling adoption**, kept reversible so the unique cyberpunk identity is never homogenised.
+- **Source-of-truth rule:** [`DESIGN.md`](DESIGN.md) is canonical. External kits *propose*; DESIGN.md
+  *disposes* — any token/aesthetic suggestion that conflicts is rejected. Adoption is **workflow-level
+  only** (Claude skills / plugins / MCPs); **no new app runtime dependencies**, so reverting is
+  config-only with zero code impact.
+- **Broad set (active):** design-idea kits (`awesome-claude-design` families + anti-slop kit, UI/UX
+  Pro Max, a Tailwind-v4 dark kit) for ideation; a browser-verify MCP (Chrome DevTools / Playwright);
+  Addy Osmani `web-quality-skills` (a11y / Core Web Vitals).
+- **Selective fallback (reserve):** browser-verify MCP + the a11y/quality skill **only**. **Revert
+  trigger:** on request → drop the idea-kits from config; the app does not change.
+
+---
+
 ## Larger / scoped (when wanted)
 
 - **6a · Event-aware race planning** ⭐ — structured event (date / A-B-C priority / type) → taper +

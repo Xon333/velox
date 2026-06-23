@@ -139,8 +139,8 @@ export function TodayRideCard({
     <>
       {!bare && (
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Today&apos;s ride</h2>
-          <span className="text-xs text-zinc-400 dark:text-zinc-500">{analysis.activityDate}</span>
+          <h2 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Today&apos;s ride</h2>
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{analysis.activityDate}</span>
         </div>
       )}
 
@@ -257,8 +257,16 @@ export function TodayRideCard({
           power/HR trace, and power time-in-zone. There is no separate HR zone bar;
           HR comparison lives in the trace overlay (decoupling = the gap widening). */}
       {(analysis.powerZoneTimes || analysis.trace || (analysis.intervalComparison && analysis.intervalComparison.reps.length > 0)) && (
-        <div className="mt-3 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Power execution</p>
+        <details className="mt-3">
+          <summary className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            Power execution
+            {analysis.intervalComparison && analysis.intervalComparison.reps.length > 0 && (
+              <span className="ml-1.5 font-mono text-[11px] font-normal normal-case text-zinc-500 dark:text-zinc-400">
+                {analysis.intervalComparison.completed}/{analysis.intervalComparison.total} · {analysis.intervalComparison.effectiveAdherencePct}%
+              </span>
+            )}
+          </summary>
+          <div className="mt-2 space-y-2">
 
           {analysis.intervalComparison && analysis.intervalComparison.reps.length > 0 && (
             <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900">
@@ -342,7 +350,8 @@ export function TodayRideCard({
           )}
 
           {analysis.powerZoneTimes && <ZoneBars times={analysis.powerZoneTimes} label="Time in power zones" />}
-        </div>
+          </div>
+        </details>
       )}
 
       {/* Advised daily intake */}
@@ -387,7 +396,7 @@ export function TodayRideCard({
   );
   if (bare) return body;
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-700 dark:bg-zinc-800">
+    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
       {body}
     </section>
   );
