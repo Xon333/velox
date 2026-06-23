@@ -302,9 +302,11 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
               )}
             </Zone>
 
-            {/* Trend pulse fixed; coach note fills the rest of the column and scrolls,
-                so its bottom border lands at the page bottom (never clipped). */}
-            <div className="flex flex-col gap-3 lg:min-h-0">
+            {/* Trend pulse + coach note stack in this column; the column itself scrolls when the
+                two together exceed the locked viewport height. (Previously the coach note used `fill`
+                — flex-1 + internal scroll — which collapsed to 0px height whenever Trend pulse consumed
+                the column, hiding the note entirely. Column-level scroll keeps the note reachable.) */}
+            <div className="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto">
               <Zone rank={3} title="Trend pulse — am I improving?" hint="opens Trends">
                 <TrendPulse vertical />
                 {/* Coach-accuracy: validation-loop self-assessment. Hidden until the 28-day horizon
@@ -334,7 +336,7 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
                   )}
               </Zone>
               {state.todayAnalysis?.activityDate === todayIso() && state.todayAnalysis.coachNote ? (
-                <Zone title="Coach note" hero accent="pink" fill>
+                <Zone title="Coach note" hero accent="pink">
                   <p className="text-xs leading-5 text-zinc-600 dark:text-zinc-300">{state.todayAnalysis.coachNote}</p>
                   {state.anthropicConfigured && (
                     <button

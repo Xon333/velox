@@ -16,12 +16,6 @@ P2 high-value UX/feature · P3 polish/education · Type: `bug` `ux` `feat` `audi
 
 From the 2026-06-23 sync triage (the activity field-mapping fix shipped — see [ARCHIVE.md](ARCHIVE.md)):
 
-- ☐ **SYNC-1 · Coach note not rendering** · P2 · `bug`/`ux` (UI lane) — the note IS generated and
-  persisted (`today-analysis.json` has `coachNote`, `activityDate` = today) and the GET returns it, yet
-  the Today view doesn't show it even after a full reload. So it's a client render/layout bug, not data —
-  likely around the coach-note `Zone` ([components/Dashboard.tsx](components/Dashboard.tsx) ~L336) vs the
-  `TodayRideCard` path ([components/dashboard/today.tsx](components/dashboard/today.tsx) ~L378). Needs
-  runtime inspection of the running app to pin which path renders + why it's hidden/empty.
 - ☐ **SYNC-2 · Ledger rebuild after the NP/decoupling mapping fix** · P1 · `data` — the field-mapping fix
   corrects *future* syncs, but historical `score-log.json` entries are frozen with execution scores + IF
   computed off the old null NP (IF fell back to raw avg) and null decoupling. A one-time rebuild

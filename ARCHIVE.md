@@ -182,6 +182,17 @@ signal stamped against it. Two commits; tests grew to 474.
   `productiveOverload`/`balanced` edges (no honest execution outcome) and the morning-check strain edge
   (needs `motivation` stamped — the ledger freezes only fatigue/sleep/soreness).
 
+### Coach-note render collapse fix (SYNC-1, 2026-06-23 triage)
+
+The Today coach note was generated, persisted, and returned by GET (correct `activityDate` + `coachNote`)
+but rendered invisibly: its `fill` Zone (`flex-1 min-h-0 overflow-y-auto` body) collapsed to **0px**
+(`clientHeight 0`, `scrollHeight 333`) whenever the Trend-pulse sibling consumed the viewport-locked
+right column. Confirmed with a headless-Chromium measurement against the live app. Fix
+([components/Dashboard.tsx](components/Dashboard.tsx)): drop `fill` from the coach-note Zone (size to
+content) and make the right column itself scroll (`lg:overflow-y-auto`) — the note now has real height
+(section 28px → 385px) and is reachable. Verified before/after via Playwright + screenshot. (Further
+above-the-fold density tuning stays the UI lane's page-density item.)
+
 ### Activity power-field mapping fix (P1 data integrity, 2026-06-23 triage)
 
 `fetchActivities` read NP/decoupling/max from keys intervals.icu never returns, so they were `null` on
