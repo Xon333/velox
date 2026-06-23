@@ -5,7 +5,8 @@
 // pretend to). Pure + deterministic + defensive — every output is clamped to a sane range.
 
 import type { CalibratedParameter, CalibrationStore, RideScoreEntry, WorkoutType } from "./types";
-import { clamp, median } from "./stats";
+import { clamp } from "./stats";
+import { deriveExecutionEdge, type ExecutionEdgeSpec } from "./correlation";
 
 export interface AcwrBands {
   optimalLow: number; // below this = under-reaching ("low")
@@ -225,7 +226,7 @@ export function isAthleteStateWeightsOverridden(override?: DeepPartial<AthleteSt
 // targets, so its score must not enter this regression. Legacy + compromised excluded (must not teach the
 // model). Provenance comes from the immutable ledger, so this re-derives deterministically each read.
 
-const TSB_QUALITY_TYPES = new Set<string>(["Threshold", "VO2max", "SIT", "RaceSim"]);
+const TSB_QUALITY_TYPES = new Set<WorkoutType>(["Threshold", "VO2max", "SIT", "RaceSim"]);
 const TSB_UNDER_BAR = 4; // quality executionScore ≤ this = under-executed
 const TSB_GOOD_BAR = 6; // executionScore ≥ this = nailed it
 const TSB_DISCRIMINATION_MARGIN = 4; // failures must sit ≥ this many TSB points deeper than successes
@@ -242,40 +243,22 @@ function tsbDeepFatigueConfidence(nUnder: number, nGood: number): CalibratedPara
   return "high";
 }
 
+// The deep-fatigue edge is now the first consumer of the shared correlation engine (lib/correlation.ts):
+// the form level (low TSB) at which quality execution falls apart. Behaviour is unchanged — this is the
+// same guarded regression, expressed as a spec so the next signals (strain, carbs) reuse the derivation.
+const TSB_DEEP_FATIGUE_SPEC: ExecutionEdgeSpec = {
+  types: TSB_QUALITY_TYPES,
+  signal: (e) => e.formState?.tsb ?? null,
+  underBar: TSB_UNDER_BAR,
+  goodBar: TSB_GOOD_BAR,
+  failureSide: "lower", // deep fatigue = low TSB
+  discriminationMargin: TSB_DISCRIMINATION_MARGIN,
+  clampTo: [TSB_DEEP_MIN, TSB_DEEP_MAX],
+  confidence: tsbDeepFatigueConfidence,
+};
+
 export function deriveTsbDeepFatigue(entries: RideScoreEntry[]): CalibratedParameter {
-  const now = new Date().toISOString();
-  const quality = entries.filter(
-    (e) =>
-      e.planned && // prescribed sessions only — off-plan rides are scored on a different axis
-      !e.legacy &&
-      !e.compromised &&
-      e.formState != null &&
-      Number.isFinite(e.formState.tsb) &&
-      e.plannedType != null &&
-      TSB_QUALITY_TYPES.has(e.plannedType)
-  );
-  const under = quality.filter((e) => e.executionScore <= TSB_UNDER_BAR).map((e) => e.formState!.tsb);
-  const good = quality.filter((e) => e.executionScore >= TSB_GOOD_BAR).map((e) => e.formState!.tsb);
-  const n = under.length;
-  // Need both failures to learn from AND successes to contrast against — without contrast (e.g. an
-  // athlete who under-executes ALL quality work, for fatigue or otherwise) we'd be calibrating to where
-  // they train, not where they adapt, which is the whole trap. No contrast → stay on the default.
-  if (n === 0 || good.length === 0) return { ...defaultParameter(), dataPoints: n, lastUpdated: now };
-  const medUnder = median(under);
-  // Guard 2: the failures must sit at meaningfully deeper TSB than the successes, else fatigue isn't the
-  // driver — don't pretend to derive a fatigue edge from it.
-  if (medUnder >= median(good) - TSB_DISCRIMINATION_MARGIN) {
-    return { ...defaultParameter(), dataPoints: n, lastUpdated: now };
-  }
-  return {
-    value: clamp(medUnder, TSB_DEEP_MIN, TSB_DEEP_MAX),
-    source: "derived",
-    confidence: tsbDeepFatigueConfidence(n, good.length),
-    dataPoints: n,
-    lastUpdated: now,
-    locked: false, // keep re-deriving as the rolling ledger window evolves
-    manualOverride: null,
-  };
+  return deriveExecutionEdge(entries, TSB_DEEP_FATIGUE_SPEC);
 }
 
 // The effective TSB-edge override to feed resolveTsbModifierEdges. Precedence is **per-edge**: a manual
