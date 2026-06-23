@@ -14,18 +14,9 @@ P2 high-value UX/feature · P3 polish/education · Type: `bug` `ux` `feat` `audi
 
 ## Open
 
-From the 2026-06-23 sync triage (the activity field-mapping fix shipped — see [ARCHIVE.md](ARCHIVE.md)):
-
-- ☐ **SYNC-2 · Ledger rebuild after the NP/decoupling mapping fix** · P1 · `data` — the field-mapping fix
-  corrects *future* syncs, but historical `score-log.json` entries are frozen with execution scores + IF
-  computed off the old null NP (IF fell back to raw avg) and null decoupling. A one-time rebuild
-  (re-derive past entries from `last-sync` activities with corrected fields) is needed so the calibration
-  ledger (decoupling baseline, TSB edge) doesn't keep training on corrupted past values. Check
-  `mergeScoreLog` freeze-vs-recompute behaviour first.
-- ☑ **SYNC-3 · "Power PRs didn't appear" — NOT a bug** (verified, no action) — fetched the live
-  intervals.icu `all` + `84d` power curves; both match the stored curve and the 2026-06-23 VO2 ride beat
-  no standard duration (5min best stays 339 W), so `powerPRs: []` is correct. _Possible future feat_ (not
-  filed): surface near-PRs / sub-5min durations, since rep 1 (~385 W/4min) isn't a checked duration.
+_Empty — the 2026-06-23 sync triage is cleared: SYNC-1 (coach-note render) + the NP/decoupling
+field-mapping fix + SYNC-2 (one-time ledger rebuild) all shipped; SYNC-3 (power PRs) was verified
+not-a-bug. Records in [ARCHIVE.md](ARCHIVE.md). No incoming bugs queued._
 
 Add new bugs/feedback here as they come in; strategy → [ROADMAP.md](ROADMAP.md).
 

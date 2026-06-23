@@ -182,6 +182,19 @@ signal stamped against it. Two commits; tests grew to 474.
   `productiveOverload`/`balanced` edges (no honest execution outcome) and the morning-check strain edge
   (needs `motivation` stamped — the ledger freezes only fatigue/sleep/soreness).
 
+### One-time ledger rebuild after the mapping fix (SYNC-2, 2026-06-23 triage)
+
+The field-mapping fix corrected future syncs, but `mergeScoreLog` freezes past dates (existing-wins),
+so 108 historical entries kept execution scores + IF computed off the old null NP (IF fell back to raw
+avg). Added an opt-in `rebuildLedger` flag to POST `/api/sync`: when set, the score-log step merges
+**fresh-wins** (recomputed entries override existing) instead of the normal freeze, re-scoring every date
+inside the 182-day activity window from corrected activities while preserving anything outside it. Off by
+default (normal sync stays immutable per date); reuses the entire build pipeline (ftpForDate / resolvedCal
+/ contextForDate / backfill / dispositions) so there's no divergence. Ran once + verified: entries with
+IF<0.70 dropped 72→39, and e.g. the 2026-06-18 **SIT** session went IF 0.63→0.86 / exec 2→8 (it was
+wrongly scored as failed purely from the understated IF). Backups: json-store `.bak` + an explicit
+`score-log.json.pre-rebuild-*.bak`. (Entries that stayed low are genuinely NP-less rides.)
+
 ### Coach-note render collapse fix (SYNC-1, 2026-06-23 triage)
 
 The Today coach note was generated, persisted, and returned by GET (correct `activityDate` + `coachNote`)
