@@ -262,6 +262,30 @@ describe("mergeScoreLogRebuild (SYNC-2, LEDGER-1)", () => {
     expect(e?.plannedType).toBe("Threshold");
   });
 
+  it("carries forward frozen context (formState/morningCheck) the re-score can't reconstruct (LEDGER-2)", () => {
+    // The wellness/morning-check window is shorter than the activity window, so a rebuilt fresh entry for
+    // an old date has no context. The original stamp must survive — it's the correlation engine's input.
+    const existing = [mk("2026-01-03", { planned: false, plannedType: null, formState: { tsb: -12, ctl: 50, atl: 62 }, morningCheck: { fatigue: 3, sleep: 4, soreness: 2 } })];
+    const fresh = [mk("2026-01-03", { planned: false, plannedType: null, executionScore: 8 })]; // re-scored, no context
+    const e = mergeScoreLogRebuild(fresh, existing).find((x) => x.date === "2026-01-03");
+    expect(e?.executionScore).toBe(8); // fresh re-score still wins
+    expect(e?.formState).toEqual({ tsb: -12, ctl: 50, atl: 62 }); // provenance preserved
+    expect(e?.morningCheck).toEqual({ fatigue: 3, sleep: 4, soreness: 2 });
+  });
+
+  it("does not overwrite a fresh context stamp with the old one", () => {
+    const existing = [mk("2026-01-03", { formState: { tsb: -12, ctl: 50, atl: 62 } })];
+    const fresh = [mk("2026-01-03", { formState: { tsb: -5, ctl: 55, atl: 60 } })];
+    const e = mergeScoreLogRebuild(fresh, existing).find((x) => x.date === "2026-01-03");
+    expect(e?.formState).toEqual({ tsb: -5, ctl: 55, atl: 60 }); // fresh wins when it has its own
+  });
+
+  it("leaves a context-free entry context-free (no undefined keys introduced)", () => {
+    const e = mergeScoreLogRebuild([mk("2026-01-03")], [mk("2026-01-03")]).find((x) => x.date === "2026-01-03")!;
+    expect("formState" in e).toBe(false);
+    expect("morningCheck" in e).toBe(false);
+  });
+
   it("adds brand-new dates from fresh and keeps the log date-sorted", () => {
     const merged = mergeScoreLogRebuild([mk("2026-01-03"), mk("2026-01-02")], [mk("2026-01-01")]);
     expect(merged.map((e) => e.date)).toEqual(["2026-01-01", "2026-01-02", "2026-01-03"]);

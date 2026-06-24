@@ -199,10 +199,27 @@ export function mergeScoreLogRebuild(fresh: RideScoreEntry[], existing: RideScor
   for (const e of existing) byDate.set(e.date, e);
   for (const f of fresh) {
     const prev = byDate.get(f.date);
-    if (prev?.planned && !f.planned) continue; // a rebuild can't un-plan a frozen entry
-    byDate.set(f.date, f);
+    if (prev?.planned && !f.planned) continue; // LEDGER-1: a rebuild can't un-plan a frozen entry
+    byDate.set(f.date, carryForwardContext(f, prev)); // LEDGER-2: keep frozen provenance the re-score lacks
   }
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-MAX_ENTRIES);
+}
+
+// LEDGER-2: a rebuild re-scores from corrected activity data, but the frozen context provenance
+// (formState/morningCheck — stamped when the wellness/morning-check window still covered the date) can't
+// always be reconstructed: the wellness window is shorter than the activity window. Carry forward any
+// stamp the fresh entry lacks so a rebuild never silently deletes a correlation-engine data point. A
+// fresh stamp always wins when present; a context-free entry stays context-free (no undefined keys).
+function carryForwardContext(fresh: RideScoreEntry, prev: RideScoreEntry | undefined): RideScoreEntry {
+  if (!prev) return fresh;
+  const formState = fresh.formState ?? prev.formState;
+  const morningCheck = fresh.morningCheck ?? prev.morningCheck;
+  if (formState === fresh.formState && morningCheck === fresh.morningCheck) return fresh; // nothing to carry
+  return {
+    ...fresh,
+    ...(formState !== undefined ? { formState } : {}),
+    ...(morningCheck !== undefined ? { morningCheck } : {}),
+  };
 }
 
 // Complete-riding-behaviour signal from ALL logged rides (planned + off-plan).
