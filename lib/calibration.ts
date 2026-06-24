@@ -363,6 +363,12 @@ export function emptyCalibration(): CalibrationStore {
 // rider who gets fitter across a season drifts less, and a value latched in March must not govern
 // December scoring. The rolling window + the sample-size confidence gate (medium+ to take effect) are
 // what guard against chasing noise; a permanent lock would defeat the whole point of calibrating.
+// Sanity band the decoupling-good cutoff must stay within. The derived value (below), a manual override
+// (app/api/calibration/route.ts), and the CalibrationPanel input all clamp/validate against this one
+// constant so they can't drift apart (CAL-4): below ~2.5% even strong aerobic riders rarely sit, above
+// ~8% a "good" cutoff is meaningless.
+export const DECOUPLING_GOOD_BOUNDS = { min: 2.5, max: 8 } as const;
+
 export function deriveDecouplingGood(
   prior: CalibratedParameter | undefined | null,
   avgDecoupling90d: number | null,
@@ -380,7 +386,7 @@ export function deriveDecouplingGood(
     return { ...defaultParameter(), manualOverride, lastUpdated: now };
   }
   return {
-    value: clamp(avgDecoupling90d, 2.5, 8), // sanity-bounded so one weird window can't produce a silly cutoff
+    value: clamp(avgDecoupling90d, DECOUPLING_GOOD_BOUNDS.min, DECOUPLING_GOOD_BOUNDS.max), // sanity-bounded so one weird window can't produce a silly cutoff
     source: "derived",
     confidence: confidenceFromN(n),
     dataPoints: n,

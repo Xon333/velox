@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSync } from "./SyncProvider";
 import { Card } from "./ui";
 import { api } from "@/lib/client-api";
-import { resolveCalibratedValue } from "@/lib/calibration";
+import { DECOUPLING_GOOD_BOUNDS, resolveCalibratedValue } from "@/lib/calibration";
 import { DEFAULT_DECOUPLING_GOOD } from "@/lib/execution-score";
 import type { CalibratedParameter, CalibrationStore } from "@/lib/types";
 
@@ -59,8 +59,10 @@ export default function CalibrationPanel() {
 
   const submit = () => {
     const v = parseFloat(draft);
-    if (!Number.isFinite(v)) {
-      setError("Enter a number between 2.5 and 8.");
+    // Validate the range here (UI-2) — not just finiteness — so an out-of-range entry shows the error
+    // instead of being silently clamped server-side to a value the athlete didn't type.
+    if (!Number.isFinite(v) || v < DECOUPLING_GOOD_BOUNDS.min || v > DECOUPLING_GOOD_BOUNDS.max) {
+      setError(`Enter a number between ${DECOUPLING_GOOD_BOUNDS.min} and ${DECOUPLING_GOOD_BOUNDS.max}.`);
       return;
     }
     void save(v);
@@ -96,14 +98,14 @@ export default function CalibrationPanel() {
                 <input
                   type="number"
                   step="0.1"
-                  min={2.5}
-                  max={8}
+                  min={DECOUPLING_GOOD_BOUNDS.min}
+                  max={DECOUPLING_GOOD_BOUNDS.max}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   aria-label="Decoupling good cutoff override (%)"
                   className="w-20 rounded border border-zinc-300 px-2 py-1 font-mono text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:focus:border-zinc-400"
                 />
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">% · 2.5–8</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">% · {DECOUPLING_GOOD_BOUNDS.min}–{DECOUPLING_GOOD_BOUNDS.max}</span>
                 <button
                   onClick={submit}
                   disabled={saving}

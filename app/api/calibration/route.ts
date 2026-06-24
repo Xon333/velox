@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { readCalibration, updateCalibration } from "@/lib/data-store";
+import { DECOUPLING_GOOD_BOUNDS } from "@/lib/calibration";
 import { clamp } from "@/lib/stats";
 
 // Contest/correct for the Model page (ROADMAP #2): set or clear a manual override on a calibrated
 // scoring parameter. Only `decouplingGood` is a learned CalibratedParameter today; its override must
-// stay inside the same sane band deriveDecouplingGood clamps the derived value to, so a bad value
-// can't distort scoring. The next sync preserves the override (deriveDecouplingGood reads prior.manualOverride).
-const DECOUPLING_BOUNDS = { min: 2.5, max: 8 };
+// stay inside the same sane band deriveDecouplingGood clamps the derived value to (the shared
+// DECOUPLING_GOOD_BOUNDS, CAL-4), so a bad value can't distort scoring. The next sync preserves the
+// override (deriveDecouplingGood reads prior.manualOverride).
 
 export async function GET() {
   return NextResponse.json({ calibration: await readCalibration() });
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
   if (raw === null) {
     manualOverride = null;
   } else if (typeof raw === "number" && Number.isFinite(raw)) {
-    manualOverride = clamp(raw, DECOUPLING_BOUNDS.min, DECOUPLING_BOUNDS.max);
+    manualOverride = clamp(raw, DECOUPLING_GOOD_BOUNDS.min, DECOUPLING_GOOD_BOUNDS.max);
   } else {
     return NextResponse.json({ error: "manualOverride must be a number or null." }, { status: 400 });
   }

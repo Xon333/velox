@@ -77,16 +77,15 @@ verified against source. Act top-down; P1 = data-integrity, fix first.
 - ☐ P3 `audit` **A11Y-1** — the "AA pass" is a manual 24-file idiom swap; 27 bare `text-zinc-400` labels
   (no `dark:` sibling) still render sub-AA in light mode, and nothing enforces it. _[globals.css:47](app/globals.css:47)._
   → add a `--muted` semantic token + a `detect.mjs` rule flagging `text-zinc-400` without a `dark:` pair.
-- ☐ P3 `bug` **A11Y-2** — driver-effect neutral arm is bare `text-zinc-400` (no `dark:`), violating DESIGN.md
-  §7 Dual-theme; the a11y commit fixed the adjacent red arm and left this in both
-  [StateDriversCard.tsx:58](components/StateDriversCard.tsx:58) and [AthleteStateCard.tsx:65](components/AthleteStateCard.tsx:65).
-- ☐ P3 `ux` **UI-1** — `StateDriversCard` re-implements `AthleteStateCard`'s band-color table + driver-effect
-  render (already drifted — see A11Y-2). _[StateDriversCard.tsx](components/StateDriversCard.tsx)._ → extract
-  one shared renderer.
-- ☐ P3 `bug` **CAL-4** — `DECOUPLING_BOUNDS {2.5,8}` is a hand-copy of the clamp in `deriveDecouplingGood`,
-  linked only by a comment. _[calibration/route.ts:7](app/api/calibration/route.ts)._ → share one constant.
-- ☐ P3 `ux` **UI-2** — `CalibrationPanel.submit` validates only `Number.isFinite`, not the 2.5–8 range its
-  error text promises; out-of-range input is posted then silently server-clamped. _[CalibrationPanel.tsx:61](components/CalibrationPanel.tsx:61)._
+- ☑ P3 `bug` **A11Y-2** + `ux` **UI-1** — fixed together: extracted `BAND_COLOR`/`DIR`/`driverEffectClass`
+  into [athlete-state-ui.tsx](components/athlete-state-ui.tsx); both StateDriversCard and AthleteStateCard
+  import it, so the duplicated band/effect logic (which drifted and left the bare-`text-zinc-400` neutral
+  arm in two places) is gone and the neutral arm is now `text-zinc-500 dark:text-zinc-400` (AA) in one place.
+- ☑ P3 `bug` **CAL-4** — exported `DECOUPLING_GOOD_BOUNDS` from [calibration.ts](lib/calibration.ts);
+  `deriveDecouplingGood`, the calibration route, and the CalibrationPanel input/validation all share it.
+- ☑ P3 `ux` **UI-2** — `CalibrationPanel.submit` now validates the `DECOUPLING_GOOD_BOUNDS` range, not just
+  finiteness, so an out-of-range entry shows the error instead of being silently server-clamped.
+  _[CalibrationPanel.tsx](components/CalibrationPanel.tsx)._
 
 _Prior 2026-06-23 sync triage (SYNC-1, NP/decoupling map, SYNC-2, SYNC-3) shipped/closed → [ARCHIVE.md](ARCHIVE.md).
 Note: this sweep found LEDGER-1/2/3 are regressions in SYNC-2 itself._
