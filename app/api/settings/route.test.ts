@@ -51,12 +51,20 @@ describe("PUT /api/settings — calibration override persistence (SET-1)", () =>
   });
 
   it("preserves an existing athleteStateWeights override across an unrelated PUT (no wipe)", async () => {
-    // SET-1 preserves an existing override so a save can't erase it; accepting NEW ones (with a clamp)
-    // is deferred to CAL-1, since resolveAthleteStateWeights does not yet bound its values.
     const w = { BASE: 60, tsb: { scale: 0.5 } };
     readMock().mockResolvedValue(base({ athleteStateWeights: w }));
     await put({ restDaysPerWeek: 2 });
     expect(lastWritten().athleteStateWeights).toEqual(w);
+  });
+
+  it("accepts a new athleteStateWeights override, clamped via the resolver (CAL-1)", async () => {
+    readMock().mockResolvedValue(base());
+    // The disable-the-safety-cap attack: scoreCap 100 / livedThreshold 99 must be clamped on the way in.
+    await put({ athleteStateWeights: { override: { scoreCap: 100, livedThreshold: 99 } } });
+    const w = lastWritten().athleteStateWeights!;
+    expect(w.override!.scoreCap).toBe(70);
+    expect(w.override!.livedThreshold).toBe(3);
+    expect(w.BASE).toBe(60); // untouched leaves fall to population default
   });
 
   it("does not invent override fields when neither the body nor current settings carry them", async () => {

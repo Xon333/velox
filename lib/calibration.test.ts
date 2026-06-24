@@ -186,6 +186,33 @@ describe("resolveAthleteStateWeights (ROADMAP §5 — fusion weights)", () => {
     resolveAthleteStateWeights({ tsb: { scale: 9 } });
     expect(DEFAULT_ATHLETE_STATE_WEIGHTS.tsb.scale).toBe(0.6);
   });
+
+  it("clamps every leaf to a sane range (CAL-1)", () => {
+    const w = resolveAthleteStateWeights({ BASE: 999, tsb: { scale: -5, cap: 999 }, behaviour: { effect: 50 } });
+    expect(w.BASE).toBe(80); // [40, 80]
+    expect(w.tsb.scale).toBe(0); // [0, 3] — a negative scale would invert TSB polarity
+    expect(w.tsb.cap).toBe(40); // [0, 40]
+    expect(w.behaviour.effect).toBe(0); // [-20, 0] — stays a penalty, never a bonus
+  });
+
+  it("keeps the lived-fatigue safety cap real: scoreCap stays below 'primed' and livedThreshold stays reachable (CAL-1)", () => {
+    // The review attack: { scoreCap: 100, livedThreshold: 99 } silently disables the corroborated-fatigue cap.
+    const w = resolveAthleteStateWeights({ override: { scoreCap: 100, livedThreshold: 99 } });
+    expect(w.override.scoreCap).toBe(70); // ≤ 70 → can't land a wrecked athlete in the 80+ "primed/push" band
+    expect(w.override.livedThreshold).toBe(3); // only 3 lived signals exist (exec/decoupling/rpe) — must stay ≤ 3
+  });
+
+  it("enforces fresh > deep on the TSB direction edges so an override can't invert them (CAL-1)", () => {
+    const w = resolveAthleteStateWeights({ tsb: { freshAbove: -10, deepBelow: 8 } });
+    expect(w.tsb.deepBelow).toBeLessThanOrEqual(0);
+    expect(w.tsb.freshAbove).toBeGreaterThan(w.tsb.deepBelow);
+  });
+
+  it("keeps ACWR level effects from flipping sign at the extremes (CAL-1)", () => {
+    const w = resolveAthleteStateWeights({ acwr: { danger: 50, optimal: -50 } });
+    expect(w.acwr.danger).toBeLessThanOrEqual(0); // danger is a penalty, never a boost
+    expect(w.acwr.optimal).toBeGreaterThanOrEqual(0); // optimal is a boost, never a penalty
+  });
 });
 
 describe("isAthleteStateWeightsOverridden", () => {

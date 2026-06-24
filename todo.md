@@ -27,13 +27,11 @@ verified against source. Act top-down; P1 = data-integrity, fix first.
   `mergeScoreLogRebuild` guarantees a rebuild never downgrades a frozen `planned` entry to off-plan; wired
   into the rebuild branch. Off-plan/current-block/new dates still re-score. 6 tests added.
   _[score-log.ts](lib/score-log.ts) · [sync/route.ts:267](app/api/sync/route.ts:267)._
-- ◑ P1 `bug` **SET-1** — settings PUT silently dropped `strainBands` / `durabilityInsertEnvelope` /
+- ☑ P1 `bug` **SET-1** — settings PUT silently dropped `strainBands` / `durabilityInsertEnvelope` /
   `athleteStateWeights` (rebuilt `updated`, only re-attached `acwrBands` + `tsbModifierEdges`; full-overwrite
-  wiped the rest every save). **Fix:** `strainBands` + `durabilityInsertEnvelope` now accept+clamp via their
-  resolvers (and preserve-when-omitted); `athleteStateWeights` is now **preserved** (no wipe) but NEW values
-  are still **not accepted** — its resolver doesn't clamp, so accept+clamp is deferred to CAL-1. 5 route
-  tests added. _[settings/route.ts](app/api/settings/route.ts)._
-  → **CAL-1 must also add the `isAthleteStateWeightsOverridden` accept block here** once the resolver clamps.
+  wiped the rest every save). **Fix:** all three now accept+clamp via their resolvers and preserve-when-omitted
+  — `strainBands` + `durabilityInsertEnvelope` in SET-1, `athleteStateWeights` accept block added with CAL-1
+  once its resolver clamped. 6 route tests. _[settings/route.ts](app/api/settings/route.ts)._
 - ☐ P1 `bug` **LEDGER-2** — SYNC-2 rebuild drops frozen `formState`/`morningCheck` provenance for rides
   older than the fresh wellness window. `contextForDate` resolves only from `lastSync.wellness`; `fresh`
   wins with `formState:undefined`, deleting correlation-engine data points permanently.
@@ -42,12 +40,14 @@ verified against source. Act top-down; P1 = data-integrity, fix first.
 - ☐ P1 `audit` **LEDGER-3** — `rebuildLedger` is an unauthenticated destructive boolean on the hot sync
   route, no auth, no one-shot guard. _[sync/route.ts:158](app/api/sync/route.ts:158)._ → move to a dedicated
   run-once migration that refuses to re-run; remove the flag from the sync handler.
-- ☐ P1 `bug` **CAL-1** — `resolveAthleteStateWeights` is the only resolver with no clamp/ordering (delegates
-  to bare `mergeNumericLeaves`); an extreme override disables the lived-fatigue safety cap at
-  [athlete-state.ts:122](lib/athlete-state.ts:122). Latent today (gated by SET-1) — becomes live the moment
-  persistence lands. _[calibration.ts:203](lib/calibration.ts:203)._ → clamp + order-enforce like the siblings
-  (ideally via CAL-2), THEN add the `isAthleteStateWeightsOverridden` accept block to settings PUT (SET-1
-  preserves existing values but defers accepting new ones to here).
+- ☑ P1 `bug` **CAL-1** — `resolveAthleteStateWeights` was the only resolver with no clamp/ordering, so an
+  extreme override could disable the lived-fatigue safety cap at [athlete-state.ts:122](lib/athlete-state.ts:122).
+  **Fix:** a per-leaf `ATHLETE_STATE_WEIGHT_BOUNDS` spec + `clampLeaves` walker bounds every leaf; key
+  safety invariants — `override.scoreCap` ≤70 (stays below the 80+ "primed" band) and `override.livedThreshold`
+  ≤3 (only 3 lived signals exist, so the cap stays reachable); scales pinned ≥0 and ACWR optimal/danger
+  sign-locked so polarity can't invert; `tsb.freshAbove` order-enforced above `deepBelow`. Resolver is the
+  single chokepoint (sync + coach-snapshot both route through it). Settings PUT now accepts the override.
+  5 tests added. _[calibration.ts:238](lib/calibration.ts:238)._ Deeper schema-driven unification = CAL-2.
 
 ### P2 — correctness, lower urgency / latent
 

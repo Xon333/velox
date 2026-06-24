@@ -182,9 +182,26 @@ export const DEFAULT_ATHLETE_STATE_WEIGHTS: AthleteStateWeights = {
 
 export type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
+// Per-leaf [min, max] bounds for the fusion weights — the clamp resolveAthleteStateWeights was missing
+// (CAL-1; every sibling resolver clamps, this one didn't). Mirrors AthleteStateWeights leaf-for-leaf.
+// Ranges are generous (these are tuning knobs, not bands) but tight enough that an override can't invert
+// a signal's polarity (scales stay ≥0; ACWR optimal stays a boost / danger stays a penalty) or — the
+// dangerous one the review caught — neuter the lived-fatigue safety cap: scoreCap stays below the 80+
+// "primed" band so it remains a real ceiling, and livedThreshold stays ≤3 since only three lived signals
+// exist (exec/decoupling/rpe), so a high value could otherwise make the cap unreachable.
+const ATHLETE_STATE_WEIGHT_BOUNDS = {
+  BASE: [40, 80],
+  tsb: { scale: [0, 3], cap: [0, 40], freshAbove: [0, 30], deepBelow: [-40, 0] },
+  acwr: { optimal: [0, 15], low: [-15, 10], high: [-40, 5], danger: [-60, 0] },
+  exec: { mid: [3, 8], perPoint: [0, 12], trend: [0, 12], cap: [0, 30] },
+  decoupling: { perPct: [0, 12], cap: [0, 30], deadband: [0, 5] },
+  rpe: { perPoint: [0, 15], cap: [0, 30], deadband: [0, 3] },
+  behaviour: { highOffPlan: [0, 100], effect: [-20, 0] },
+  override: { livedThreshold: [1, 3], scoreCap: [0, 70] },
+} as const;
+
 // Recursively merge an override's finite numeric leaves onto a default; non-finite or missing values
-// fall back. No ordering constraints — these are free tuning knobs, not bands — so defensiveness is
-// just "ignore garbage and keep the default".
+// fall back. Pure merge — bounding/ordering is the resolver's job (see resolveAthleteStateWeights).
 function mergeNumericLeaves<T>(def: T, ov: unknown): T {
   if (typeof def === "number") {
     return (typeof ov === "number" && Number.isFinite(ov) ? ov : def) as T;
@@ -200,8 +217,30 @@ function mergeNumericLeaves<T>(def: T, ov: unknown): T {
   return def;
 }
 
+// Clamp every numeric leaf of `value` to the matching leaf in `bounds` (same shape). A leaf with no
+// bound is left as-is (defensive — the bounds mirror the weights, so this shouldn't happen).
+function clampLeaves<T>(value: T, bounds: unknown): T {
+  if (typeof value === "number") {
+    if (Array.isArray(bounds)) return clamp(value, bounds[0] as number, bounds[1] as number) as T;
+    return value;
+  }
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    const b = (bounds ?? {}) as Record<string, unknown>;
+    for (const k of Object.keys(value as Record<string, unknown>)) {
+      out[k] = clampLeaves((value as Record<string, unknown>)[k], b[k]);
+    }
+    return out as T;
+  }
+  return value;
+}
+
 export function resolveAthleteStateWeights(override?: DeepPartial<AthleteStateWeights> | null): AthleteStateWeights {
-  return mergeNumericLeaves(DEFAULT_ATHLETE_STATE_WEIGHTS, override ?? undefined);
+  const w = clampLeaves(mergeNumericLeaves(DEFAULT_ATHLETE_STATE_WEIGHTS, override ?? undefined), ATHLETE_STATE_WEIGHT_BOUNDS);
+  // "Fresh" must sit strictly above "deep fatigue" or evalTsb's direction labels invert (a fatigued TSB
+  // would read as fresh). Clamps already pin freshAbove ≥ 0 ≥ deepBelow; nudge if both collapse to 0.
+  if (w.tsb.freshAbove <= w.tsb.deepBelow) w.tsb.freshAbove = w.tsb.deepBelow + 1;
+  return w;
 }
 
 export function isAthleteStateWeightsOverridden(override?: DeepPartial<AthleteStateWeights> | null): boolean {

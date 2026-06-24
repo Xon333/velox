@@ -4,14 +4,18 @@ import type { BlockSettings } from "@/lib/types";
 import { DEFAULT_BLOCK_SETTINGS } from "@/lib/types";
 import {
   isAcwrBandsOverridden,
+  isAthleteStateWeightsOverridden,
   isDurabilityInsertEnvelopeOverridden,
   isStrainBandsOverridden,
   isTsbModifierEdgesOverridden,
   resolveAcwrBands,
+  resolveAthleteStateWeights,
   resolveDurabilityInsertEnvelope,
   resolveStrainBands,
   resolveTsbModifierEdges,
   type AcwrBands,
+  type AthleteStateWeights,
+  type DeepPartial,
   type DurabilityInsertEnvelope,
   type StrainBands,
   type TsbModifierEdges,
@@ -89,11 +93,12 @@ export async function PUT(req: Request) {
     updated.durabilityInsertEnvelope = current.durabilityInsertEnvelope;
   }
 
-  // Athlete-state fusion weights (ROADMAP §5 / #2): PRESERVE an existing override so a save can't wipe it,
-  // but don't accept a NEW one through this route yet — resolveAthleteStateWeights does not clamp (CAL-1),
-  // so persisting arbitrary client values could disable the lived-fatigue safety cap. Accept+clamp lands
-  // with CAL-1.
-  if (current.athleteStateWeights) {
+  // Athlete-state fusion weights (ROADMAP §5 / #2): clamp + order via the resolver when present (safe now
+  // that resolveAthleteStateWeights bounds every leaf — CAL-1), else preserve an existing override, else
+  // leave it on population defaults.
+  if (isAthleteStateWeightsOverridden(b.athleteStateWeights as DeepPartial<AthleteStateWeights> | null)) {
+    updated.athleteStateWeights = resolveAthleteStateWeights(b.athleteStateWeights as DeepPartial<AthleteStateWeights>);
+  } else if (current.athleteStateWeights) {
     updated.athleteStateWeights = current.athleteStateWeights;
   }
 
