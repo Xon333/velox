@@ -11,6 +11,7 @@
 
 import type { BlockSettings, PlannedDay, WorkoutType } from "./types";
 import { carriesEmbeddedIntensity } from "./prescription";
+import { resolveDurabilityInsertEnvelope } from "./calibration";
 
 // The intensity ("hard") sessions: structured quality work that drives adaptation and needs an
 // easy/rest day after it. RaceSim is a peaking/sharpening session (KB §10, whole-session IF
@@ -26,9 +27,11 @@ function isQuality(day: PlannedDay): boolean {
 // A day is "hard" for spacing if it's a quality type OR an otherwise-easy ride carrying a real dose
 // of embedded threshold/VO2 work (a durability template) — so the back-to-back guard isn't blind to
 // intensity hidden inside a Z2 ride. (The quality *budget* below stays type-based: durability
-// complements the budgeted quality work, it doesn't count against it.)
-function isHardDay(day: PlannedDay, ftp: number): boolean {
-  return isQuality(day) || carriesEmbeddedIntensity(day.workoutText, ftp);
+// complements the budgeted quality work, it doesn't count against it.) `embeddedHardPct` is the
+// athlete's resolved durability-envelope floor (CAL-3) — the same value validatePlanProtocol uses, so
+// the two validators agree on what counts as an embedded hard effort.
+function isHardDay(day: PlannedDay, ftp: number, embeddedHardPct: number): boolean {
+  return isQuality(day) || carriesEmbeddedIntensity(day.workoutText, ftp, embeddedHardPct);
 }
 
 function hardLabel(day: PlannedDay): string {
@@ -46,6 +49,9 @@ export function validateSchedule(days: PlannedDay[], settings: BlockSettings, ft
   if (days.length === 0) return [];
   const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));
   const warnings: string[] = [];
+  // The embedded-hard floor, per-athlete: resolve the durability envelope once and reuse it for every
+  // adjacency check, so spacing agrees with validatePlanProtocol on what counts as an embedded effort.
+  const embeddedHardPct = resolveDurabilityInsertEnvelope(settings.durabilityInsertEnvelope).embeddedHardPct;
 
   // (a) Back-to-back hard days: a hard session (quality type, or an endurance ride carrying embedded
   // threshold/VO2 work) on two consecutive calendar dates. Checked by date adjacency (not array
@@ -53,7 +59,7 @@ export function validateSchedule(days: PlannedDay[], settings: BlockSettings, ft
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1];
     const cur = sorted[i];
-    if (isHardDay(prev, ftp) && isHardDay(cur, ftp) && daysBetween(prev.date, cur.date) === 1) {
+    if (isHardDay(prev, ftp, embeddedHardPct) && isHardDay(cur, ftp, embeddedHardPct) && daysBetween(prev.date, cur.date) === 1) {
       warnings.push(
         `SCHEDULE: back-to-back hard days — ${hardLabel(prev)} on ${prev.date} then ${hardLabel(cur)} on ${cur.date}. Put an easy or rest day between hard sessions.`
       );

@@ -58,6 +58,19 @@ describe("validateSchedule — back-to-back hard days", () => {
     expect(w.some((m) => /embedded intensity/.test(m))).toBe(true);
   });
 
+  it("uses the athlete's durability-envelope override for the embedded-intensity floor (CAL-3)", () => {
+    // A 92% embedded block: hard at the 88% population floor, not hard once the athlete raises it to 95%.
+    // validatePlanProtocol already honours the resolved envelope — this keeps validateSchedule consistent.
+    const durability: PlannedDay = {
+      date: "2026-06-20", weekNumber: 1, weekTheme: "t", name: "Durability", type: "Z2",
+      durationMin: 240, workoutText: "Main Set 3x\n- 12m 92%\n- 6m 60%", description: "x",
+    };
+    const pair = [durability, day("2026-06-21", "VO2max")];
+    expect(validateSchedule(pair, SETTINGS, 250).some((m) => /embedded intensity/.test(m))).toBe(true);
+    const raised: BlockSettings = { ...SETTINGS, durabilityInsertEnvelope: { embeddedHardPct: 95, maxIntensityPct: 122, maxEffortMin: 20 } };
+    expect(validateSchedule(pair, raised, 250).some((m) => /embedded intensity/.test(m))).toBe(false);
+  });
+
   it("leaves a plain Z2 ride (no embedded intensity) easy next to a quality day", () => {
     expect(validateSchedule([day("2026-06-20", "Z2"), day("2026-06-21", "VO2max")], SETTINGS, 250)).toEqual([]);
   });
