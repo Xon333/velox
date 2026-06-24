@@ -107,6 +107,24 @@ function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+// A power reading of exactly 0 is "no power" (e.g. a sensor dropout serialised as 0), not a real 0 W
+// effort — treat it as absent so a `??` fallback isn't masked and IF isn't computed off a phantom zero (API-1).
+function numPos(value: unknown): number | null {
+  const n = num(value);
+  return n !== null && n > 0 ? n : null;
+}
+
+// Like num(), but also accepts a numeric string — some intervals.icu fields (e.g. decoupling) can
+// serialise as strings depending on endpoint/version; a bare typeof-number guard would silently drop
+// them (API-2). Non-numeric or empty strings still → null.
+function numLoose(value: unknown): number | null {
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return num(value);
+}
+
 function str(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
@@ -178,7 +196,7 @@ export async function fetchIntervals(activityId: string): Promise<ExecutedInterv
         type: str(iv.type).toUpperCase(),
         durationSec: num(iv.moving_time) ?? num(iv.elapsed_time) ?? 0,
         avgWatts: num(iv.average_watts) ?? num(iv.icu_average_watts),
-        npWatts: num(iv.weighted_average_watts) ?? num(iv.icu_weighted_avg_watts),
+        npWatts: numPos(iv.weighted_average_watts) ?? numPos(iv.icu_weighted_avg_watts),
         avgHr: num(iv.average_heartrate) ?? num(iv.icu_average_hr),
         startIndex: num(iv.start_index),
         endIndex: num(iv.end_index),
@@ -207,7 +225,7 @@ export async function fetchActivities(oldest: string, newest: string): Promise<A
       // as a bare `decoupling`. The old keys read null on every ride — which silently dropped IF back
       // to raw avg watts (a VO2 day read as recovery) and zeroed decoupling/its baseline. Old keys
       // kept as defensive fallbacks.
-      normalizedPower: num(a.icu_weighted_avg_watts) ?? num(a.icu_normalized_power),
+      normalizedPower: numPos(a.icu_weighted_avg_watts) ?? numPos(a.icu_normalized_power),
       maxWatts: num(a.icu_pm_p_max) ?? num(a.max_watts),
       avgHr: num(a.average_heartrate),
       maxHr: num(a.max_heartrate),
@@ -215,7 +233,7 @@ export async function fetchActivities(oldest: string, newest: string): Promise<A
       trainingLoad: num(a.icu_training_load),
       rpe: num(a.icu_rpe),
       carbsIngestedG: num(a.carbs_ingested), // "CHO In" — athlete-logged carbohydrate intake (g), often unset
-      decoupling: num(a.decoupling) ?? num(a.icu_power_hr_decoupling),
+      decoupling: numLoose(a.decoupling) ?? numLoose(a.icu_power_hr_decoupling),
       efficiencyFactor: num(a.icu_efficiency_factor),
       description: str(a.description) || null,
       avgCadence: num(a.average_cadence),

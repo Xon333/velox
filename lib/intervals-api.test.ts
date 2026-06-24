@@ -130,4 +130,31 @@ describe("intervals-api network failure handling (CR-B)", () => {
     expect(a.maxWatts).toBe(591);
     expect(a.carbsIngestedG).toBe(114);
   });
+
+  it("treats a present-but-zero weighted-avg power as missing, not a 0 W effort (API-1)", async () => {
+    // A sensor dropout can serialise NP as 0; num(0)=0 would short-circuit the ?? and force IF to 0 (a
+    // quality ride read as recovery). It must be null so IF falls back to avg watts downstream.
+    const raw = [{
+      id: "z1", start_date_local: "2026-06-23T08:00:00", type: "Ride", name: "Dropout",
+      moving_time: 3600, icu_average_watts: 180, icu_weighted_avg_watts: 0,
+    }];
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(raw), { status: 200, headers: { "Content-Type": "application/json" } })
+    ) as unknown as typeof fetch;
+    const [a] = await fetchActivities("2026-06-01", "2026-06-23");
+    expect(a.normalizedPower).toBeNull();
+    expect(a.avgWatts).toBe(180);
+  });
+
+  it("accepts a numeric-string decoupling (some payloads serialise it as a string) (API-2)", async () => {
+    const raw = [{
+      id: "d1", start_date_local: "2026-06-23T08:00:00", type: "Ride", name: "StringDecoup",
+      moving_time: 3600, icu_average_watts: 180, icu_weighted_avg_watts: 190, decoupling: "4.5",
+    }];
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(raw), { status: 200, headers: { "Content-Type": "application/json" } })
+    ) as unknown as typeof fetch;
+    const [a] = await fetchActivities("2026-06-01", "2026-06-23");
+    expect(a.decoupling).toBe(4.5);
+  });
 });
