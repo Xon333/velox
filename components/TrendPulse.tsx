@@ -30,7 +30,7 @@ function Tile({ label, tip, onClick, children }: { label: string; tip?: string; 
       onClick={onClick}
       className="rounded-md bg-zinc-50 px-2.5 py-2 text-left transition-colors hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
-      <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-400">
+      <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
         {label}
         {tip && <InfoDot text={tip} />}
       </p>
@@ -58,7 +58,7 @@ function VolumeTile({ weeks, onClick }: { weeks: TrendsResp["weeklyHours"]; onCl
       </div>
       <p className="font-mono text-xs font-semibold text-zinc-800 dark:text-zinc-100">
         {latest != null ? `${latest.toFixed(1)} h` : "—"}
-        <span className="ml-1 text-[10px] font-normal text-zinc-400">this wk</span>
+        <span className="ml-1 text-[10px] font-normal text-zinc-500 dark:text-zinc-400">this wk</span>
       </p>
     </Tile>
   );
@@ -81,7 +81,7 @@ function ZoneTile({ zones, onClick }: { zones: number[]; onClick: () => void }) 
         <div style={{ width: `${pct(hard)}%` }} className="bg-red-400 dark:bg-red-500/70" />
       </div>
       <p className="font-mono text-xs font-semibold text-zinc-800 dark:text-zinc-100">
-        {pct(easy)}/{pct(mod)}/{pct(hard)} <span className="text-[10px] font-normal text-zinc-400">e/m/h</span>
+        {pct(easy)}/{pct(mod)}/{pct(hard)} <span className="text-[10px] font-normal text-zinc-500 dark:text-zinc-400">e/m/h</span>
       </p>
     </Tile>
   );

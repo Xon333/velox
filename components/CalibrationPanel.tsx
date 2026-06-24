@@ -116,7 +116,7 @@ export default function CalibrationPanel() {
                 <button
                   onClick={() => setEditing(false)}
                   disabled={saving}
-                  className="text-[11px] text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
+                  className="text-[11px] text-zinc-500 dark:text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
                 >
                   Cancel
                 </button>

@@ -74,13 +74,13 @@ interface TrendsData {
 // ---------- shared bits ----------
 
 function trendDir(points: Point[], higherIsBetter = true): { label: string; cls: string } {
-  if (points.length < 4) return { label: "", cls: "text-zinc-400" };
+  if (points.length < 4) return { label: "", cls: "text-zinc-500 dark:text-zinc-400" };
   const mid = Math.floor(points.length / 2);
   const a = points.slice(0, mid).reduce((s, p) => s + p.value, 0) / mid;
   const b = points.slice(mid).reduce((s, p) => s + p.value, 0) / (points.length - mid);
   const delta = b - a;
   const eps = Math.max(0.02, Math.abs(a) * 0.02);
-  if (Math.abs(delta) < eps) return { label: "→ stable", cls: "text-zinc-400" };
+  if (Math.abs(delta) < eps) return { label: "→ stable", cls: "text-zinc-500 dark:text-zinc-400" };
   const improving = higherIsBetter ? delta > 0 : delta < 0;
   return improving
     ? { label: delta > 0 ? "↑ improving" : "↓ improving", cls: "text-green-600 dark:text-emerald-400" }
@@ -116,7 +116,7 @@ function BlockTimeline({ blocks }: { blocks: TrendBlock[] }) {
                 {b.ctlGain != null && (
                   <span
                     className={`font-mono text-xs font-semibold ${
-                      b.ctlGain > 0 ? "text-green-600 dark:text-emerald-400" : b.ctlGain < 0 ? "text-red-500" : "text-zinc-400"
+                      b.ctlGain > 0 ? "text-green-600 dark:text-emerald-400" : b.ctlGain < 0 ? "text-red-500" : "text-zinc-500 dark:text-zinc-400"
                     }`}
                   >
                     CTL {b.ctlGain > 0 ? "+" : ""}{b.ctlGain}
@@ -259,7 +259,7 @@ export default function Trends() {
       </div>
     );
   }
-  if (!data) return <p className="py-12 text-center text-sm text-zinc-400">Loading…</p>;
+  if (!data) return <p className="py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
 
   const noData = !data.syncedAt;
   const efTrend = trendDir(data.ef, true);

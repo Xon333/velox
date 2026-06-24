@@ -81,7 +81,7 @@ export default function KnowledgeBaseEditor() {
     );
   }
   if (files === null) {
-    return <p className="py-12 text-center text-sm text-zinc-400">Loading…</p>;
+    return <p className="py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
   }
 
   const isRetro = selected?.kind === "retro";
@@ -176,7 +176,7 @@ export default function KnowledgeBaseEditor() {
               </div>
             </>
           ) : (
-            <p className="py-12 text-center text-sm text-zinc-400">No knowledge base files found.</p>
+            <p className="py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">No knowledge base files found.</p>
           )}
         </div>
       </div>

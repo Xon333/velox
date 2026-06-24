@@ -70,7 +70,7 @@ export default function SyncNotice() {
           <button
             onClick={() => setDismissed(key)}
             aria-label="Dismiss"
-            className="-mr-1 -mt-1 shrink-0 rounded p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+            className="-mr-1 -mt-1 shrink-0 rounded p-1 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
           >
             ✕
           </button>

@@ -234,7 +234,7 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
     );
   }
   if (!state) {
-    return <p className="py-12 text-center text-sm text-zinc-400">Loading…</p>;
+    return <p className="py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
   }
 
   const hasActiveBlock =
@@ -410,7 +410,7 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
               <div className="mb-3 flex justify-end">
                 <button
                   onClick={() => setGenOpen(false)}
-                  className="text-xs text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
+                  className="text-xs text-zinc-500 dark:text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
                 >
                   Collapse
                 </button>

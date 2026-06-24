@@ -77,11 +77,11 @@ verified against source. Act top-down; P1 = data-integrity, fix first.
   up, strain nudges the lower band down, durability nudges the ceiling, TSB chains ascending), so a generic
   resolver is ~as complex as the four, and CAL-1 already closed the bug this was tied to — marginal gain vs
   regression risk on tested scoring code.
-- ◑ P3 `audit` **A11Y-1** — **detector rule shipped**: `muted-contrast` in [detect.mjs](prototypes/impeccable-audit/detect.mjs)
-  flags `text-zinc-400` used as a light-mode color (≈3.5:1 on white, under AA) while passing the correct
-  `text-zinc-500 dark:text-zinc-400`; ~38 bare usages now surface deterministically and can't regress.
-  **Deferred:** the per-case sweep of those ~38 (each needs a light-surface check, best done with the
-  preview running for real contrast verification) — and the `--muted` token if we go that route.
+- ☑ P3 `audit` **A11Y-1** — **detector rule** (`muted-contrast` in [detect.mjs](prototypes/impeccable-audit/detect.mjs))
+  flags `text-zinc-400` used as a light-mode color (≈2.6:1 on white, under AA) while passing the correct
+  `text-zinc-500 dark:text-zinc-400`. **Sweep done:** every genuine bare usage across 14 components swapped to
+  the AA pattern (`text-zinc-500 dark:text-zinc-400`; the two `dark:text-zinc-600` tiers kept their dark tier),
+  including the close-× control and empty-state placeholders. Detector now reports 0 muted-contrast.
 - ☑ P3 `bug` **A11Y-2** + `ux` **UI-1** — fixed together: extracted `BAND_COLOR`/`DIR`/`driverEffectClass`
   into [athlete-state-ui.tsx](components/athlete-state-ui.tsx); both StateDriversCard and AthleteStateCard
   import it, so the duplicated band/effect logic (which drifted and left the bare-`text-zinc-400` neutral

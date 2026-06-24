@@ -71,7 +71,7 @@ export function WeeklyDebrief({ sync }: { sync: SyncData }) {
       </div>
       {topSession && (
         <div className="mt-2 rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
-          <p className="text-[10px] uppercase tracking-wide text-zinc-400">Top session</p>
+          <p className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Top session</p>
           <p className="mt-0.5 text-sm font-medium leading-snug text-zinc-800 dark:text-zinc-100">{topSession.name}</p>
           {topSession.trainingLoad != null && (
             <p className="mt-0.5 font-mono text-[11px] text-zinc-500 dark:text-zinc-400">{topSession.trainingLoad} TSS</p>
@@ -184,11 +184,11 @@ export function GoalsProgress({ athleteMd }: ProfileGoals) {
       </div>
       {powerGoals && Object.keys(powerGoals).length > 0 && (
         <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-700">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Current performance</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Current performance</p>
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {Object.entries(powerGoals).map(([k, v]) => (
               <div key={k} className="rounded-md bg-zinc-50 px-2 py-1.5 dark:bg-zinc-900">
-                <p className="text-[11px] text-zinc-400">{k}</p>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{k}</p>
                 <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{v}</p>
               </div>
             ))}
@@ -218,7 +218,7 @@ export function BlockHistory({ history }: { history: BlockHistoryEntry[] }) {
               <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 line-clamp-1">
                 {entry.goal}
               </p>
-              <span className="shrink-0 text-xs text-zinc-400">
+              <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
                 {entry.startDate} → {entry.endDate}
               </span>
             </div>
@@ -260,7 +260,7 @@ function BlockCalendar({ block, scores, compromisedDates, partialDates }: { bloc
         const label = m === 0 ? `${h}h` : `${h}h ${m}m`;
         return (
           <div key={i} className="flex items-center gap-2">
-            <span className="w-10 shrink-0 text-right text-[10px] font-medium text-zinc-400">{label}</span>
+            <span className="w-10 shrink-0 text-right text-[10px] font-medium text-zinc-500 dark:text-zinc-400">{label}</span>
             <div className="flex flex-1 gap-1.5 overflow-visible">
               {week.map((day, dayIdx) => {
                 const alignClass =
@@ -325,7 +325,7 @@ function BlockCalendar({ block, scores, compromisedDates, partialDates }: { bloc
                         ) : missed ? (
                           <p className="mt-0.5 text-[10px] font-medium text-red-500">Missed</p>
                         ) : null}
-                        <p className="mt-0.5 font-mono text-[10px] text-zinc-400 dark:text-zinc-600">
+                        <p className="mt-0.5 font-mono text-[10px] text-zinc-500 dark:text-zinc-600">
                           {day.date}
                         </p>
                       </div>

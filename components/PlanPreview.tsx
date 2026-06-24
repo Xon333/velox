@@ -82,20 +82,20 @@ export default function PlanPreview({
         <div>
           <div className="flex items-baseline gap-2">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Plan preview</h2>
-            <span className="text-xs text-zinc-400">{fmtHours(plan.days)} total · {plan.days.length} sessions</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{fmtHours(plan.days)} total · {plan.days.length} sessions</span>
           </div>
           <p className="mt-1 max-w-3xl text-xs leading-5 text-zinc-500 dark:text-zinc-400">{plan.overview}</p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 no-print">
           <button
             onClick={() => window.print()}
-            className="rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+            className="rounded px-2 py-1 text-xs text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
           >
             Print
           </button>
           <button
             onClick={onDismiss}
-            className="rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+            className="rounded px-2 py-1 text-xs text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
           >
             ✕
           </button>

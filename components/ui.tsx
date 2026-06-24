@@ -100,7 +100,7 @@ export function StatTile({
         : "text-zinc-800 dark:text-zinc-100";
   return (
     <div className="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
-      <p className="text-[10px] uppercase tracking-wide text-zinc-400">{label}</p>
+      <p className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{label}</p>
       <p className={`mt-0.5 font-mono text-sm font-semibold ${valueColor}`}>
         {value}
         {arrow ? <span className="ml-0.5 text-[10px] font-normal text-cyan-600 dark:text-[#00d4ff]">{arrow}</span> : null}
@@ -227,7 +227,7 @@ export function TrendTile({
       onClick={onClick}
       className="rounded-md bg-zinc-50 px-2.5 py-2 text-left transition-colors hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
-      <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-400">
+      <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
         {label}
         {tip && <InfoDot text={tip} />}
       </p>

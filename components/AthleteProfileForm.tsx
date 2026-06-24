@@ -166,7 +166,7 @@ export default function AthleteProfileForm() {
       </div>
     );
   }
-  if (!data) return <p className="py-12 text-center text-sm text-zinc-400">Loading…</p>;
+  if (!data) return <p className="py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
 
   const { athleteMd, autoSync, bufferStatus, syncedPowerCurve, powerProfile, latestWeightKg } = data;
 

@@ -83,7 +83,7 @@ export default function MultiSparkline({ series, chartHeight = 104 }: { series: 
               aria-pressed={!off}
               className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors ${
                 off
-                  ? "border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-600"
+                  ? "border-zinc-200 text-zinc-500 dark:border-zinc-700 dark:text-zinc-600"
                   : "border-zinc-300 text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
               }`}
             >

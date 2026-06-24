@@ -121,7 +121,7 @@ export default function BlockSettingsForm() {
   };
 
   if (!settings) {
-    return <p className="text-sm text-zinc-400">Loading…</p>;
+    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
   }
 
   return (
@@ -288,7 +288,7 @@ export default function BlockSettingsForm() {
       </div>
 
       {settings.updatedAt !== new Date(0).toISOString() && (
-        <p className="text-xs text-zinc-400">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
           Last updated: {new Date(settings.updatedAt).toLocaleString()}
         </p>
       )}
