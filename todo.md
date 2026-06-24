@@ -71,12 +71,17 @@ verified against source. Act top-down; P1 = data-integrity, fix first.
 
 ### P3 — altitude / cleanup / a11y polish
 
-- ☐ P3 `audit` **CAL-2** — four sibling resolvers re-implement `pick+clamp+order-nudge` by hand (the reason
-  CAL-1 slipped). _[calibration.ts:31](lib/calibration.ts:31)._ → one schema-driven resolver
-  (`{field:[min,max], order:[...]}`), the spec-driven pattern already used for `deriveExecutionEdge`.
-- ☐ P3 `audit` **A11Y-1** — the "AA pass" is a manual 24-file idiom swap; 27 bare `text-zinc-400` labels
-  (no `dark:` sibling) still render sub-AA in light mode, and nothing enforces it. _[globals.css:47](app/globals.css:47)._
-  → add a `--muted` semantic token + a `detect.mjs` rule flagging `text-zinc-400` without a `dark:` pair.
+- ☑ P3 `audit` **CAL-2** (scoped) — hoisted the duplicated finite-guard `pick` to one module-level helper in
+  [calibration.ts](lib/calibration.ts); the four band resolvers now share it. The full schema-driven
+  unification was **deliberately not done**: the resolvers' ordering rules are heterogeneous (ACWR nudges
+  up, strain nudges the lower band down, durability nudges the ceiling, TSB chains ascending), so a generic
+  resolver is ~as complex as the four, and CAL-1 already closed the bug this was tied to — marginal gain vs
+  regression risk on tested scoring code.
+- ◑ P3 `audit` **A11Y-1** — **detector rule shipped**: `muted-contrast` in [detect.mjs](prototypes/impeccable-audit/detect.mjs)
+  flags `text-zinc-400` used as a light-mode color (≈3.5:1 on white, under AA) while passing the correct
+  `text-zinc-500 dark:text-zinc-400`; ~38 bare usages now surface deterministically and can't regress.
+  **Deferred:** the per-case sweep of those ~38 (each needs a light-surface check, best done with the
+  preview running for real contrast verification) — and the `--muted` token if we go that route.
 - ☑ P3 `bug` **A11Y-2** + `ux` **UI-1** — fixed together: extracted `BAND_COLOR`/`DIR`/`driverEffectClass`
   into [athlete-state-ui.tsx](components/athlete-state-ui.tsx); both StateDriversCard and AthleteStateCard
   import it, so the duplicated band/effect logic (which drifted and left the bare-`text-zinc-400` neutral

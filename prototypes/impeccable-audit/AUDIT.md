@@ -3,6 +3,11 @@
 > `node prototypes/impeccable-audit/detect.mjs components/*.tsx components/dashboard/*.tsx app/**/*.tsx`
 > Detector is now **DESIGN.md-aware** (reads the repo-root [`/DESIGN.md`](../../DESIGN.md) palette) and
 > hardened against the false positives the first pass turned up. Prototype — no app coupling.
+>
+> **Update (A11Y-1):** added a `muted-contrast` rule that flags `text-zinc-400` used as a light-mode color
+> (≈3.5:1 on white, under WCAG AA). It surfaces ~38 bare usages still on the page — a real light-mode
+> contrast gap the original dark-first pass missed. Fixing those is the deferred sweep tracked in `todo.md`
+> (A11Y-1); the "no must-fix UI bugs" conclusion below was a dark-mode-only read.
 
 ## What the first pass flagged → what it actually was
 

@@ -38,6 +38,7 @@ const RULES = {
   "em-dash-overuse": ["slop", "advisory", "more than two em-dashes in one string is an AI cadence tell (no-data — glyphs exempt)"],
   "native-title-tooltip": ["consistency", "advisory", "native title= on a DOM element — prefer InfoDot/MetricTip for a labelled metric explanation (per-datum detail is fine)"],
   "light-only-color": ["dual-theme", "warn", "light-mode color with no dark: sibling — a dark-mode regression (toggle knobs / status dots exempt)"],
+  "muted-contrast": ["a11y", "warn", "text-zinc-400 as a light-mode color reads ~3.5:1 on white (under WCAG AA 4.5:1) — use text-zinc-500 dark:text-zinc-400"],
 };
 
 function scanLine(line) {
@@ -77,6 +78,14 @@ function scanLine(line) {
   // status-dot pattern (a small absolute rounded-full element is theme-agnostic by design).
   const isKnob = /\babsolute\b/.test(line) && /\brounded-full\b/.test(line);
   if (LIGHT_ONLY.test(line) && !/\bdark:/.test(line) && !isKnob) out.push(["light-only-color", line.match(LIGHT_ONLY)[0]]);
+
+  // muted-contrast (A11Y-1) — text-zinc-400 used as a LIGHT-mode color (not dark:-prefixed) renders
+  // ~3.5:1 on white, under WCAG AA 4.5:1. The AA muted pattern is text-zinc-500 dark:text-zinc-400, so
+  // the lookbehind passes a dark:text-zinc-400 (the legitimate dark variant). Knob/dot is theme-agnostic;
+  // gray-on-color is already flagged above.
+  if (/(?<!dark:)\btext-zinc-400\b/.test(line) && !isKnob && !COLORED_BG.test(line)) {
+    out.push(["muted-contrast", "text-zinc-400 light-mode <4.5:1 — use text-zinc-500 dark:text-zinc-400"]);
+  }
 
   return out;
 }
