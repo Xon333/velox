@@ -36,7 +36,7 @@ import { DEFAULT_DECOUPLING_GOOD } from "@/lib/execution-score";
 import { buildTodayAnalysis } from "@/lib/ride-analysis";
 import { backfillLedgerEntries } from "@/lib/sync-ledger";
 import { detectPowerPRs } from "@/lib/pr";
-import { buildRideScores, calStampFor, mergeScoreLog } from "@/lib/score-log";
+import { buildRideScores, calStampFor, mergeScoreLog, mergeScoreLogRebuild } from "@/lib/score-log";
 import { applyDispositions, compromisedDates } from "@/lib/disposition";
 import { buildFormStateLookup, computeAcwr, computeFatigueAlert, computeIntensityDistribution, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
 import { deriveDecouplingGood, deriveIfBandOffsets, resolveAcwrBands, resolveAthleteStateWeights, resolveCalibratedValue } from "@/lib/calibration";
@@ -263,8 +263,9 @@ export async function POST(req: Request) {
       await updateScoreLog((entries) => {
         const backfilled = backfillLedgerEntries(entries, ftpForDate, offPlanFloor);
         // Normal sync: existing wins (immutable per date). Rebuild: fresh (recomputed from corrected
-        // activities) wins, while existing still fills any date outside the activity window.
-        const merged = rebuildLedger ? mergeScoreLog(fresh, backfilled) : mergeScoreLog(backfilled, fresh);
+        // activities) wins, while existing still fills any date outside the activity window — but a
+        // rebuild never downgrades a frozen planned ride to off-plan (LEDGER-1; see mergeScoreLogRebuild).
+        const merged = rebuildLedger ? mergeScoreLogRebuild(fresh, backfilled) : mergeScoreLog(backfilled, fresh);
         return applyDispositions(merged, dispositions);
       });
       if (rebuildLedger) warnings.push("Ledger rebuilt: past entries re-scored from corrected activity data (NP/decoupling).");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRideScores, fuelStampFor, mergeScoreLog, summariseBehaviour } from "./score-log";
+import { buildRideScores, fuelStampFor, mergeScoreLog, mergeScoreLogRebuild, summariseBehaviour } from "./score-log";
 import type { ActivitySummary, CurrentBlock, RideScoreEntry, WorkoutType } from "./types";
 
 function activity(over: Partial<ActivitySummary> & { date: string }): ActivitySummary {
@@ -207,6 +207,64 @@ describe("mergeScoreLog", () => {
     expect(merged.find((e) => e.date === "2026-01-03")?.executionScore).toBe(9); // fresh wins
     expect(merged.find((e) => e.date === "2026-01-01")?.executionScore).toBe(5); // kept (outside window)
     expect(merged.find((e) => e.date === "2026-01-02")?.executionScore).toBe(7);
+  });
+});
+
+describe("mergeScoreLogRebuild (SYNC-2, LEDGER-1)", () => {
+  const mk = (date: string, over: Partial<RideScoreEntry> = {}): RideScoreEntry => ({
+    date,
+    executionScore: 5,
+    plannedType: "Z2",
+    inferredType: "Z2",
+    planned: true,
+    legacy: false,
+    compliancePct: 100,
+    intensityFactor: 0.68,
+    ftpUsed: 200,
+    durationMin: 60,
+    tss: 60,
+    ...over,
+  });
+
+  it("re-scored fresh entries win on overlapping dates (corrected NP/decoupling re-flows)", () => {
+    const merged = mergeScoreLogRebuild([mk("2026-01-03", { executionScore: 9 })], [mk("2026-01-03", { executionScore: 6 })]);
+    expect(merged.find((e) => e.date === "2026-01-03")?.executionScore).toBe(9);
+  });
+
+  it("preserves an existing entry outside the activity window (no fresh counterpart)", () => {
+    const merged = mergeScoreLogRebuild([mk("2026-01-03", { executionScore: 9 })], [mk("2026-01-01", { executionScore: 5 }), mk("2026-01-03", { executionScore: 6 })]);
+    expect(merged.find((e) => e.date === "2026-01-01")?.executionScore).toBe(5);
+  });
+
+  it("never downgrades a frozen planned ride to off-plan when its block has rolled off (LEDGER-1)", () => {
+    // buildRideScores only knows the CURRENT block, so a historical planned ride is re-derived as
+    // off-plan. The rebuild must keep the frozen planned classification, not corrupt the planned axis.
+    const existing = [mk("2026-01-03", { planned: true, plannedType: "VO2max", executionScore: 7, compliancePct: 95 })];
+    const fresh = [mk("2026-01-03", { planned: false, plannedType: null, inferredType: "Z2", executionScore: 4, compliancePct: null })];
+    const e = mergeScoreLogRebuild(fresh, existing).find((x) => x.date === "2026-01-03");
+    expect(e?.planned).toBe(true);
+    expect(e?.plannedType).toBe("VO2max");
+    expect(e?.executionScore).toBe(7);
+    expect(e?.compliancePct).toBe(95);
+  });
+
+  it("still re-scores off-plan rides (fresh wins where it is not un-planning a frozen entry)", () => {
+    const existing = [mk("2026-01-05", { planned: false, plannedType: null, executionScore: 3 })];
+    const fresh = [mk("2026-01-05", { planned: false, plannedType: null, executionScore: 8 })];
+    expect(mergeScoreLogRebuild(fresh, existing).find((e) => e.date === "2026-01-05")?.executionScore).toBe(8);
+  });
+
+  it("lets the current block re-plan a date that used to be off-plan (planned wins, not a downgrade)", () => {
+    const existing = [mk("2026-01-06", { planned: false, plannedType: null, executionScore: 3 })];
+    const fresh = [mk("2026-01-06", { planned: true, plannedType: "Threshold", executionScore: 8 })];
+    const e = mergeScoreLogRebuild(fresh, existing).find((x) => x.date === "2026-01-06");
+    expect(e?.planned).toBe(true);
+    expect(e?.plannedType).toBe("Threshold");
+  });
+
+  it("adds brand-new dates from fresh and keeps the log date-sorted", () => {
+    const merged = mergeScoreLogRebuild([mk("2026-01-03"), mk("2026-01-02")], [mk("2026-01-01")]);
+    expect(merged.map((e) => e.date)).toEqual(["2026-01-01", "2026-01-02", "2026-01-03"]);
   });
 });
 
