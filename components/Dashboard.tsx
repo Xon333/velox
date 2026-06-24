@@ -317,18 +317,18 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
                       title="How often acting on the coach's matured directives proved right (28-day validation horizon)."
                       className="mt-2 flex items-baseline justify-between border-t border-zinc-100 pt-2 dark:border-zinc-700/60"
                     >
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                         Coach accuracy
                       </span>
                       {state.coachAccuracy.hitRatePct !== null ? (
                         <span className="font-mono text-xs text-zinc-700 dark:text-zinc-300">
                           {state.coachAccuracy.hitRatePct}%{" "}
-                          <span className="text-zinc-400 dark:text-zinc-500">
+                          <span className="text-zinc-500 dark:text-zinc-400">
                             ({state.coachAccuracy.evaluated} checked)
                           </span>
                         </span>
                       ) : (
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
                           accruing · {state.coachAccuracy.pending} pending
                         </span>
                       )}
@@ -351,13 +351,13 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
                 </Zone>
               ) : state.todayAnalysis?.activityDate === todayIso() && analyzing ? (
                 <Zone title="Coach note" hero accent="pink" fill>
-                  <p className="text-xs italic leading-5 text-zinc-400 dark:text-zinc-500">Analysing today&apos;s ride…</p>
+                  <p className="text-xs italic leading-5 text-zinc-500 dark:text-zinc-400">Analysing today&apos;s ride…</p>
                 </Zone>
               ) : state.todayAnalysis?.activityDate === todayIso() && state.anthropicConfigured ? (
                 // Ride synced but the note is missing (e.g. the auto-run hit an Anthropic hiccup) —
                 // offer a manual retry instead of waiting for the next full sync.
                 <Zone title="Coach note" hero accent="pink" fill>
-                  <p className="text-xs leading-5 text-zinc-400 dark:text-zinc-500">No coach note yet.</p>
+                  <p className="text-xs leading-5 text-zinc-500 dark:text-zinc-400">No coach note yet.</p>
                   <button
                     onClick={reAnalyse}
                     className="mt-2 rounded border border-zinc-200 px-2 py-1 text-[10px] font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
@@ -402,7 +402,7 @@ export default function Dashboard({ mode = "plan" }: { mode?: "today" | "plan" }
             className="flex w-full items-center justify-between gap-3 text-left"
           >
             <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Generate next block</span>
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">Plan the next 2–4 weeks →</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">Plan the next 2–4 weeks →</span>
           </button>
         ) : (
           <>

@@ -45,14 +45,14 @@ export default function AiUsageCard({ usage }: { usage: AiUsageStore }) {
       </p>
 
       {!hasData ? (
-        <p className="mt-3 text-sm text-zinc-400 dark:text-zinc-500">No AI calls recorded yet.</p>
+        <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">No AI calls recorded yet.</p>
       ) : (
         <div className="mt-3 space-y-4">
           <div className="border-t border-zinc-100 pt-2 dark:border-zinc-700/60">{totalsBlock(usage.total)}</div>
           {models.map(([model, t]) => (
             <div key={model} className="border-t border-zinc-100 pt-2 dark:border-zinc-700/60">
               <div className="flex items-baseline justify-between gap-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   {model}
                 </span>
                 <span className="font-mono text-sm text-zinc-700 dark:text-zinc-300">{fmtUsd(t.costUsd)}</span>

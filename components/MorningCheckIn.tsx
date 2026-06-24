@@ -188,7 +188,7 @@ export default function MorningCheckIn() {
                 </button>
               ))}
             </div>
-            <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+            <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
               {r.lo}→{r.hi}
             </span>
           </div>

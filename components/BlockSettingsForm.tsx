@@ -17,7 +17,7 @@ function Field({
   return (
     <div>
       <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{label}</label>
-      {hint && <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">{hint}</p>}
+      {hint && <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>}
       <div className="mt-1.5">{children}</div>
     </div>
   );
@@ -43,7 +43,7 @@ function ToggleRow({
     >
       <span className="min-w-0">
         <span className="block text-sm font-medium text-zinc-800 dark:text-zinc-200">{label}</span>
-        {hint && <span className="mt-0.5 block text-xs text-zinc-400 dark:text-zinc-500">{hint}</span>}
+        {hint && <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">{hint}</span>}
       </span>
       <span
         className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
@@ -245,7 +245,7 @@ export default function BlockSettingsForm() {
               >
                 <span className="block font-semibold">{opt.label}</span>
                 <span
-                  className={`block text-xs ${settings.polarisedApproach === opt.value ? "text-zinc-300 dark:text-zinc-600" : "text-zinc-400 dark:text-zinc-500"}`}
+                  className={`block text-xs ${settings.polarisedApproach === opt.value ? "text-zinc-300 dark:text-zinc-600" : "text-zinc-500 dark:text-zinc-400"}`}
                 >
                   {opt.description}
                 </span>
@@ -257,7 +257,7 @@ export default function BlockSettingsForm() {
 
       {/* Platform behavior */}
       <Card title="Platform behavior">
-        <p className="mb-3 text-xs text-zinc-400 dark:text-zinc-500">How Nodevelo handles syncing and write-back.</p>
+        <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">How Nodevelo handles syncing and write-back.</p>
         <div className="space-y-2">
           <ToggleRow
             label="Auto-sync on open"

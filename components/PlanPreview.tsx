@@ -34,12 +34,12 @@ function DayCard({ day, result }: { day: PlannedDay; result: WriteResult | undef
     >
       <div className="px-3 pt-3 pb-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500">{dayHeading(day.date)}</span>
+          <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">{dayHeading(day.date)}</span>
           <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${style.badge}`}>
             {day.type}
           </span>
           {day.durationMin > 0 && (
-            <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{day.durationMin} min</span>
+            <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{day.durationMin} min</span>
           )}
           {result && (
             <span className={`ml-auto text-[11px] font-semibold ${result.ok ? "text-green-600" : "text-red-600"}`}>

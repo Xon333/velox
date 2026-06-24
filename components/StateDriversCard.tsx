@@ -31,11 +31,11 @@ export default function StateDriversCard() {
         <>
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className={`font-mono text-2xl font-bold leading-none ${BAND_COLOR[s.band]}`}>{s.score}</span>
-            <span className="text-[10px] text-zinc-400 dark:text-zinc-500">/100</span>
+            <span className="text-[10px] text-zinc-500 dark:text-zinc-400">/100</span>
             <span className="ml-1 text-xs font-medium capitalize text-zinc-700 dark:text-zinc-200">{s.band}</span>
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">· {s.recommendation}</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">· {s.recommendation}</span>
             {s.confidence !== "high" && (
-              <span className="text-[10px] text-zinc-400 dark:text-zinc-500">· {s.confidence} confidence</span>
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400">· {s.confidence} confidence</span>
             )}
           </div>
           <p className="mt-1 text-xs leading-snug text-zinc-500 dark:text-zinc-400">{s.headline}</p>
@@ -54,7 +54,7 @@ export default function StateDriversCard() {
                       d.effect > 0
                         ? "text-emerald-600 dark:text-emerald-400"
                         : d.effect < 0
-                          ? "text-red-500"
+                          ? "text-red-600 dark:text-red-400"
                           : "text-zinc-400"
                     }`}
                   >

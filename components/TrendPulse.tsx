@@ -112,7 +112,7 @@ export default function TrendPulse({ vertical }: { vertical?: boolean }) {
 
   if (!data || !data.syncedAt) {
     return (
-      <button onClick={go} className="w-full rounded-md bg-zinc-50 px-3 py-3 text-left text-xs text-zinc-400 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800">
+      <button onClick={go} className="w-full rounded-md bg-zinc-50 px-3 py-3 text-left text-xs text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800">
         Sync to populate trends →
       </button>
     );

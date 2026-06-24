@@ -89,7 +89,7 @@ export default function CalibrationPanel() {
             <p className="mt-0.5 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
               Aerobic drift below this scores well; the bands recenter on your own typical decoupling.
             </p>
-            <p className="mt-0.5 text-[11px] leading-snug text-zinc-400 dark:text-zinc-500">{detail(dg, effective)}</p>
+            <p className="mt-0.5 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">{detail(dg, effective)}</p>
 
             {editing ? (
               <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -103,7 +103,7 @@ export default function CalibrationPanel() {
                   aria-label="Decoupling good cutoff override (%)"
                   className="w-20 rounded border border-zinc-300 px-2 py-1 font-mono text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:focus:border-zinc-400"
                 />
-                <span className="text-[11px] text-zinc-400 dark:text-zinc-500">% · 2.5–8</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">% · 2.5–8</span>
                 <button
                   onClick={submit}
                   disabled={saving}
@@ -131,7 +131,7 @@ export default function CalibrationPanel() {
                   <button
                     onClick={() => void save(null)}
                     disabled={saving}
-                    className="text-[11px] text-zinc-400 transition-colors hover:text-zinc-600 disabled:opacity-50 dark:text-zinc-500 dark:hover:text-zinc-300"
+                    className="text-[11px] text-zinc-500 transition-colors hover:text-zinc-600 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-300"
                   >
                     Use learned value
                   </button>

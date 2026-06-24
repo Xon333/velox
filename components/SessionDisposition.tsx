@@ -60,7 +60,7 @@ export default function SessionDisposition({ date }: { date: string }) {
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-1.5">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Session</span>
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Session</span>
       {OPTIONS.map((o) => (
         <button key={o.value} disabled={saving} onClick={() => set(o.value)} className={chip(current?.disposition === o.value)}>
           {o.label}

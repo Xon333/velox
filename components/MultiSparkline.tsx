@@ -130,7 +130,7 @@ export default function MultiSparkline({ series, chartHeight = 104 }: { series: 
       </svg>
 
       {visible.length === 0 && (
-        <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[11px] text-zinc-400 dark:text-zinc-500">
+        <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[11px] text-zinc-500 dark:text-zinc-400">
           All metrics hidden — tap one above to show it.
         </p>
       )}
@@ -140,7 +140,7 @@ export default function MultiSparkline({ series, chartHeight = 104 }: { series: 
           className="pointer-events-none absolute -top-1 z-10 -translate-x-1/2 -translate-y-full rounded border border-zinc-200 bg-white px-2 py-1 shadow-sm dark:border-zinc-700 dark:bg-zinc-900"
           style={{ left: `${tipPct}%` }}
         >
-          <p className="mb-0.5 text-center font-mono text-[9px] text-zinc-400 dark:text-zinc-500">{hoverDate}</p>
+          <p className="mb-0.5 text-center font-mono text-[9px] text-zinc-500 dark:text-zinc-400">{hoverDate}</p>
           {visible.map((s) => {
             const v = valueOn(s, hoverDate);
             return (

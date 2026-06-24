@@ -74,7 +74,7 @@ export function WeeklyDebrief({ sync }: { sync: SyncData }) {
           <p className="text-[10px] uppercase tracking-wide text-zinc-400">Top session</p>
           <p className="mt-0.5 text-sm font-medium leading-snug text-zinc-800 dark:text-zinc-100">{topSession.name}</p>
           {topSession.trainingLoad != null && (
-            <p className="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">{topSession.trainingLoad} TSS</p>
+            <p className="mt-0.5 font-mono text-[11px] text-zinc-500 dark:text-zinc-400">{topSession.trainingLoad} TSS</p>
           )}
         </div>
       )}
@@ -116,7 +116,7 @@ export function RetroSection({
         <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">{result.retrospective}</p>
         {result.seeds.length > 0 && (
           <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-700">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1.5">
               Seeded into next block
             </p>
             <ul className="space-y-1">
@@ -308,7 +308,7 @@ function BlockCalendar({ block, scores, compromisedDates, partialDates }: { bloc
                           />
                           <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{day.type}</span>
                           {day.durationMin > 0 && (
-                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                            <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
                               · {day.durationMin} min
                             </span>
                           )}

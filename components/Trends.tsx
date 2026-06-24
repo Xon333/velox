@@ -99,7 +99,7 @@ function BlockTimeline({ blocks }: { blocks: TrendBlock[] }) {
         How each block executed and what it changed — the long view your coach reasons from.
       </p>
       {blocks.length === 0 ? (
-        <p className="mt-4 rounded-md bg-zinc-50 px-3 py-6 text-center text-sm text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500">
+        <p className="mt-4 rounded-md bg-zinc-50 px-3 py-6 text-center text-sm text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
           No completed blocks yet. Wrap up a block on the dashboard to start building history.
         </p>
       ) : (
@@ -123,7 +123,7 @@ function BlockTimeline({ blocks }: { blocks: TrendBlock[] }) {
                   </span>
                 )}
               </div>
-              <p className="mt-0.5 font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
+              <p className="mt-0.5 font-mono text-[10px] text-zinc-500 dark:text-zinc-400">
                 {b.startDate} → {b.endDate}
                 {b.actualHours != null && b.plannedHours != null && ` · ${b.actualHours}/${b.plannedHours}h`}
               </p>
@@ -182,7 +182,7 @@ function ScoreBars({ scores }: { scores: ScoreEntry[] }) {
           />
         ))}
       </div>
-      <p className="mt-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+      <p className="mt-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">
         Avg {avg}/10 over last {recent.length} matched sessions · taller = better execution
       </p>
     </div>
@@ -220,7 +220,7 @@ function WeeklyVolumeBars({ weeks }: { weeks: TrendsData["weeklyHours"] }) {
           />
         ))}
       </div>
-      <p className="mt-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+      <p className="mt-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">
         Avg {avg} h/week over last {recent.length} complete weeks · darker blue = bigger week
       </p>
     </div>
@@ -308,12 +308,12 @@ export default function Trends() {
           </p>
         </div>
         {data.syncedAt && (
-          <span className="text-[11px] text-zinc-400 dark:text-zinc-500">synced {timeAgo(data.syncedAt)}</span>
+          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">synced {timeAgo(data.syncedAt)}</span>
         )}
       </div>
 
       {noData && (
-        <p className="rounded-lg border border-zinc-200 bg-white px-4 py-6 text-center text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500">
+        <p className="rounded-lg border border-zinc-200 bg-white px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
           No synced data yet. Sync from the dashboard to populate trends.
         </p>
       )}
@@ -368,7 +368,7 @@ export default function Trends() {
               );
             })}
           </ul>
-          <p className="mt-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+          <p className="mt-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">
             These also steer the next block you generate.
           </p>
         </Card>
@@ -405,11 +405,11 @@ export default function Trends() {
               })}
             </ul>
           ) : (
-            <p className="rounded-md bg-zinc-50 px-3 py-3 text-xs text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500">
+            <p className="rounded-md bg-zinc-50 px-3 py-3 text-xs text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
               {data.validation.pending} intervention{data.validation.pending === 1 ? "" : "s"} recorded — outcomes evaluate after ~4 weeks.
             </p>
           )}
-          <p className="mt-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+          <p className="mt-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">
             Whether acting on each past insight actually moved execution or a physiological marker — the closed learning loop.
           </p>
         </Card>
@@ -427,7 +427,7 @@ export default function Trends() {
                 </span>
               </div>
               <Sparkline points={data.ef} format={(v) => v.toFixed(2)} />
-              <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+              <p className="mt-1 text-[10px] text-zinc-500 dark:text-zinc-400">
                 Power-to-HR on steady endurance rides. Rising = more output at the same HR = better aerobic base.
               </p>
             </Card>
@@ -495,7 +495,7 @@ export default function Trends() {
       {energyHasData && (
         <Card title="Fueling & weight" hint="complete weeks · tap to isolate">
           <MultiSparkline series={energySeries} />
-          <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+          <p className="mt-1 text-[10px] text-zinc-500 dark:text-zinc-400">
             Per complete week: total ride burn (kJ≈kcal) and total intake against the week&apos;s median weight, each on its own scale. The current in-progress week is excluded until it closes. Tap a legend chip to show/hide; isolating one fills the area.
           </p>
         </Card>

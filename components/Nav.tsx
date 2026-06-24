@@ -166,7 +166,7 @@ function SyncControl({ compact }: { compact?: boolean }) {
         {syncing ? "Syncing…" : "Sync"}
         {notice && !syncing && <span className={`absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full ${dotColor}`} aria-hidden />}
       </button>
-      <p className="mt-1 text-center text-[10px] text-zinc-400 dark:text-zinc-500">
+      <p className="mt-1 text-center text-[10px] text-zinc-500 dark:text-zinc-400">
         {analyzing
           ? "analysing today's ride…"
           : state.lastSync?.syncedAt
@@ -255,7 +255,7 @@ export default function Nav() {
                 className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
                   active
                     ? "text-zinc-900 dark:text-[#ff49c8]"
-                    : "text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300"
+                    : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
                 }`}
               >
                 <Icon name={link.icon} className={`h-5 w-5 ${active ? "dark:[filter:drop-shadow(0_0_4px_rgba(255,73,200,0.5))]" : ""}`} />

@@ -10,7 +10,7 @@ export const READINESS_STYLES: Record<ReadinessSignal["level"], string> = {
 };
 
 export const ACWR_COLOR: Record<AcwrResult["level"], string> = {
-  low: "text-zinc-400 dark:text-zinc-500",
+  low: "text-zinc-500 dark:text-zinc-400",
   optimal: "text-green-600 dark:text-green-400",
   high: "text-amber-600 dark:text-amber-400",
   danger: "text-red-600 dark:text-red-400",
@@ -38,7 +38,7 @@ export function ZoneBars({ times, label, secondary }: { times: number[]; label: 
   const segs = pcts.map((pct, i) => ({ pct, i })).filter((s) => s.pct >= 1);
   return (
     <div className={secondary ? "opacity-90" : undefined}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">{label}</p>
       <div className={`flex w-full gap-px ${secondary ? "h-2" : "h-4"}`}>
         {segs.map((s, k) => (
           <div key={s.i} style={{ width: `${s.pct}%` }} className="group/zone relative min-w-0">

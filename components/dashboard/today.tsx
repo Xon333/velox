@@ -140,7 +140,7 @@ export function TodayRideCard({
       {!bare && (
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Today&apos;s ride</h2>
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{analysis.activityDate}</span>
+          <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{analysis.activityDate}</span>
         </div>
       )}
 
@@ -167,7 +167,7 @@ export function TodayRideCard({
       {/* Planned vs Actual */}
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <div className="rounded border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Planned</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Planned</p>
           {analysis.plannedName ? (
             <div className="mt-1">
               <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{analysis.plannedName}</p>
@@ -178,7 +178,7 @@ export function TodayRideCard({
                   </span>
                 )}
                 {analysis.plannedDurationMin !== null && (
-                  <span className="text-xs text-zinc-400 dark:text-zinc-500">{analysis.plannedDurationMin} min</span>
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">{analysis.plannedDurationMin} min</span>
                 )}
               </div>
             </div>
@@ -188,7 +188,7 @@ export function TodayRideCard({
         </div>
 
         <div className="rounded border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Actual</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Actual</p>
           <p className="mt-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">{analysis.activityName}</p>
           <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
             <span className="text-xs text-zinc-500 dark:text-zinc-400">{analysis.activityDurationMin} min</span>
@@ -210,13 +210,13 @@ export function TodayRideCard({
               key={m.label}
               className={`group relative rounded bg-zinc-100 px-2.5 py-1.5 dark:bg-zinc-900${m.tip ? " cursor-help" : ""}`}
             >
-              <p className="flex items-center gap-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+              <p className="flex items-center gap-1 text-[10px] text-zinc-500 dark:text-zinc-400">
                 {m.label}
                 {m.tip && <span className="opacity-60">ⓘ</span>}
               </p>
               <p className={`font-mono text-sm font-semibold text-zinc-800 ${m.highlight ? m.highlight : "dark:text-zinc-100"}`}>
                 {m.value}
-                {m.sub && <span className="ml-1 font-sans text-[10px] font-normal text-zinc-400 dark:text-zinc-500">{m.sub}</span>}
+                {m.sub && <span className="ml-1 font-sans text-[10px] font-normal text-zinc-500 dark:text-zinc-400">{m.sub}</span>}
               </p>
               {m.tip && <MetricTip text={m.tip} />}
             </div>
@@ -228,11 +228,11 @@ export function TodayRideCard({
       {analysis.executionScore != null && (
         <div className="mt-3 flex items-center gap-3">
           <div className="flex items-center gap-2 rounded bg-zinc-100 px-3 py-1.5 dark:bg-zinc-900">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Execution</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Execution</span>
             <span className="font-mono text-sm font-bold text-zinc-800 dark:text-[#ff49c8]">
               {analysis.executionScore}/10
             </span>
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
               {executionScoreLabel(analysis.executionScore)}
             </span>
           </div>
@@ -258,7 +258,7 @@ export function TodayRideCard({
           HR comparison lives in the trace overlay (decoupling = the gap widening). */}
       {(analysis.powerZoneTimes || analysis.trace || (analysis.intervalComparison && analysis.intervalComparison.reps.length > 0)) && (
         <details className="mt-3">
-          <summary className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          <summary className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             Power execution
             {analysis.intervalComparison && analysis.intervalComparison.reps.length > 0 && (
               <span className="ml-1.5 font-mono text-[11px] font-normal normal-case text-zinc-500 dark:text-zinc-400">
@@ -272,7 +272,7 @@ export function TodayRideCard({
             <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Prescribed</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Prescribed</span>
                   {analysis.intervalComparison.prescribedLabels.map((l, i) => (
                     <span key={i} className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] text-zinc-700 dark:bg-[#00d4ff]/10 dark:text-[#00d4ff]">
                       {l}
@@ -329,7 +329,7 @@ export function TodayRideCard({
                       title="extra effort ridden on top of the plan — not scored against a target"
                       className="rounded border border-dashed border-zinc-300 bg-white px-1.5 py-0.5 font-mono text-[11px] dark:border-zinc-600 dark:bg-zinc-800"
                     >
-                      <span className="text-zinc-400 dark:text-zinc-500">+extra </span>
+                      <span className="text-zinc-500 dark:text-zinc-400">+extra </span>
                       <span className="text-zinc-700 dark:text-zinc-200">{x.actualWatts}W</span>{" "}
                       <span className="text-zinc-500 dark:text-zinc-400">{mins}:{secs}</span>
                     </span>
@@ -342,7 +342,7 @@ export function TodayRideCard({
           {analysis.trace && (
             <div className="rounded-md border border-zinc-200 bg-white px-2 py-2 dark:border-zinc-700 dark:bg-zinc-900">
               <RideTrace trace={analysis.trace} />
-              <p className="mt-1 px-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+              <p className="mt-1 px-1 text-[10px] text-zinc-500 dark:text-zinc-400">
                 Power (cyan, 30s smoothed) · HR (grey){analysis.trace.targetWatts ? ` · dashed = ${analysis.trace.targetWatts}W target` : ""}
                 {analysis.trace.bands.length > 0 ? " · shaded = work intervals" : ""}
               </p>
@@ -358,12 +358,12 @@ export function TodayRideCard({
       {analysis.advisedIntakeKcal != null && (
         <div className="mt-3 flex items-baseline gap-3 rounded bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Advised daily intake</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Advised daily intake</p>
             <p className="mt-0.5 font-mono text-base font-bold text-zinc-900 dark:text-[#ff49c8] dark:[text-shadow:0_0_8px_rgba(255,73,200,0.3)]">
               {analysis.advisedIntakeKcal.toLocaleString()} kcal
             </p>
           </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
             {analysis.advisedBaseKcal?.toLocaleString()} base
             {analysis.advisedRideFuelKcal ? ` + ${analysis.advisedRideFuelKcal.toLocaleString()} ride` : ""}
             {analysis.advisedBufferKcal ? ` + ${analysis.advisedBufferKcal.toLocaleString()} buffer` : ""}
@@ -374,7 +374,7 @@ export function TodayRideCard({
       {/* Athlete note (from Intervals.icu activity description) — scrolls if long */}
       {analysis.activityDescription != null && analysis.activityDescription.trim() !== "" && (
         <div className="mt-3 rounded border border-zinc-100 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Your note</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Your note</p>
           <p className="mt-0.5 text-xs italic leading-5 text-zinc-600 dark:text-zinc-400">{analysis.activityDescription}</p>
         </div>
       )}
@@ -386,7 +386,7 @@ export function TodayRideCard({
       {/* Coach note (only when shown inline, i.e. not relocated to its own card) */}
       {!hideCoachNote && (analysis.coachNote ?? (analysis as unknown as { analysis?: string }).analysis) && (
         <div className="mt-3 border-l-2 border-zinc-300 pl-3 dark:border-[#ff49c8]/30">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Coach note</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Coach note</p>
           <p className="mt-0.5 max-h-48 overflow-y-auto text-xs leading-5 text-zinc-600 dark:text-zinc-400">
             {analysis.coachNote ?? (analysis as unknown as { analysis?: string }).analysis}
           </p>
@@ -467,7 +467,7 @@ export function RecentDataSummary({
           </p>
           <p className="mt-0.5 font-mono text-sm font-semibold text-zinc-700 dark:text-zinc-300">
             {polarization.easyPct}/{polarization.moderatePct}/{polarization.hardPct}
-            <span className="ml-1 text-[10px] font-normal text-zinc-400 dark:text-zinc-500">e/m/h</span>
+            <span className="ml-1 text-[10px] font-normal text-zinc-500 dark:text-zinc-400">e/m/h</span>
           </p>
         </div>
       )}
@@ -504,7 +504,7 @@ export function PlannedToday({ block }: { block: CurrentBlock | null }) {
       </div>
       {day.prescription && day.prescription.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Prescribed</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Prescribed</span>
           {day.prescription.map((iv, i) => (
             <span
               key={i}
@@ -515,7 +515,7 @@ export function PlannedToday({ block }: { block: CurrentBlock | null }) {
           ))}
         </div>
       )}
-      <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
+      <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
         Ride it, then sync to see your execution score and fuel.
       </p>
     </div>

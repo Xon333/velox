@@ -22,7 +22,7 @@ export function MetricTip({ text, align = "left" }: { text: string; align?: "lef
 // "what is this number?" hint used across cards, tiles, and stats.
 export function InfoDot({ text, align }: { text: string; align?: "left" | "right" }) {
   return (
-    <span className="group relative inline-flex cursor-help align-middle text-zinc-400 dark:text-zinc-500">
+    <span className="group relative inline-flex cursor-help align-middle text-zinc-500 dark:text-zinc-400">
       <span className="text-[10px] opacity-60">ⓘ</span>
       <MetricTip text={text} align={align} />
     </span>
@@ -67,7 +67,7 @@ export function Card({
           )}
           {(hint || action) && (
             <div className="flex shrink-0 items-center gap-2">
-              {hint && <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{hint}</span>}
+              {hint && <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{hint}</span>}
               {action}
             </div>
           )}
@@ -186,7 +186,7 @@ export function Zone({
             </span>
           )}
           <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{title}</h2>
-          {hint && <span className="ml-auto text-[10px] text-zinc-400 dark:text-zinc-500">{hint}</span>}
+          {hint && <span className="ml-auto text-[10px] text-zinc-500 dark:text-zinc-400">{hint}</span>}
         </div>
         {fill ? <div className="min-h-0 flex-1 overflow-y-auto">{children}</div> : children}
       </div>
@@ -248,7 +248,7 @@ export function TrendTile({
 export function SectionDivider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2 pt-1">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">{label}</span>
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{label}</span>
       <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
     </div>
   );

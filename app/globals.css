@@ -7,6 +7,8 @@
   --foreground: #18181b;
   --neon: #ff49c8;
   --cyan: #00d4ff;
+  /* Keyboard focus ring — a darker cyan in light mode so it clears 3:1 on white (WCAG 1.4.11). */
+  --focus-ring: #0e7490;
 }
 
 .dark {
@@ -14,6 +16,8 @@
   --foreground: #f4f4f5;
   --neon: #ff49c8;
   --cyan: #00d4ff;
+  /* Bright cyan reads strongly against the near-black canonical theme. */
+  --focus-ring: #00d4ff;
 }
 
 @theme inline {
@@ -41,6 +45,27 @@ body {
     linear-gradient(90deg, rgba(0, 212, 255, 0.022) 1px, transparent 1px);
   background-size: 44px 44px;
   background-attachment: fixed;
+}
+
+/* A consistent, visible keyboard-focus ring (WCAG 2.4.7) in the cyan accent — tuned for the canonical
+   dark theme. Form inputs that set their own focus border keep it; everything else (buttons, links,
+   summaries) gets this ring on keyboard focus only (:focus-visible, so mouse clicks stay quiet). */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Respect a reduced-motion preference (WCAG 2.3.3) — collapse transitions/animations (e.g. the sync
+   spinner, tooltip fades) and instant scrolling for users who opt out of motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @media print {

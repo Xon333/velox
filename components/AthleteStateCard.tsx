@@ -27,17 +27,18 @@ export default function AthleteStateCard({ state }: { state: AthleteState }) {
     <div className="group relative flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800">
       <div className="flex items-baseline gap-0.5">
         <span className={`font-mono text-3xl font-bold leading-none ${BAND_NUM[state.band]}`}>{state.score}</span>
-        <span className="text-[10px] text-zinc-400 dark:text-zinc-500">/100</span>
+        <span className="text-[10px] text-zinc-500 dark:text-zinc-400">/100</span>
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="min-w-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          <p className="min-w-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             Athlete state
-            {state.confidence !== "high" && <span className="ml-1 normal-case opacity-80">· {state.confidence} confidence</span>}
+            {state.confidence !== "high" && <span className="ml-1 normal-case">· {state.confidence} confidence</span>}
           </p>
           <Link
             href="/model"
-            className="shrink-0 text-[10px] font-medium text-zinc-400 transition-colors hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-[#00d4ff]"
+            aria-label="Why this state — open your coaching model"
+            className="shrink-0 text-[10px] font-medium text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-[#00d4ff]"
           >
             why? →
           </Link>
@@ -50,7 +51,7 @@ export default function AthleteStateCard({ state }: { state: AthleteState }) {
       {/* Hover detail: band + recommendation + the drivers that moved the score. */}
       <div className="pointer-events-none absolute left-0 top-full z-30 mt-1 w-72 max-w-[90vw] rounded-lg border border-zinc-200 bg-white p-3 text-left opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900">
         <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-          {band} <span className="text-xs font-normal text-zinc-400 dark:text-zinc-500">· {state.recommendation}</span>
+          {band} <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">· {state.recommendation}</span>
         </p>
         <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{state.headline}</p>
         <ul className="mt-2 space-y-1">
@@ -61,7 +62,7 @@ export default function AthleteStateCard({ state }: { state: AthleteState }) {
               </span>
               <span
                 className={`shrink-0 font-mono ${
-                  d.effect > 0 ? "text-emerald-600 dark:text-emerald-400" : d.effect < 0 ? "text-red-500" : "text-zinc-400"
+                  d.effect > 0 ? "text-emerald-600 dark:text-emerald-400" : d.effect < 0 ? "text-red-600 dark:text-red-400" : "text-zinc-400"
                 }`}
               >
                 {d.effect > 0 ? "+" : ""}

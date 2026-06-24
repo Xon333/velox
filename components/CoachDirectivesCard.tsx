@@ -15,10 +15,10 @@ export default function CoachDirectivesCard() {
     acc && (acc.hitRatePct !== null || acc.pending > 0) ? (
       acc.hitRatePct !== null ? (
         <span className="font-mono text-[11px] text-zinc-500 dark:text-zinc-400">
-          {acc.hitRatePct}% right <span className="text-zinc-400 dark:text-zinc-500">({acc.evaluated} checked)</span>
+          {acc.hitRatePct}% right <span className="text-zinc-500 dark:text-zinc-400">({acc.evaluated} checked)</span>
         </span>
       ) : (
-        <span className="text-[11px] text-zinc-400 dark:text-zinc-500">accruing · {acc.pending} pending</span>
+        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">accruing · {acc.pending} pending</span>
       )
     ) : undefined;
 

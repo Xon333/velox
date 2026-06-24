@@ -67,7 +67,7 @@ Tailwind **arbitrary literals with opacity** — that is the established convent
 | **Page title** (`h1`) | `text-lg font-semibold` foreground (`text-zinc-900` / dark `text-zinc-100`) | one per page |
 | **Card / section title** | `text-xs font-semibold` muted (`text-zinc-500` / dark `text-zinc-400`), **sentence case** | the `Card` primitive — the single card-title treatment on Settings/Profile/utility pages |
 | **Zone eyebrow** | `text-[11px] font-semibold uppercase tracking-wide` muted | the `Zone` primitive — dashboard command-center priority path **only** |
-| **Micro-label** | `text-[10px] uppercase tracking-wide` muted (`text-zinc-400`) | tile/datum labels (`StatTile`/`TrendTile`/`SectionDivider`) |
+| **Micro-label** | `text-[10px] uppercase tracking-wide` muted (`text-zinc-500` / dark `text-zinc-400`, for AA contrast) | tile/datum labels (`StatTile`/`TrendTile`/`SectionDivider`) |
 | **Body** | `text-sm`/`text-xs` (`text-zinc-600` / dark `text-zinc-300`) | prose, hints |
 | **Mono value** | `font-mono` (size per context, default `text-sm`) | every number the athlete reads as data |
 

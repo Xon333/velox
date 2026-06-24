@@ -122,7 +122,7 @@ export default function KnowledgeBaseEditor() {
 
           {retros.length > 0 && (
             <>
-              <p className="mt-4 mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              <p className="mt-4 mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 Block retrospectives
               </p>
               <ul className="space-y-0.5">
@@ -170,7 +170,7 @@ export default function KnowledgeBaseEditor() {
                 {saveState.state === "error" && (
                   <span className="text-xs text-red-600">{saveState.message}</span>
                 )}
-                <span className="ml-auto text-xs text-zinc-400 dark:text-zinc-500">
+                <span className="ml-auto text-xs text-zinc-500 dark:text-zinc-400">
                   {content.length.toLocaleString()} chars
                 </span>
               </div>

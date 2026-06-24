@@ -212,7 +212,7 @@ export default function AthleteProfileForm() {
           "what am I / what to target" read is the decision-critical content, the PR numbers are reference. */}
       {powerProfile && powerProfile.confident && (
         <Section title="Rider profile">
-          <p className="mb-3 text-[11px] text-zinc-400 dark:text-zinc-500">
+          <p className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">
             auto-derived from your power-curve shape · a hint the coach plans around, not a fixed label
           </p>
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -234,10 +234,10 @@ export default function AthleteProfileForm() {
               const weak = pct <= -6;
               return (
                 <div key={s.system} className="rounded bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
-                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{SYSTEM_LABELS[s.system]}</p>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{SYSTEM_LABELS[s.system]}</p>
                   <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-[#00d4ff]">{s.watts}W</p>
                   {s.wattsPerKg !== null && (
-                    <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{s.wattsPerKg} W/kg</p>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{s.wattsPerKg} W/kg</p>
                   )}
                   <p
                     className={
@@ -245,7 +245,7 @@ export default function AthleteProfileForm() {
                         ? "mt-0.5 text-[11px] font-medium text-cyan-700 dark:text-[#00d4ff]"
                         : weak
                           ? "mt-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400"
-                          : "mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500"
+                          : "mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400"
                     }
                   >
                     {pct > 0 ? "+" : ""}{pct}% vs expected
@@ -263,7 +263,7 @@ export default function AthleteProfileForm() {
         <Section title="Power PRs" editHref={syncedPowerCurve.length > 0 ? undefined : "/knowledge"}>
           {syncedPowerCurve.length > 0 ? (
             <>
-              <p className="mb-3 text-[11px] text-zinc-400 dark:text-zinc-500">
+              <p className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">
                 all-time best efforts · from Intervals.icu · {timeAgo(autoSync.syncedAt)}
               </p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
@@ -276,7 +276,7 @@ export default function AthleteProfileForm() {
                       title={wkg ? `${wkg} W/kg` : undefined}
                       className={`rounded bg-zinc-50 px-3 py-1.5 dark:bg-zinc-900 ${wkg ? "cursor-help" : ""}`}
                     >
-                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{label}</p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{label}</p>
                       <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-[#00d4ff]">{pt.watts}W</p>
                     </div>
                   );
@@ -287,7 +287,7 @@ export default function AthleteProfileForm() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-left text-zinc-400 dark:text-zinc-500">
+                  <tr className="text-left text-zinc-500 dark:text-zinc-400">
                     <th className="pb-1 pr-4 font-medium">Duration</th>
                     <th className="pb-1 pr-4 font-medium">Watts</th>
                     <th className="pb-1 font-medium">W/kg</th>
@@ -360,7 +360,7 @@ export default function AthleteProfileForm() {
           ).map((f) => (
             <label key={f.key}>
               <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                {f.label} <span className="text-zinc-400 dark:text-zinc-500">({f.unit})</span>
+                {f.label} <span className="text-zinc-500 dark:text-zinc-400">({f.unit})</span>
               </span>
               <input
                 type="number"
@@ -382,7 +382,7 @@ export default function AthleteProfileForm() {
             <span className="font-semibold">{bufferStatus.bufferApplied} kcal</span>
             {bufferStatus.delta !== 0 && ` (${bufferStatus.delta > 0 ? "+" : ""}${bufferStatus.delta} kcal)`}
           </p>
-          <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">{bufferStatus.reason}</p>
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{bufferStatus.reason}</p>
         </div>
 
         <div className="mt-3 flex items-center gap-3">
