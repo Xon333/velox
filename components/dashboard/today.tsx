@@ -70,7 +70,7 @@ export function ReadinessBadge({
         <span className="text-sm font-semibold">{readiness.level}</span>
         <span className="text-xs opacity-70">— {readiness.reason}</span>
         <span className="ml-auto shrink-0 text-xs opacity-40">ⓘ</span>
-        <MetricTip text="Combines your form (TSB) and recent HRV to suggest whether to build, hold, or recover today." />
+        <MetricTip text="Reads your form (TSB) and acute-fatigue load (ATL/CTL) to suggest whether to build, hold, or recover today. (HRV is not yet in the loop — it's gated off until an overnight source exists.)" />
       </div>
     </div>
   );
