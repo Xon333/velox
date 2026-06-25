@@ -65,6 +65,13 @@ could still capture it) is a separate `← §7` API piece (only `createEvent` ex
   a limitation, or keep a minimal illness input.
 
 ### Scoring-core gaps (route through #2 — they touch `execution-score.ts`)
+- **Off-plan aerobic signal — fill the gap decoupling left** ⭐ — decoupling was demoted out of execution
+  scoring (`ACC-2026-06-25`: too noisy per-ride, whole-ride drift is a ride-structure artifact on
+  non-steady days; it's now a steady-ride **durability** reference only — `decouplingGood`). Off-plan
+  rides now rest on pacing (VI) + RPE alone — the intent-independent aerobic read is gone. Give them a
+  **non-circular** aerobic signal, e.g. Z2-isolated Pw:HR vs the athlete's own baseline (the same signal
+  the athlete-state path already uses), so an off-plan endurance ride is graded on aerobic quality without
+  inferring intensity from the type it was inferred from.
 - **Recovery-specific Z2 cap** — give Recovery its own "dialed-in" cap (above Z1, not Z2) *if* the
   lenient shared aerobic cap proves too soft in real use.
 - **Power-zone source of truth** — decide: keep zones strictly Intervals.icu vs. a sanctioned local

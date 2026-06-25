@@ -5,27 +5,20 @@ const base: ExecutionScoreInput = {
   compliancePct: null,
   intensityFactor: null,
   plannedType: null,
-  decoupling: null,
   variabilityIndex: null,
 };
+
+// Decoupling was demoted out of execution scoring (ACC-2026-06-25) — it's a steady-ride durability
+// signal now, not an execution input — so it no longer appears here.
 
 describe("computeExecutionScore", () => {
   it("returns null when no signal is present", () => {
     expect(computeExecutionScore(base)).toBeNull();
   });
 
-  it("recenters the decoupling band on the calibrated 'good' cutoff, unchanged at the default (ROADMAP #2)", () => {
-    const ride: ExecutionScoreInput = { ...base, compliancePct: 100, intensityFactor: 0.7, plannedType: "Z2", decoupling: 6 };
-    const uncalibrated = computeExecutionScore(ride)!; // G=4 → 6 ∈ [4,7) → +0
-    const drifty = computeExecutionScore({ ...ride, calibration: { decouplingGood: 8 } })!; // G=8 → 6 < 8 → +1
-    expect(drifty).toBeGreaterThan(uncalibrated);
-    // An explicit default cutoff must score identically to passing no calibration at all.
-    expect(computeExecutionScore({ ...ride, calibration: { decouplingGood: 4 } })).toBe(uncalibrated);
-  });
-
   it("rewards a hard, variable RaceSim and penalises a soft one", () => {
-    const hard = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.86, plannedType: "RaceSim", decoupling: 4 });
-    const soft = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.62, plannedType: "RaceSim", decoupling: 4 });
+    const hard = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.86, plannedType: "RaceSim" });
+    const soft = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.62, plannedType: "RaceSim" });
     expect(hard!).toBeGreaterThan(soft!);
   });
 
@@ -35,7 +28,6 @@ describe("computeExecutionScore", () => {
       compliancePct: 100,
       intensityFactor: 0.68,
       plannedType: "Z2",
-      decoupling: 1.5,
       variabilityIndex: 1.02,
     });
     expect(score).toBeGreaterThanOrEqual(9);
@@ -47,7 +39,6 @@ describe("computeExecutionScore", () => {
       compliancePct: 100,
       intensityFactor: 0.68,
       plannedType: "Z2",
-      decoupling: 3,
       variabilityIndex: 1.02,
     })!;
     const surgy = computeExecutionScore({
@@ -55,7 +46,6 @@ describe("computeExecutionScore", () => {
       compliancePct: 100,
       intensityFactor: 0.68,
       plannedType: "Z2",
-      decoupling: 3,
       variabilityIndex: 1.22,
     })!;
     expect(surgy).toBeLessThan(steady);
@@ -67,7 +57,6 @@ describe("computeExecutionScore", () => {
       compliancePct: 100,
       intensityFactor: 1.0,
       plannedType: "VO2max",
-      decoupling: 5,
       variabilityIndex: 1.4,
     })!;
     const withoutVi = computeExecutionScore({
@@ -75,7 +64,6 @@ describe("computeExecutionScore", () => {
       compliancePct: 100,
       intensityFactor: 1.0,
       plannedType: "VO2max",
-      decoupling: 5,
       variabilityIndex: null,
     })!;
     expect(withVi).toBe(withoutVi);
@@ -87,14 +75,12 @@ describe("computeExecutionScore", () => {
       compliancePct: 100,
       intensityFactor: 1.0,
       plannedType: "VO2max",
-      decoupling: 5,
     })!;
     const sandbagged = computeExecutionScore({
       ...base,
       compliancePct: 100,
       intensityFactor: 0.7,
       plannedType: "VO2max",
-      decoupling: 5,
     })!;
     expect(sandbagged).toBeLessThan(proper);
   });
@@ -104,14 +90,12 @@ describe("computeExecutionScore", () => {
       ...base,
       intensityFactor: 1.0,
       plannedType: "VO2max",
-      decoupling: 5,
       adherencePct: 100,
     })!;
     const wellUnder = computeExecutionScore({
       ...base,
       intensityFactor: 1.0,
       plannedType: "VO2max",
-      decoupling: 5,
       adherencePct: 78,
     })!;
     expect(onTarget).toBeGreaterThan(wellUnder);
@@ -123,7 +107,6 @@ describe("computeExecutionScore", () => {
       compliancePct: 100,
       intensityFactor: 0.7,
       plannedType: "Z2",
-      decoupling: 3,
       rpe: 7,
     })!;
     const struggled = computeExecutionScore({
@@ -131,7 +114,6 @@ describe("computeExecutionScore", () => {
       compliancePct: 100,
       intensityFactor: 0.7,
       plannedType: "Z2",
-      decoupling: 3,
       rpe: 10,
     })!;
     expect(struggled).toBeLessThan(aligned);
@@ -143,7 +125,6 @@ describe("computeExecutionScore", () => {
       compliancePct: 30,
       intensityFactor: 1.2,
       plannedType: "Z2",
-      decoupling: 18,
       variabilityIndex: 1.3,
     });
     expect(score).toBe(1);
@@ -155,7 +136,6 @@ describe("computeExecutionScore", () => {
       compliancePct: 100,
       intensityFactor: 0.88,
       plannedType: "Threshold",
-      decoupling: 0.5,
       variabilityIndex: 1.03,
     });
     expect(score).toBe(10);
@@ -170,12 +150,6 @@ describe("intrinsic (off-plan) scoring", () => {
     const planned = computeExecutionScore(args)!;
     const intrinsic = computeExecutionScore({ ...args, intrinsic: true })!;
     expect(intrinsic).toBeLessThan(planned);
-  });
-
-  it("still rewards clean aerobic execution off-plan (decoupling)", () => {
-    const tight = computeExecutionScore({ ...base, intensityFactor: 0.7, plannedType: "Z2", decoupling: 1, intrinsic: true })!;
-    const drifty = computeExecutionScore({ ...base, intensityFactor: 0.7, plannedType: "Z2", decoupling: 12, intrinsic: true })!;
-    expect(tight).toBeGreaterThan(drifty);
   });
 });
 
@@ -210,7 +184,7 @@ describe("executionScoreLabel", () => {
 });
 
 describe("computeExecutionScore — per-type IF-band offset (ROADMAP #2)", () => {
-  // Isolate the IF-vs-type branch: full duration (+2), no decoupling/VI/RPE signal.
+  // Isolate the IF-vs-type branch: full duration (+2), no VI/RPE signal.
   const threshold = (ifVal: number, calibration?: ExecutionScoreInput["calibration"]): number =>
     computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: ifVal, plannedType: "Threshold", calibration })!;
 
@@ -241,7 +215,7 @@ describe("computeExecutionScore — per-type IF-band offset (ROADMAP #2)", () =>
 describe("computeExecutionScore — easy-ride discipline (time above the Z2 cap)", () => {
   // A clean-on-average Z2 ride (IF 0.68); only aboveZ2Frac varies.
   const z2 = (aboveZ2Frac?: number | null, type = "Z2"): number =>
-    computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.68, plannedType: type, decoupling: 3, aboveZ2Frac })!;
+    computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.68, plannedType: type, aboveZ2Frac })!;
 
   it("is inert when zone data is absent — scoring is unchanged", () => {
     const baseline = z2(); // no aboveZ2Frac at all
@@ -265,12 +239,12 @@ describe("computeExecutionScore — easy-ride discipline (time above the Z2 cap)
   });
 
   it("does not touch non-easy types — a Threshold ride ignores time-above-Z2", () => {
-    const args = { ...base, compliancePct: 100, intensityFactor: 0.9, plannedType: "Threshold", decoupling: 3 };
+    const args = { ...base, compliancePct: 100, intensityFactor: 0.9, plannedType: "Threshold" };
     expect(computeExecutionScore({ ...args, aboveZ2Frac: 0.5 })).toBe(computeExecutionScore(args));
   });
 
   it("does not apply off-plan (intrinsic) — there was no plan to be disciplined against", () => {
-    const args = { ...base, intensityFactor: 0.68, plannedType: "Z2", decoupling: 3, intrinsic: true };
+    const args = { ...base, intensityFactor: 0.68, plannedType: "Z2", intrinsic: true };
     expect(computeExecutionScore({ ...args, aboveZ2Frac: 0.5 })).toBe(computeExecutionScore(args));
   });
 });

@@ -443,10 +443,10 @@ export interface RideScoreEntry {
   tss: number | null;
   // The per-athlete calibration this entry was scored against (ROADMAP #2) — frozen alongside ftpUsed
   // so the immutable ledger stays reproducible. Absent on entries scored before calibration shipped
-  // (those used population defaults). `decouplingGood` is the global drift cutoff; `ifBandOffset` is
-  // the per-type IF-band shift that scored THIS entry (planned rides only — off-plan rides skip the
-  // intensity-vs-type branch). Each field is independently optional — only what actually applied is stamped.
-  calibration?: { decouplingGood?: number; ifBandOffset?: number };
+  // (those used population defaults). `ifBandOffset` is the per-type IF-band shift that scored THIS entry
+  // (planned rides only — off-plan rides skip the intensity-vs-type branch). (Decoupling was demoted out
+  // of execution scoring — ACC-2026-06-25 — so it's no longer stamped here.)
+  calibration?: { ifBandOffset?: number };
   // Athlete-state CONTEXT frozen at scoring time (ROADMAP #2 — context-stamp the ledger): the state the
   // athlete carried into this session, so a later state→subsequent-execution correlation can derive the
   // override-only edges honestly (e.g. auto-derive the TSB adaptation window). Both are provenance only —

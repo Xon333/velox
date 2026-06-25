@@ -80,7 +80,7 @@ export default function CalibrationPanel() {
         <ul className="space-y-3">
           <li className="border-t border-zinc-100 pt-3 first:border-t-0 first:pt-0 dark:border-zinc-700/60">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-xs font-medium text-zinc-700 dark:text-zinc-200">Decoupling &ldquo;good&rdquo; cutoff</span>
+              <span className="text-xs font-medium text-zinc-700 dark:text-zinc-200">Durability reference (typical Pw:HR drift)</span>
               <span className="font-mono text-sm text-zinc-900 dark:text-zinc-100">
                 {effective.toFixed(1)}%
                 {overridden && (
@@ -89,7 +89,7 @@ export default function CalibrationPanel() {
               </span>
             </div>
             <p className="mt-0.5 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
-              Aerobic drift below this scores well; the bands recenter on your own typical decoupling.
+              Your typical Pw:HR drift on steady rides — the reference a long-ride durability read compares against. (No longer affects execution scoring.)
             </p>
             <p className="mt-0.5 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">{detail(dg, effective)}</p>
 

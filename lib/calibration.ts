@@ -354,10 +354,11 @@ export function emptyCalibration(): CalibrationStore {
   return { decouplingGood: defaultParameter(), updatedAt: new Date(0).toISOString() };
 }
 
-// Derive the decoupling "good" threshold from the athlete's own 90-day mean decoupling (ROADMAP #2):
-// their typical decoupling becomes the +1/0 boundary, so a structurally-drifty rider isn't punished
-// to the floor and a flat-TT rider is graded tightly — instead of a fixed 4%. `n` is how many rides
-// in the window carried a decoupling reading (drives confidence). Preserves a prior manual override.
+// Derive the decoupling "good" threshold from the athlete's own typical drift (ROADMAP #2). As of
+// ACC-2026-06-25 decoupling no longer feeds execution scoring — this is now the DURABILITY reference
+// ("your typical steady-ride Pw:HR drift"), so the caller passes the mean over STEADY rides only (an
+// interval day's whole-ride decoupling is a ride-structure artifact). `n` is how many steady rides
+// carried a reading (drives confidence). Preserves a prior manual override.
 //
 // Deliberately NOT frozen at high confidence (CR-E): the input is ALREADY a 90-day rolling mean, so
 // the derived value tracks the athlete's recent physiology and must keep re-deriving every sync — a

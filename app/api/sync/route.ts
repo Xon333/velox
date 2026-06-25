@@ -36,14 +36,14 @@ import { buildAthleteModel } from "@/lib/athlete-model";
 import { athleteStateInputsFrom, computeAthleteState } from "@/lib/athlete-state";
 import { overallCoachAccuracy, validateInterventions } from "@/lib/intervention";
 import { weightTrendFromWellness } from "@/lib/nutrition";
-import { DEFAULT_DECOUPLING_GOOD } from "@/lib/execution-score";
+import { isSteadyEnduranceRide } from "@/lib/trends";
 import { buildTodayAnalysis } from "@/lib/ride-analysis";
 import { backfillLedgerEntries, shouldRebuildLedger } from "@/lib/sync-ledger";
 import { detectPowerPRs } from "@/lib/pr";
 import { buildRideScores, calStampFor, mergeScoreLog, mergeScoreLogRebuild } from "@/lib/score-log";
 import { applyDispositions, compromisedDates } from "@/lib/disposition";
 import { buildFormStateLookup, computeAcwr, computeFatigueAlert, computeIntensityDistribution, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
-import { deriveDecouplingGood, deriveIfBandOffsets, resolveAcwrBands, resolveAthleteStateWeights, resolveCalibratedValue } from "@/lib/calibration";
+import { deriveDecouplingGood, deriveIfBandOffsets, resolveAcwrBands, resolveAthleteStateWeights } from "@/lib/calibration";
 import { buildCoachSnapshotFromSources } from "@/lib/coach-snapshot";
 import { resolveToday } from "@/lib/date";
 import type { ExecutedInterval, RideEntryContext, TodayAnalysis } from "@/lib/types";
@@ -201,22 +201,27 @@ export async function POST(req: Request) {
     const baselines = computeRollingBaselines(lastSync.activities, lastSync.wellness, today);
     await writeRollingBaselines({ ...baselines, updatedAt: new Date().toISOString() });
 
-    // Per-athlete calibration (ROADMAP #2): derive the decoupling "good" cutoff from the 90-day mean +
-    // how many rides in that window carried a decoupling reading (drives confidence), then resolve the
-    // effective value the scorer uses. Each new score entry below is frozen with what it scored against.
+    // Durability reference (ACC-2026-06-25): decoupling is no longer an execution input — it's a
+    // steady-ride durability signal. Derive the athlete's "typical drift" from STEADY endurance rides
+    // only (an interval day's whole-ride decoupling is a ride-structure artifact), so the reference the
+    // CalibrationPanel shows is a clean number. Confidence comes from how many steady rides had a reading.
     const cutoff90 = new Date(Date.parse(today) - 90 * 86_400_000).toISOString().slice(0, 10);
-    const decouplingN = lastSync.activities.filter((a) => a.decoupling !== null && a.date >= cutoff90).length;
+    const stateFtp = physStore?.current.ftp ?? 0;
+    const steadyDecoup = lastSync.activities.filter(
+      (a) => a.decoupling !== null && a.date >= cutoff90 && isSteadyEnduranceRide(a, stateFtp)
+    );
+    const steadyDecoupMean = steadyDecoup.length
+      ? Math.round((steadyDecoup.reduce((s, a) => s + (a.decoupling as number), 0) / steadyDecoup.length) * 10) / 10
+      : null;
     const priorCal = await readCalibration();
     const calibration = {
-      decouplingGood: deriveDecouplingGood(priorCal.decouplingGood, baselines.avgDecoupling90d, decouplingN),
+      decouplingGood: deriveDecouplingGood(priorCal.decouplingGood, steadyDecoupMean, steadyDecoup.length),
       updatedAt: new Date().toISOString(),
     };
     await writeCalibration(calibration);
-    // Resolve the values the scorer uses this sync: the decoupling cutoff (confidence-gated) + the
-    // per-type IF-band offsets derived from the athlete's current power zones (ROADMAP #2). Default
-    // zones → empty offsets → identical scoring.
+    // The only value the scorer still needs: the per-type IF-band offsets from the athlete's power zones
+    // (decoupling left execution scoring). Default zones → empty offsets → identical scoring.
     const resolvedCal = {
-      decouplingGood: resolveCalibratedValue(calibration.decouplingGood, DEFAULT_DECOUPLING_GOOD),
       ifBandOffsets: deriveIfBandOffsets(physStore?.current.powerZonePct ?? []),
     };
 
@@ -398,7 +403,8 @@ export async function POST(req: Request) {
                         executionScore,
                         compliancePct: resolvedCompliancePct,
                         // Re-stamp with the current calibration (this entry may be a stale prior one) —
-                        // including the per-type IF offset for a planned day. Off-plan → decouplingGood only.
+                        // the per-type IF offset for a planned day; off-plan rides skip it (intensity-vs-type
+                        // branch is circular for them), so they stamp nothing.
                         ...calStampFor(resolvedCal, e.planned ? e.plannedType : null, !e.planned),
                       }
                     : e

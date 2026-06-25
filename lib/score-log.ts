@@ -15,19 +15,17 @@ function isRide(a: ActivitySummary): boolean {
   return a.type === "Ride" || a.type === "VirtualRide";
 }
 
-// Freeze the calibration that actually scored THIS entry (ROADMAP #2). `decouplingGood` is global;
-// the IF-band offset is per-type and only moves planned (non-intrinsic) entries — off-plan rides skip
-// the intensity-vs-type branch, so no offset applies and none is stamped. A spread-ready `{}` when
-// nothing applied keeps uncalibrated entries free of a `calibration` key (byte-identical to before).
-// Exported so the sync route's live-today re-score stamps the same shape (planned → pass the type).
+// Freeze the calibration that actually scored THIS entry (ROADMAP #2). Now just the per-type IF-band
+// offset (decoupling was demoted out of execution scoring — ACC-2026-06-25), which only moves planned
+// (non-intrinsic) entries — off-plan rides skip the intensity-vs-type branch, so no offset applies and
+// none is stamped. A spread-ready `{}` when nothing applied keeps uncalibrated entries free of a
+// `calibration` key. Exported so the sync route's live-today re-score stamps the same shape.
 export function calStampFor(
   calibration: ScoringCalibration | null | undefined,
   scoringType: string | null,
   intrinsic: boolean
-): { calibration: { decouplingGood?: number; ifBandOffset?: number } } | Record<string, never> {
-  const stamp: { decouplingGood?: number; ifBandOffset?: number } = {};
-  const g = calibration?.decouplingGood;
-  if (g != null && Number.isFinite(g)) stamp.decouplingGood = g;
+): { calibration: { ifBandOffset?: number } } | Record<string, never> {
+  const stamp: { ifBandOffset?: number } = {};
   if (!intrinsic && scoringType) {
     const o = calibration?.ifBandOffsets?.[scoringType];
     if (o != null && Number.isFinite(o) && o !== 0) stamp.ifBandOffset = o;
@@ -110,7 +108,6 @@ export function buildRideScores(
         compliancePct: durationCompliancePct,
         intensityFactor,
         plannedType: planned.type,
-        decoupling: act.decoupling,
         variabilityIndex,
         aboveZ2Frac,
         calibration,
@@ -143,7 +140,6 @@ export function buildRideScores(
         compliancePct: null,
         intensityFactor,
         plannedType: inferredType,
-        decoupling: act.decoupling,
         variabilityIndex,
         aboveZ2Frac, // gated to prescribed Z2/Recovery in computeExecutionScore — inert here (intrinsic)
         intrinsic: true,

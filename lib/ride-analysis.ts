@@ -105,7 +105,6 @@ export function buildTodayAnalysis(input: TodayAnalysisInputs): TodayAnalysisRes
     compliancePct: metrics.compliancePct,
     intensityFactor: metrics.intensityFactor,
     plannedType: plannedDay?.type ?? null,
-    decoupling: activity.decoupling,
     variabilityIndex: metrics.variabilityIndex,
     adherencePct:
       intervalComparison && !intervalComparison.structuralMismatch

@@ -47,7 +47,7 @@ describe("buildRideAnalysisPrompt", () => {
     const p = buildRideAnalysisPrompt(rideInput());
     expect(p).toContain('Planned: Threshold — "Threshold 3x12" (75 min)');
     expect(p).toContain("IF 1.00"); // NP 250 / FTP 250
-    expect(p).toContain("Decoupling 4.2%");
+    expect(p).toContain("Pw:HR drift 4.2%"); // durability framing (decoupling demoted from execution)
   });
 
   it("calls out a new power PR as a breakthrough", () => {

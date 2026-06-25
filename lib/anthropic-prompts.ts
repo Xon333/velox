@@ -16,6 +16,7 @@ import { DEFAULT_BLOCK_SETTINGS } from "./types";
 import { weightTrendFromWellness } from "./nutrition";
 import { formatCoachSnapshot, type CoachSnapshot } from "./coach-snapshot";
 import { prDurationLabel } from "./pr";
+import { isSteadyEnduranceRide } from "./trends";
 
 // ---------- date helpers ----------
 
@@ -383,7 +384,9 @@ export function buildRideAnalysisPrompt(input: RideAnalysisInput): string {
     const ifBasis = input.activityNormalizedPower ?? input.activityAvgWatts;
     const ifVal = input.athleteFtp > 0 ? (ifBasis / input.athleteFtp).toFixed(2) : "—";
     const maxW = input.activityMaxWatts ? ` · Max ${input.activityMaxWatts}W` : "";
-    const dec = input.activityDecoupling != null ? ` · Decoupling ${input.activityDecoupling.toFixed(1)}%` : "";
+    // Only present on steady rides (gated in buildRideAnalysisInput) — there it's a durability/aerobic-fade
+    // read; on interval days whole-ride decoupling is a ride-structure artifact, so it's omitted entirely.
+    const dec = input.activityDecoupling != null ? ` · Pw:HR drift ${input.activityDecoupling.toFixed(1)}% (durability)` : "";
     const npLabel = input.activityNormalizedPower ? "NP" : "NP ~";
     powerLine = `Power:  Avg ${input.activityAvgWatts}W · ${npLabel} ${np}W · IF ${ifVal}${maxW}${dec}`;
   }
@@ -419,7 +422,7 @@ export function buildRideAnalysisPrompt(input: RideAnalysisInput): string {
     : null;
 
   return [
-    "You are a cycling coach. Review today's ride vs the plan in 2–3 sentences. Power is the primary lens: if interval adherence is given, judge execution on BOTH the power hit AND whether each rep held its prescribed duration — a rep at target watts but cut short is NOT full execution, so don't call it textbook. Use HR and decoupling only to judge aerobic efficiency. Be direct: execution quality, any notable deviation, and one concrete takeaway for next session. If a new power PR is listed, call it out as a breakthrough first — it's a genuine fitness signal worth recognising. If the athlete left a note, factor it in. No greeting, no fluff, and do not restate the prescription verbatim.",
+    "You are a cycling coach. Review today's ride vs the plan in 2–3 sentences. Power is the primary lens: if interval adherence is given, judge execution on BOTH the power hit AND whether each rep held its prescribed duration — a rep at target watts but cut short is NOT full execution, so don't call it textbook. Use HR — and, when a Pw:HR drift figure is shown (steady rides only), aerobic durability/fade — to judge aerobic quality; do not infer decoupling on interval days. Be direct: execution quality, any notable deviation, and one concrete takeaway for next session. If a new power PR is listed, call it out as a breakthrough first — it's a genuine fitness signal worth recognising. If the athlete left a note, factor it in. No greeting, no fluff, and do not restate the prescription verbatim.",
     "",
     planned,
     header,
@@ -453,7 +456,9 @@ export function buildRideAnalysisInput(
     activityKj: activity.kj,
     activityTrainingLoad: activity.trainingLoad,
     activityRpe: activity.rpe,
-    activityDecoupling: activity.decoupling,
+    // Decoupling is a steady-ride DURABILITY signal only (ACC-2026-06-25): on an interval day the
+    // whole-ride figure is a ride-structure artifact, so the coach note never sees it there.
+    activityDecoupling: isSteadyEnduranceRide(activity, athleteFtp) ? activity.decoupling : null,
     activityDescription: activity.description,
     avgCadence: activity.avgCadence,
     distanceMeters: activity.distanceMeters,

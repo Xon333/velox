@@ -77,7 +77,7 @@ describe("buildTodayAnalysis (CR-G)", () => {
     trace: null,
     powerPRs: [],
     preserved: null,
-    resolvedCal: { decouplingGood: 4 },
+    resolvedCal: {},
   };
 
   it("assembles a coherent analysis with a numeric execution score and capped compliance", () => {

@@ -10,8 +10,6 @@ export const DEFAULT_DECOUPLING_GOOD = 4;
 // Per-athlete scoring calibration (ROADMAP #2) threaded into the score. Every field is optional and
 // defaults to the population behaviour, so an uncalibrated/default-zoned athlete scores identically.
 export interface ScoringCalibration {
-  // Recenters the decoupling bands on the athlete's own typical drift (absent → DEFAULT_DECOUPLING_GOOD).
-  decouplingGood?: number;
   // Per-workout-type IF-band shift (FTP fraction) that moves the intensity-vs-type bands to the
   // athlete's own power-zone edges (see deriveIfBandOffsets). Absent/0 → unchanged population bands.
   ifBandOffsets?: Record<string, number>;
@@ -21,7 +19,6 @@ export interface ExecutionScoreInput {
   compliancePct: number | null;
   intensityFactor: number | null;
   plannedType: string | null;
-  decoupling: number | null;
   variabilityIndex: number | null; // NP / avg power; ~1.0 = perfectly steady
   adherencePct?: number | null; // avg interval power vs prescribed target (interval days)
   rpe?: number | null; // perceived exertion 1-10
@@ -32,21 +29,23 @@ export interface ExecutionScoreInput {
   aboveZ2Frac?: number | null;
   // Off-plan ride: the type was inferred FROM intensity, so scoring intensity against that
   // type would be circular. When set, the intensity-vs-type branch is skipped and the score
-  // rests on the intent-independent signals (decoupling, pacing, RPE).
+  // rests on the intent-independent signals (pacing, RPE). (Decoupling was demoted to a durability-only
+  // signal — too noisy per-ride to grade execution — so it no longer contributes here. ACC follow-up:
+  // give off-plan rides a non-circular aerobic signal, e.g. Pw:HR-Z2-vs-baseline.)
   intrinsic?: boolean;
-  // Per-athlete calibration (ROADMAP #2): recenters decoupling bands + shifts the IF-vs-type bands to
-  // the athlete's own zone edges. Absent → population behaviour (unchanged scoring).
+  // Per-athlete calibration (ROADMAP #2): shifts the IF-vs-type bands to the athlete's own zone edges.
+  // Absent → population behaviour (unchanged scoring).
   calibration?: ScoringCalibration | null;
 }
 
 export function computeExecutionScore(input: ExecutionScoreInput): number | null {
-  const { compliancePct, intensityFactor, plannedType, decoupling, variabilityIndex } = input;
+  const { compliancePct, intensityFactor, plannedType, variabilityIndex } = input;
   const adherencePct = input.adherencePct ?? null;
   const rpe = input.rpe ?? null;
   const intrinsic = input.intrinsic ?? false;
 
   // Need at least one meaningful signal to produce a score.
-  if (compliancePct === null && intensityFactor === null && decoupling === null && adherencePct === null) return null;
+  if (compliancePct === null && intensityFactor === null && adherencePct === null) return null;
 
   let score = 5; // baseline
 
@@ -68,18 +67,9 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
     else score -= 2;
   }
 
-  // --- Aerobic execution via decoupling (±2) ---
-  // Bands scale off the athlete's "good" cutoff G (calibrated, ROADMAP #2). At the default G=4 the
-  // cutoffs are exactly [2, 4, 7, 10] — unchanged. A higher G (a structurally-drifty rider) widens
-  // them so a typical ride isn't over-penalised; a lower G grades a steady rider more tightly.
-  if (decoupling !== null) {
-    const G = input.calibration?.decouplingGood ?? DEFAULT_DECOUPLING_GOOD;
-    if (decoupling < G * 0.5) score += 2;
-    else if (decoupling < G) score += 1;
-    else if (decoupling < G * 1.75) score += 0;
-    else if (decoupling < G * 2.5) score -= 1;
-    else score -= 2;
-  }
+  // Decoupling no longer contributes to execution (ACC-2026-06-25): whole-ride decoupling is a ride-
+  // structure artifact on non-steady days and too noisy per-ride to grade a session. It's now a
+  // steady-ride DURABILITY signal only — see lib/calibration.ts (decouplingGood) + the coach note.
 
   // --- Intensity vs planned type (±2) --- skipped for off-plan rides (would be circular)
   if (intensityFactor !== null && plannedType && !intrinsic) {
