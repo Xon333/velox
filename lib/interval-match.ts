@@ -9,6 +9,7 @@
 // is attempted — Intervals' interval boundaries aren't reliable enough to align on.
 
 import type { ExecutedInterval, IntervalAdherence, IntervalComparison, PrescribedInterval } from "./types";
+import { median } from "./stats";
 
 export function matchPrescription(
   prescription: PrescribedInterval[],
@@ -54,12 +55,6 @@ export function matchPrescription(
   }
 
   const avg = (xs: number[]) => (xs.length > 0 ? Math.round(xs.reduce((s, v) => s + v, 0) / xs.length) : 0);
-  const median = (xs: number[]) => {
-    if (xs.length === 0) return 0;
-    const s = [...xs].sort((a, b) => a - b);
-    const mid = Math.floor(s.length / 2);
-    return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-  };
   const avgAdherencePct = avg(reps.map((r) => r.adherencePct));
   const avgDurationPct = avg(reps.map((r) => r.durationPct));
   // Effective execution = power adherence scaled by how much of the prescribed duration was
@@ -84,7 +79,7 @@ export function matchPrescription(
   // intended correction for the rare genuine-short case.
   const countMatches = reps.length === flat.length;
   const allRepsHalvedOrLess = reps.length >= 2 && reps.every((r) => r.durationPct < 55);
-  const powerNailed = median(reps.map((r) => r.adherencePct)) >= 95;
+  const powerNailed = reps.length > 0 && median(reps.map((r) => r.adherencePct)) >= 95;
   const structuralMismatch = countMatches && allRepsHalvedOrLess && powerNailed;
 
   // Work efforts beyond the prescribed count = mid-ride added intervals (DI-3). Surface them as

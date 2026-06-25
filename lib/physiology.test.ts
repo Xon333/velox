@@ -80,6 +80,10 @@ describe("resolvePowerZones / resolveHrZones", () => {
     const zones = resolveHrZones(snap({ hrZones: [75, 86, 97], hrZonesAreBpm: false, lthr: 160 }));
     expect(zones[0]).toEqual({ name: "Z1", lo: 0, hi: 120 }); // 75% of 160
   });
+
+  it("returns [] for %-of-LTHR zones with no anchor, not raw % as bpm (RV2-7)", () => {
+    expect(resolveHrZones(snap({ hrZones: [75, 86, 97], hrZonesAreBpm: false, lthr: null, maxHr: null }))).toEqual([]);
+  });
 });
 
 describe("physiologyAsOf", () => {

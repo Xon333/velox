@@ -85,6 +85,15 @@ describe("computeExecutionScore", () => {
     expect(sandbagged).toBeLessThan(proper);
   });
 
+  it("marks down a wildly over-cooked VO2max / RaceSim, not just an under-cooked one (RV2-8)", () => {
+    const properVo2 = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 1.0, plannedType: "VO2max" })!;
+    const overVo2 = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 1.3, plannedType: "VO2max" })!;
+    expect(overVo2).toBeLessThan(properVo2);
+    const properRace = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.88, plannedType: "RaceSim" })!;
+    const overRace = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 1.15, plannedType: "RaceSim" })!;
+    expect(overRace).toBeLessThan(properRace);
+  });
+
   it("uses interval adherence as the execution signal on interval days", () => {
     const onTarget = computeExecutionScore({
       ...base,

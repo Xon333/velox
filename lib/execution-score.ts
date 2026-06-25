@@ -99,6 +99,7 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
         if (IF >= 0.90 + o && IF <= 1.10 + o) score += 2;
         else if (IF >= 0.86 + o && IF <= 1.15 + o) score += 1;
         else if (IF < 0.80 + o) score -= 2;
+        else if (IF > 1.20 + o) score -= 1; // sustained way over VO2 isn't the prescribed session either (RV2-8)
         break;
       case "SIT":
         if (IF >= 1.00 + o) score += 2;
@@ -111,6 +112,7 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
         if (IF >= 0.80 + o && IF <= 0.95 + o) score += 2;
         else if (IF >= 0.75 + o && IF <= 1.0 + o) score += 1;
         else if (IF < 0.70 + o) score -= 2;
+        else if (IF > 1.05 + o) score -= 1; // way over even for a hard surgy race-sim (RV2-8)
         break;
     }
   }

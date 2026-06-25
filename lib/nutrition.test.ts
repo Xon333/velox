@@ -148,7 +148,7 @@ describe("weightTrendFromWellness", () => {
     injury: null,
   });
 
-  it("returns the OLS slope as kg/7d over the trailing window", () => {
+  it("returns the Theil–Sen slope as kg/7d over the trailing window", () => {
     const trend = weightTrendFromWellness([
       entry("2026-06-01", 75.2),
       entry("2026-06-05", 75.0),

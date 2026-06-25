@@ -328,7 +328,11 @@ function extractCurve(data: unknown): PowerCurvePoint[] {
 }
 
 // Reduce a per-second power curve to the spec's key durations (nearest point), dropping targets
-// the athlete has no data near (e.g. no 60-min effort).
+// the athlete has no data near (e.g. no 60-min effort). The match tolerance is a clamped percentage
+// (RV2-13): a flat 20% is ±1s at a 5s target (too strict — drops valid points) and ±12min at 60min
+// (too loose — would match a 48-min effort to the 60-min slot). Clamp to [5s, 120s].
+const CURVE_MATCH_MIN_TOL_SEC = 5;
+const CURVE_MATCH_MAX_TOL_SEC = 120;
 function reduceToKeyDurations(full: PowerCurvePoint[]): PowerCurvePoint[] {
   if (full.length === 0) return [];
   return POWER_CURVE_DURATIONS_SEC.flatMap((target) => {
@@ -338,7 +342,8 @@ function reduceToKeyDurations(full: PowerCurvePoint[]): PowerCurvePoint[] {
         best = p;
       }
     }
-    if (!best || Math.abs(best.durationSec - target) > target * 0.2) return [];
+    const tol = Math.min(CURVE_MATCH_MAX_TOL_SEC, Math.max(CURVE_MATCH_MIN_TOL_SEC, target * 0.2));
+    if (!best || Math.abs(best.durationSec - target) > tol) return [];
     return [{ durationSec: target, watts: Math.round(best.watts) }];
   });
 }

@@ -2,6 +2,7 @@
 // The AI receives this module's output as pre-computed values and only
 // rephrases them in natural language inside workout descriptions.
 import type { WellnessEntry, WorkoutType } from "./types";
+import { median } from "./stats";
 
 export interface AthleteNutritionConfig {
   baseCalories: number; // default: 2000
@@ -87,6 +88,8 @@ const SESSION_INTENSITY_FACTOR: Record<Exclude<WorkoutType, "Rest" | "Strength">
   Recovery: 0.5,
   Z2: 0.65,
   Threshold: 0.78,
+  // VO2max sits BELOW Threshold deliberately (not a typo): VO2 work is short hard reps with long
+  // recoveries, so the WHOLE-session average power is lower than a sustained threshold block.
   VO2max: 0.75,
   SIT: 0.68,
   RaceSim: 0.82, // hard + surgy; whole-session average sits above threshold work
@@ -138,12 +141,13 @@ export function calculateDailyTarget(
 const WEIGHT_TREND_WINDOW_DAYS = 14; // regress over the trailing fortnight
 const WEIGHT_TREND_MIN_POINTS = 3; // need ≥3 weigh-ins before a slope is meaningful (and outlier-resistant)
 
-// 7-day weight trend (kg/7d, + = gaining) from synced wellness. An ordinary-least-squares slope over
-// EVERY weigh-in in the trailing ~14 days — NOT a latest-minus-one-reference diff. Daily body weight
-// swings ±0.5–1 kg (water/glycogen/food), so a single noisy reading — e.g. an outlier exactly 7 days
-// ago — would dominate a two-point diff but barely moves a slope fit to ~10 points. Handles sparse
-// logging (e.g. 5×/week) natively via regression on irregular dates. Null below the sample floor or
-// when every weigh-in shares one day (no slope).
+// 7-day weight trend (kg/7d, + = gaining) from synced wellness. A Theil–Sen slope — the median of every
+// pair's slope — over every weigh-in in the trailing ~14 days. Daily body weight swings ±0.5–1 kg
+// (water/glycogen/food), so a single noisy reading must not steer the trend. Theil–Sen is genuinely robust
+// to that: unlike OLS it isn't dragged by a high-leverage outlier at the window EDGE (the oldest weigh-in,
+// or the latest), which is exactly where OLS leverage is highest (RV2-6). Handles sparse logging (e.g.
+// 5×/week) natively via slopes over irregular dates. Null below the sample floor or when every weigh-in
+// shares one day (no pair spans time).
 export function weightTrendFromWellness(wellness: WellnessEntry[]): number | null {
   const weighIns = wellness
     .filter((w): w is WellnessEntry & { weightKg: number } => w.weightKg !== null)
@@ -155,15 +159,14 @@ export function weightTrendFromWellness(wellness: WellnessEntry[]): number | nul
     .map((w) => ({ x: (Date.parse(w.date) - latestMs) / 86_400_000, y: w.weightKg }))
     .filter((p) => p.x >= -WEIGHT_TREND_WINDOW_DAYS);
   if (pts.length < WEIGHT_TREND_MIN_POINTS) return null;
-  const n = pts.length;
-  const sx = pts.reduce((s, p) => s + p.x, 0);
-  const sy = pts.reduce((s, p) => s + p.y, 0);
-  const sxx = pts.reduce((s, p) => s + p.x * p.x, 0);
-  const sxy = pts.reduce((s, p) => s + p.x * p.y, 0);
-  const denom = n * sxx - sx * sx;
-  if (denom === 0) return null; // all weigh-ins on one day → no slope
-  const slopePerDay = (n * sxy - sx * sy) / denom;
-  return Math.round(slopePerDay * 7 * 10) / 10; // express as kg/7d, 1 decimal
+  const slopes: number[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    for (let j = i + 1; j < pts.length; j++) {
+      if (pts[j].x !== pts[i].x) slopes.push((pts[j].y - pts[i].y) / (pts[j].x - pts[i].x));
+    }
+  }
+  if (slopes.length === 0) return null; // all weigh-ins on one day → no slope
+  return Math.round(median(slopes) * 7 * 10) / 10; // express as kg/7d, 1 decimal
 }
 
 // ---------- Reference table injected into the AI prompt ----------

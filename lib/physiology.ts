@@ -118,13 +118,13 @@ export function resolvePowerZones(s: PhysiologySnapshot): Zone[] {
 
 export function resolveHrZones(s: PhysiologySnapshot): Zone[] {
   if (s.hrZones.length === 0) return [];
+  if (s.hrZonesAreBpm) return boundsToZones(s.hrZones, s.hrZoneNames);
+  // Percent-of-LTHR zones need an anchor to become bpm. With neither LTHR nor max-HR, return [] rather
+  // than emitting the raw percentages AS IF they were bpm (silently-wrong 60–90 "bpm" zones — RV2-7).
+  // The md fallback (readHrZones) then takes over, matching how resolvePowerZones bails on ftp ≤ 0.
   const anchor = s.lthr ?? s.maxHr;
-  const uppers = s.hrZonesAreBpm
-    ? s.hrZones
-    : anchor
-      ? s.hrZones.map((pct) => Math.round((pct / 100) * anchor))
-      : s.hrZones;
-  return boundsToZones(uppers, s.hrZoneNames);
+  if (!anchor) return [];
+  return boundsToZones(s.hrZones.map((pct) => Math.round((pct / 100) * anchor)), s.hrZoneNames);
 }
 
 // ---------- effective-dating + reconciliation (pure) ----------
