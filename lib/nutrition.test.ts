@@ -53,8 +53,6 @@ describe("calculateDailyTarget", () => {
       dailyTarget: 2600,
       preRideCarbs: 0,
       inRideCarbsPerHour: 0,
-      postRideCarbs: 0,
-      postRideProtein: 0,
       bufferApplied: 0,
     });
   });
@@ -69,12 +67,6 @@ describe("calculateDailyTarget", () => {
     const plan = calculateDailyTarget(700, false, config, -0.5);
     expect(plan.bufferApplied).toBe(450);
     expect(plan.dailyTarget).toBe(3150); // 2000 + 700 + 450
-  });
-
-  it("scales post-ride targets to body weight", () => {
-    const plan = calculateDailyTarget(500, false, config, 0);
-    expect(plan.postRideCarbs).toBe(85); // 1.1 g/kg × 75 kg, rounded to 5 g
-    expect(plan.postRideProtein).toBe(30);
   });
 
   it("fills pre/in-ride carbs from the workout context", () => {

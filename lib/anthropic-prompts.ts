@@ -274,7 +274,6 @@ DESCRIPTION FORMAT for each workout:
   Execution: [Optional — one short pacing or technique cue for THIS session/terrain when it adds value (see execution-cue rule). Omit entirely when nothing useful applies.]
   Pre-ride: [Carbohydrate grams from the reference table]
   In-ride: [Carbohydrate grams/hr from the reference table, only for rides > 60 min]
-  Post-ride: [Carbs and protein targets in grams from the reference table]
   Daily intake: [Total kcal for the day, copied from the reference table]
 
 NUTRITION REFERENCE TABLE (pre-computed by the app's deterministic formula — copy these values, never calculate your own; pick the row matching the session's type and closest duration):

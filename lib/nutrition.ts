@@ -16,8 +16,6 @@ export interface WorkoutNutritionPlan {
   dailyTarget: number; // total kcal for the day
   preRideCarbs: number; // grams
   inRideCarbsPerHour: number; // grams/hr (0 if < 60 min ride)
-  postRideCarbs: number; // grams
-  postRideProtein: number; // grams
   bufferApplied: number; // actual buffer used (may differ from config if weight-adjusted)
 }
 
@@ -122,8 +120,6 @@ export function calculateDailyTarget(
       dailyTarget: Math.round(config.restDayTarget),
       preRideCarbs: 0,
       inRideCarbsPerHour: 0,
-      postRideCarbs: 0,
-      postRideProtein: 0,
       bufferApplied: 0,
     };
   }
@@ -132,8 +128,6 @@ export function calculateDailyTarget(
     dailyTarget: roundTo(config.baseCalories + activityBurnKcal + bufferApplied, 10),
     preRideCarbs: workout ? preRideCarbTarget(workout.durationMin, workout.type, config.weight) : 0,
     inRideCarbsPerHour: workout ? inRideCarbTarget(workout.durationMin, workout.type) : 0,
-    postRideCarbs: roundTo(1.1 * config.weight, 5), // 1.0–1.2 g/kg midpoint
-    postRideProtein: 30, // 25–35 g midpoint
     bufferApplied,
   };
 }
@@ -214,11 +208,11 @@ export function buildNutritionReferenceRows(
 
 export function nutritionTableMarkdown(rows: NutritionReferenceRow[]): string {
   const header =
-    "| Session type | Duration (min) | Est. burn (kcal) | Daily target (kcal) | Pre-ride carbs (g) | In-ride carbs (g/hr) | Post-ride carbs (g) | Post-ride protein (g) |\n" +
-    "|---|---|---|---|---|---|---|---|";
+    "| Session type | Duration (min) | Est. burn (kcal) | Daily target (kcal) | Pre-ride carbs (g) | In-ride carbs (g/hr) |\n" +
+    "|---|---|---|---|---|---|";
   const lines = rows.map(
     (r) =>
-      `| ${r.type} | ${r.durationMin} | ${r.estBurnKcal} | ${r.plan.dailyTarget} | ${r.plan.preRideCarbs} | ${r.plan.inRideCarbsPerHour} | ${r.plan.postRideCarbs} | ${r.plan.postRideProtein} |`
+      `| ${r.type} | ${r.durationMin} | ${r.estBurnKcal} | ${r.plan.dailyTarget} | ${r.plan.preRideCarbs} | ${r.plan.inRideCarbsPerHour} |`
   );
   return [header, ...lines].join("\n");
 }
