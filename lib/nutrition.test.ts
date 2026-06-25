@@ -148,16 +148,16 @@ describe("weightTrendFromWellness", () => {
     injury: null,
   });
 
-  it("returns the change between the latest weigh-in and ~7 days prior", () => {
+  it("returns the OLS slope as kg/7d over the trailing window", () => {
     const trend = weightTrendFromWellness([
       entry("2026-06-01", 75.2),
       entry("2026-06-05", 75.0),
       entry("2026-06-08", 74.6),
     ]);
-    expect(trend).toBe(-0.6); // 74.6 (Jun 8) vs 75.2 (Jun 1, 7 days back)
+    expect(trend).toBe(-0.6); // steady ~0.6 kg/week loss
   });
 
-  it("returns null when there is no weigh-in 4–10 days before the latest", () => {
+  it("returns null below the 3-weigh-in floor", () => {
     expect(weightTrendFromWellness([entry("2026-06-08", 74.6)])).toBeNull();
     expect(
       weightTrendFromWellness([entry("2026-06-07", 75.0), entry("2026-06-08", 74.6)])
@@ -167,9 +167,26 @@ describe("weightTrendFromWellness", () => {
   it("ignores entries without weight", () => {
     const trend = weightTrendFromWellness([
       entry("2026-06-01", 75.0),
-      entry("2026-06-07", null),
+      entry("2026-06-04", null),
+      entry("2026-06-05", 74.8),
       entry("2026-06-08", 74.5),
     ]);
     expect(trend).toBe(-0.5);
+  });
+
+  it("resists a single outlier ~7 days back (the reported failure mode)", () => {
+    // True weight is flat at 75.0; the reading exactly 7 days before the latest spiked to 75.6. The old
+    // latest-minus-one-reference diff reported a false −0.6 kg/7d — the regression stays ~flat.
+    const trend = weightTrendFromWellness([
+      entry("2026-06-01", 75.0),
+      entry("2026-06-03", 75.0),
+      entry("2026-06-05", 75.0),
+      entry("2026-06-07", 75.6), // outlier, exactly 7 days before the latest
+      entry("2026-06-09", 75.0),
+      entry("2026-06-11", 75.0),
+      entry("2026-06-13", 75.0),
+      entry("2026-06-14", 75.0),
+    ]);
+    expect(Math.abs(trend as number)).toBeLessThan(0.2);
   });
 });

@@ -135,28 +135,35 @@ export function calculateDailyTarget(
   };
 }
 
-// 7-day weight trend from synced wellness data: latest weigh-in minus the
-// weigh-in closest to 7 days earlier (accepted window 4–10 days back).
+const WEIGHT_TREND_WINDOW_DAYS = 14; // regress over the trailing fortnight
+const WEIGHT_TREND_MIN_POINTS = 3; // need ≥3 weigh-ins before a slope is meaningful (and outlier-resistant)
+
+// 7-day weight trend (kg/7d, + = gaining) from synced wellness. An ordinary-least-squares slope over
+// EVERY weigh-in in the trailing ~14 days — NOT a latest-minus-one-reference diff. Daily body weight
+// swings ±0.5–1 kg (water/glycogen/food), so a single noisy reading — e.g. an outlier exactly 7 days
+// ago — would dominate a two-point diff but barely moves a slope fit to ~10 points. Handles sparse
+// logging (e.g. 5×/week) natively via regression on irregular dates. Null below the sample floor or
+// when every weigh-in shares one day (no slope).
 export function weightTrendFromWellness(wellness: WellnessEntry[]): number | null {
   const weighIns = wellness
     .filter((w): w is WellnessEntry & { weightKg: number } => w.weightKg !== null)
     .sort((a, b) => a.date.localeCompare(b.date));
-  if (weighIns.length < 2) return null;
-  const latest = weighIns[weighIns.length - 1];
-  const latestMs = Date.parse(latest.date);
-  let reference: (typeof weighIns)[number] | null = null;
-  let bestDistance = Infinity;
-  for (const entry of weighIns.slice(0, -1)) {
-    const daysBack = (latestMs - Date.parse(entry.date)) / 86_400_000;
-    if (daysBack < 4 || daysBack > 10) continue;
-    const distance = Math.abs(daysBack - 7);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      reference = entry;
-    }
-  }
-  if (!reference) return null;
-  return Math.round((latest.weightKg - reference.weightKg) * 10) / 10;
+  if (weighIns.length < WEIGHT_TREND_MIN_POINTS) return null;
+  const latestMs = Date.parse(weighIns[weighIns.length - 1].date);
+  // x = days relative to the latest weigh-in (≤ 0); y = kg. Keep only the trailing window.
+  const pts = weighIns
+    .map((w) => ({ x: (Date.parse(w.date) - latestMs) / 86_400_000, y: w.weightKg }))
+    .filter((p) => p.x >= -WEIGHT_TREND_WINDOW_DAYS);
+  if (pts.length < WEIGHT_TREND_MIN_POINTS) return null;
+  const n = pts.length;
+  const sx = pts.reduce((s, p) => s + p.x, 0);
+  const sy = pts.reduce((s, p) => s + p.y, 0);
+  const sxx = pts.reduce((s, p) => s + p.x * p.x, 0);
+  const sxy = pts.reduce((s, p) => s + p.x * p.y, 0);
+  const denom = n * sxx - sx * sx;
+  if (denom === 0) return null; // all weigh-ins on one day → no slope
+  const slopePerDay = (n * sxy - sx * sy) / denom;
+  return Math.round(slopePerDay * 7 * 10) / 10; // express as kg/7d, 1 decimal
 }
 
 // ---------- Reference table injected into the AI prompt ----------

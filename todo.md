@@ -33,6 +33,21 @@ P2 high-value UX/feature · P3 polish/education · Type: `bug` `ux` `feat` `audi
   fallback to detection when no usable laps exist. Scoping TBD — separate change to the executed source
   in [intervals-api.ts](lib/intervals-api.ts) + [interval-match.ts](lib/interval-match.ts).
 
+**ACC-2026-06-25 — second-brain state accuracy (athlete request).**
+- ☑ P2 `bug` **Z2-gate decoupling in the athlete state.** It fed the latest ANY-type ride's whole-ride
+  decoupling vs an all-rides 90d average — but whole-ride decoupling on an interval day is a ride-STRUCTURE
+  artifact (hard efforts first inflate first-half Pw:HR), not aerobic strain, and as a "lived negative" it
+  could wrongly CAP the score. Now only steady-endurance rides count (shared `isSteadyEnduranceRide` gate
+  the Trends Pw:HR already used: outdoor, 0.56–0.85 FTP, ≥45min), the latest must be recent (≤14d), and the
+  baseline is the mean over qualifying rides (≥3, else the signal sits out — better absent than misleading).
+  FTP threaded through resolveCoachSignals + sync + generate. 2 tests. _[athlete-state.ts](lib/athlete-state.ts) ·
+  [trends.ts](lib/trends.ts)._
+- ☑ P2 `bug` **OLS weight trend.** Replaced the latest-minus-one-reference diff (a single outlier exactly
+  7 days ago produced a false reading) with an ordinary-least-squares slope over every weigh-in in the
+  trailing 14 days → kg/7d (≥3 weigh-ins). Robust to one noisy reading, handles 5×/week logging natively.
+  Feeds the nutrition buffer + the Trends "7-day trend" tile. 2 tests incl. the outlier case. Theil–Sen is
+  the further-robust upgrade if ever needed. _[nutrition.ts](lib/nutrition.ts)._
+
 **RV-2026-06-24 — senior-dev general review (architecture + edge cases).** 10 findings from a
 full read of the deterministic core, sync orchestrator, routes, and Intervals client. **9 of 10 shipped**
 (RV-1…RV-6, RV-8, RV-9, RV-5b). Only **RV-7** (AI spend cap) is left — de-prioritised: usage/spend is
