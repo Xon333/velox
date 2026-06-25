@@ -166,16 +166,28 @@ describe("athleteStateInputsFrom — Z2 Pw:HR aerobic signal", () => {
   const sync = (activities: ActivitySummary[]): SyncData =>
     ({ syncedAt: "", activities, wellness: [], powerCurve: [], powerCurveAllTime: [], fitness: { ctl: null, atl: null, tsb: null } });
 
-  it("uses the latest ride with enough Z2, ignoring a thin-Z2 interval day", () => {
+  it("uses the latest ride with enough Z2, and excludes it from its own baseline (RV2-4)", () => {
     const activities = [
       act({ date: iso(0), powerHrZ2: 1.31, powerHrZ2Mins: 8 }), // interval day, only 8 Z2 min → excluded
-      act({ date: iso(1), powerHrZ2: 1.55, powerHrZ2Mins: 60 }), // endurance → latest qualifying
+      act({ date: iso(1), powerHrZ2: 1.55, powerHrZ2Mins: 60 }), // recent → latest qualifying
+      act({ date: iso(20), powerHrZ2: 1.4, powerHrZ2Mins: 50 }), // older than the 14d recency window → baseline
+      act({ date: iso(30), powerHrZ2: 1.4, powerHrZ2Mins: 70 }),
+      act({ date: iso(45), powerHrZ2: 1.4, powerHrZ2Mins: 70 }),
+    ];
+    const inputs = athleteStateInputsFrom(sync(activities), model, null);
+    expect(inputs.aerobicEffLatest).toBe(1.55); // the recent ≥15-min-Z2 ride
+    expect(inputs.aerobicEffBaseline).toBe(1.4); // mean of the OLDER rides only — the latest isn't averaged in
+  });
+
+  it("sits the baseline out when every qualifying ride is recent (can't self-compare — RV2-4)", () => {
+    const activities = [
+      act({ date: iso(1), powerHrZ2: 1.55, powerHrZ2Mins: 60 }),
       act({ date: iso(4), powerHrZ2: 1.5, powerHrZ2Mins: 50 }),
       act({ date: iso(8), powerHrZ2: 1.6, powerHrZ2Mins: 70 }),
     ];
     const inputs = athleteStateInputsFrom(sync(activities), model, null);
-    expect(inputs.aerobicEffLatest).toBe(1.55); // the recent ≥15-min-Z2 ride, NOT the 8-min interval day
-    expect(inputs.aerobicEffBaseline).toBe(1.55); // round2(mean(1.55, 1.50, 1.60))
+    expect(inputs.aerobicEffLatest).toBe(1.55); // latest still reads
+    expect(inputs.aerobicEffBaseline).toBeNull(); // nothing outside the recency window to baseline against
   });
 
   it("sits the signal out (null) when no ride clears the Z2-minutes floor", () => {
@@ -186,5 +198,20 @@ describe("athleteStateInputsFrom — Z2 Pw:HR aerobic signal", () => {
     );
     expect(inputs.aerobicEffLatest).toBeNull();
     expect(inputs.aerobicEffBaseline).toBeNull();
+  });
+
+  it("RPE needs a minimum sample and the baseline excludes the recent window (RV2-4/RV2-5)", () => {
+    // One recent ride → below the recent-RPE floor of 2 → rpeRecent null (no n=1 trend).
+    const single = athleteStateInputsFrom(sync([act({ date: iso(1), rpe: 8 })]), model, null);
+    expect(single.rpeRecent).toBeNull();
+
+    // 2 recent (avg 8) + 3 older (avg 5). Recent clears its floor; baseline is the OLDER rides only.
+    const activities = [
+      act({ date: iso(1), rpe: 8 }), act({ date: iso(3), rpe: 8 }),
+      act({ date: iso(20), rpe: 5 }), act({ date: iso(30), rpe: 5 }), act({ date: iso(45), rpe: 5 }),
+    ];
+    const inputs = athleteStateInputsFrom(sync(activities), model, null);
+    expect(inputs.rpeRecent).toBe(8);
+    expect(inputs.rpeBaseline).toBe(5); // recent rides not folded into their own baseline
   });
 });

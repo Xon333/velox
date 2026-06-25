@@ -11,6 +11,7 @@
 
 import { DEFAULT_ATHLETE_STATE_WEIGHTS, type AthleteStateWeights } from "./calibration";
 import { round2 } from "./stats";
+import { utcToday } from "./date";
 import type { AcwrResult, ActivitySummary, AthleteModel, AthleteState, SignalContribution, SyncData } from "./types";
 
 export interface AthleteStateInputs {
@@ -147,22 +148,33 @@ export function computeAthleteState(
 // ---- adapter: resolve the scalar inputs from the app's stored signals (pure; the routes pass the
 // pieces they already have, so the fusion stays IO-free and testable). ----
 
-function meanRpe(activities: ActivitySummary[], sinceIso: string): number | null {
-  const rpes = activities.filter((a) => a.date >= sinceIso && a.rpe !== null).map((a) => a.rpe as number);
-  return rpes.length ? Math.round((rpes.reduce((s, v) => s + v, 0) / rpes.length) * 10) / 10 : null;
+// Mean RPE over a date window [sinceIso, untilIso), with a minimum sample so a single noisy reading can't
+// stand in for a trend (RV2-5). `untilIso` lets the baseline EXCLUDE the recent window it's compared
+// against, instead of containing it (RV2-4).
+function meanRpe(activities: ActivitySummary[], sinceIso: string, minN: number, untilIso?: string): number | null {
+  const rpes = activities
+    .filter((a) => a.date >= sinceIso && (untilIso === undefined || a.date < untilIso) && a.rpe !== null)
+    .map((a) => a.rpe as number);
+  return rpes.length >= minN ? Math.round((rpes.reduce((s, v) => s + v, 0) / rpes.length) * 10) / 10 : null;
 }
 
 const AEROBIC_RECENCY_DAYS = 14; // a reading older than this isn't "now" aerobic state
 const AEROBIC_BASELINE_DAYS = 90;
 const AEROBIC_MIN_BASELINE = 3; // need a few readings before the baseline is trustworthy
 const AEROBIC_MIN_Z2_MINS = 15; // trust a ride's Z2 Pw:HR only above this much Z2 (a few warmup mins is noisy)
+const RPE_MIN_RECENT = 2; // a single recent ride is too noisy to call a trend (RV2-5)
+const RPE_MIN_BASELINE = 3;
 
 export function athleteStateInputsFrom(
   sync: SyncData | null,
   model: AthleteModel,
-  acwr: AcwrResult | null
+  acwr: AcwrResult | null,
+  // Thread the resolved local date in (RV2-11) so backfill/replay anchors to the as-of day, not wall-clock
+  // now — mirrors the readiness window functions. Default reproduces the old utcToday() behaviour.
+  today: string = utcToday()
 ): AthleteStateInputs {
-  const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+  const base = Date.parse(today);
+  const daysAgo = (n: number) => new Date(base - n * 86_400_000).toISOString().slice(0, 10);
   const acts = sync?.activities ?? [];
   // Aerobic efficiency from intervals.icu's Z2-isolated Pw:HR (icu_power_hr_z2). Because it's already
   // computed over the ride's Z2 SAMPLES only, it's a clean like-for-like aerobic reading present even on
@@ -173,8 +185,11 @@ export function athleteStateInputsFrom(
   const latestQual = [...qualifying].sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
   const aerobicEffLatest =
     latestQual && latestQual.date >= daysAgo(AEROBIC_RECENCY_DAYS) ? latestQual.powerHrZ2 : null;
+  // Baseline EXCLUDES the recent window the latest reading comes from (RV2-4) — otherwise the latest sits
+  // inside its own baseline and the comparison is self-muted. Too few qualifying rides outside the window
+  // → null → the signal sits out (better absent than self-comparing).
   const baseVals = qualifying
-    .filter((a) => a.date >= daysAgo(AEROBIC_BASELINE_DAYS))
+    .filter((a) => a.date >= daysAgo(AEROBIC_BASELINE_DAYS) && a.date < daysAgo(AEROBIC_RECENCY_DAYS))
     .map((a) => a.powerHrZ2 as number);
   const aerobicEffBaseline =
     baseVals.length >= AEROBIC_MIN_BASELINE ? round2(baseVals.reduce((s, v) => s + v, 0) / baseVals.length) : null;
@@ -186,8 +201,8 @@ export function athleteStateInputsFrom(
     execSampleSize: model.sampleSize,
     aerobicEffLatest,
     aerobicEffBaseline,
-    rpeRecent: meanRpe(acts, daysAgo(14)),
-    rpeBaseline: meanRpe(acts, daysAgo(90)),
+    rpeRecent: meanRpe(acts, daysAgo(AEROBIC_RECENCY_DAYS), RPE_MIN_RECENT),
+    rpeBaseline: meanRpe(acts, daysAgo(AEROBIC_BASELINE_DAYS), RPE_MIN_BASELINE, daysAgo(AEROBIC_RECENCY_DAYS)),
     offPlanPct: model.behaviour.offPlanPct,
   };
 }

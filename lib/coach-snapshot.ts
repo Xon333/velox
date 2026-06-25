@@ -135,7 +135,7 @@ export function resolveCoachSignals(
     acwr,
     loadRamp: computeLoadRamp(sync.activities, today),
     athleteState: computeAthleteState(
-      athleteStateInputsFrom(sync, athleteModel, acwr),
+      athleteStateInputsFrom(sync, athleteModel, acwr, today),
       resolveAthleteStateWeights(athleteStateWeightsOverride)
     ),
     weightTrend7dKg: weightTrendFromWellness(sync.wellness),

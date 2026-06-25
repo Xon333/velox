@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFormStateLookup, computeAcwr, computeIntensityDistribution, computeLoadRamp, computeReadiness } from "./readiness";
+import { buildFormStateLookup, computeAcwr, computeIntensityDistribution, computeLoadRamp, computeReadiness, computeRollingBaselines } from "./readiness";
 import type { FitnessMetrics, WellnessEntry } from "./types";
 
 // Build a date `n` days ago in YYYY-MM-DD (local), matching computeLoadRamp's basis.
@@ -107,6 +107,36 @@ describe("computeAcwr", () => {
     const activities = Array.from({ length: 28 }, (_, i) => ({ date: daysAgo(i), trainingLoad: 60 }));
     const r = computeAcwr(activities)!;
     expect(r.level).toBe("optimal");
+  });
+
+  it("returns null until ~2 weeks of base exist, even on heavy recent load (RV2-2 gate)", () => {
+    // 10 hard days only — under the min-history gate, so no (bogus) confident ratio yet.
+    const activities = Array.from({ length: 10 }, (_, i) => ({ date: daysAgo(i), trainingLoad: 120 }));
+    expect(computeAcwr(activities)).toBeNull();
+  });
+
+  it("does not false-flag danger on a short-but-full history (RV2-2 divisor)", () => {
+    // 20 consecutive steady days. Old code divided chronic by a fixed 28 → chronic understated to ~43 vs
+    // acute 60 → ratio ~1.4 (false 'high/danger'). Dividing by the 20 days that exist → ~1.0, optimal.
+    const activities = Array.from({ length: 20 }, (_, i) => ({ date: daysAgo(i), trainingLoad: 60 }));
+    const r = computeAcwr(activities)!;
+    expect(r.ratio).toBeLessThan(1.2);
+    expect(r.level).toBe("optimal");
+  });
+});
+
+describe("computeRollingBaselines weekly hours (RV2-3 divisor)", () => {
+  it("divides by the weeks of history that exist, not a flat 90/7", () => {
+    // 20 daily 1-hour rides. Old: 20h / (90/7 ≈ 12.86 wk) ≈ 1.6 h/wk (wrong). New: 20h / (20/7 wk) = 7.0.
+    const activities = Array.from({ length: 20 }, (_, i) => ({
+      date: daysAgo(i),
+      trainingLoad: 50,
+      decoupling: null,
+      avgCadence: null,
+      movingTimeSec: 3600,
+    }));
+    const b = computeRollingBaselines(activities, []);
+    expect(b.avgWeeklyHours90d).toBe(7);
   });
 });
 

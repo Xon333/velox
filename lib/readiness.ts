@@ -43,17 +43,39 @@ export function buildFormStateLookup(
   };
 }
 
+// Heavy-fatigue overrides, defined once (RV2-9) so the alert and the readiness level can't drift apart —
+// both `computeFatigueAlert` and `computeReadiness` keyed on these same thresholds with copy-pasted literals.
+const ATL_CTL_FATIGUE_RATIO = 1.5; // ATL/CTL above this = heavy acute fatigue
+const TSB_DEEP_FATIGUE = -30; // form below this = deep fatigue
+const ACWR_MIN_HISTORY_DAYS = 14; // need ~2 weeks of base before an acute:chronic ratio means anything (RV2-2)
+const heavyAtlCtl = (ctl: number | null, atl: number | null): number | null =>
+  atl !== null && ctl !== null && ctl > 0 && atl / ctl > ATL_CTL_FATIGUE_RATIO ? atl / ctl : null;
+const isDeepFatigueTsb = (tsb: number | null): boolean => tsb !== null && tsb < TSB_DEEP_FATIGUE;
+
+// Calendar days of history actually backing a rolling average, so a new athlete's average isn't divided
+// by a full window they haven't trained yet (RV2-2/RV2-3): elapsed days from the earliest date to `today`
+// inclusive, floored at 1 and capped at the window length. Rest days legitimately count (load = 0), so the
+// span is calendar elapsed, not the number of days that carried data.
+function historyDays(dates: string[], today: string, window: number): number {
+  let earliest: string | null = null;
+  for (const d of dates) if (earliest === null || d < earliest) earliest = d;
+  if (earliest === null) return window;
+  const span = Math.floor((Date.parse(today) - Date.parse(earliest)) / 86_400_000) + 1;
+  return Math.max(1, Math.min(window, span));
+}
+
 export function computeFatigueAlert(fitness: FitnessMetrics): FatigueAlert {
   const { ctl, atl, tsb } = fitness;
 
-  if (atl !== null && ctl !== null && ctl > 0 && atl / ctl > 1.5) {
+  const ratio = heavyAtlCtl(ctl, atl);
+  if (ratio !== null) {
     return {
       triggered: true,
       type: "atl_ctl_ratio",
-      reason: `ATL/CTL ratio is ${(atl / ctl).toFixed(2)} — heavy fatigue load. Consider a recovery day.`,
+      reason: `ATL/CTL ratio is ${ratio.toFixed(2)} — heavy fatigue load. Consider a recovery day.`,
     };
   }
-  if (tsb !== null && tsb < -30) {
+  if (isDeepFatigueTsb(tsb)) {
     return {
       triggered: true,
       type: "tsb",
@@ -72,11 +94,12 @@ export function computeReadiness(
 ): ReadinessSignal {
   const { ctl, atl, tsb } = fitness;
 
-  // Fatigue overrides everything.
-  if (atl !== null && ctl !== null && ctl > 0 && atl / ctl > 1.5) {
-    return { level: "Recover", reason: `ATL/CTL ${(atl / ctl).toFixed(2)} — excessive load, prioritise recovery` };
+  // Fatigue overrides everything (shared thresholds — RV2-9).
+  const ratio = heavyAtlCtl(ctl, atl);
+  if (ratio !== null) {
+    return { level: "Recover", reason: `ATL/CTL ${ratio.toFixed(2)} — excessive load, prioritise recovery` };
   }
-  if (tsb !== null && tsb < -30) {
+  if (isDeepFatigueTsb(tsb)) {
     return { level: "Recover", reason: `TSB ${tsb} — deep fatigue, rest or easy movement only` };
   }
 
@@ -177,13 +200,21 @@ export function computeAcwr(
   const dayMs = 86_400_000;
   const base = Date.parse(today);
   const iso = (offsetDays: number) => new Date(base - offsetDays * dayMs).toISOString().slice(0, 10);
-  const sumFrom = (from: string) =>
-    activities
-      .filter((a) => a.date >= from && a.date <= today && a.trainingLoad !== null)
-      .reduce((s, a) => s + (a.trainingLoad as number), 0);
+  const within = (from: string) => activities.filter((a) => a.date >= from && a.date <= today && a.trainingLoad !== null);
+  const sum = (acts: typeof activities) => acts.reduce((s, a) => s + (a.trainingLoad as number), 0);
 
-  const acute = sumFrom(iso(6)) / 7;
-  const chronic = sumFrom(iso(27)) / 28;
+  // Divide each window by the history that actually backs it (RV2-2): an athlete with 12 days of training
+  // must not get a fixed 28-day chronic divisor that understates chronic load and inflates the ratio into a
+  // false "danger". Earliest date in the chronic window drives both spans (chronic is the wider window).
+  const chronicActs = within(iso(27));
+  const histDates = chronicActs.map((a) => a.date);
+  const spanDays = historyDays(histDates, today, 28);
+  // Correct the average, but still gate on enough history — ACWR is meaningless below ~2 weeks of base.
+  // This explicit gate replaces the old `chronic < 5` proxy, which only held because the divisor was a
+  // fixed 28 (RV2-2): with a true divisor a single ride would otherwise read a confident, bogus ratio.
+  if (chronicActs.length === 0 || spanDays < ACWR_MIN_HISTORY_DAYS) return null;
+  const acute = sum(within(iso(6))) / historyDays(histDates, today, 7);
+  const chronic = sum(chronicActs) / spanDays;
   if (chronic < 5) return null; // not enough chronic load to compute a stable ratio
 
   const ratio = Math.round((acute / chronic) * 100) / 100;
@@ -265,10 +296,13 @@ export function computeRollingBaselines(
     .filter((w) => w.date >= cutoff && w.ctl !== null)
     .map((w) => w.ctl as number);
 
-  // Mean weekly ride hours over the SAME 90-day window as the other baselines (total hours ÷ 90/7
-  // weeks), so the Recent-Baselines card doesn't mix a 90d-rolling tile with an all-time one (MR-2).
+  // Mean weekly ride hours over the SAME 90-day window as the other baselines, so the Recent-Baselines
+  // card doesn't mix a 90d-rolling tile with an all-time one (MR-2). Divide by the weeks of history that
+  // actually exist, not a flat 90/7 (RV2-3) — a rider with 20 days of data shouldn't read as 0.3× their
+  // real weekly hours.
   const totalHours90d = recent.reduce((s, a) => s + a.movingTimeSec, 0) / 3600;
-  const avgWeeklyHours90d = recent.length ? Math.round((totalHours90d / (90 / 7)) * 10) / 10 : null;
+  const weeks90d = historyDays(recent.map((a) => a.date), today, 90) / 7;
+  const avgWeeklyHours90d = recent.length ? Math.round((totalHours90d / weeks90d) * 10) / 10 : null;
 
   return {
     avgTss90d: avg(tssList),
