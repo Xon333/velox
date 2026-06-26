@@ -106,10 +106,14 @@ export function TodayRideCard({
   // app's load-completion read.
   if (analysis.intensityFactor != null) {
     const IF = analysis.intensityFactor;
+    // Bands match the app's OWN zone model (execution-score.ts: Z2 = IF 0.60–0.74, recovery < 0.60), NOT
+    // the Coggan IF-level table — otherwise a solid Z2 ride (IF ~0.70) reads "recovery", contradicting both
+    // the scorer and an "Easy Z2" plan. The single IF is a whole-ride average; time-in-zone tells the
+    // distribution story (see the coach note / zone split).
     const band =
-      IF < 0.75 ? "recovery" :
-      IF < 0.85 ? "endurance" :
-      IF < 0.95 ? "tempo" :
+      IF < 0.60 ? "recovery" :
+      IF < 0.76 ? "endurance" :
+      IF < 0.91 ? "tempo" :
       IF < 1.05 ? "threshold" :
       IF < 1.15 ? "VO2max" : "anaerobic";
     // Provenance stamp (B): IF reads NP when present, else avg power (ride-analysis.ts — `normalizedPower
@@ -119,7 +123,7 @@ export function TodayRideCard({
       label: "IF",
       value: IF.toFixed(2),
       sub: `${band} · ${npBased ? "NP" : "avg"}`,
-      tip: `Intensity Factor = ${npBased ? "normalized power" : "average power (NP unavailable)"} ÷ FTP — how hard the whole ride was relative to your threshold. ~0.75–0.85 endurance · 0.85–0.95 tempo · 0.95–1.05 threshold/race · >1.05 VO2+.${npBased ? "" : " Avg-based: understates short/variable efforts vs a true NP read."}`,
+      tip: `Intensity Factor = ${npBased ? "normalized power" : "average power (NP unavailable)"} ÷ FTP — how hard the whole ride was relative to your threshold. <0.60 recovery · 0.60–0.75 endurance · 0.76–0.90 tempo · 0.91–1.05 threshold/race · >1.05 VO2+. It's a whole-ride average — check time-in-zone for how the effort was actually distributed.${npBased ? "" : " Avg-based: understates short/variable efforts vs a true NP read."}`,
     });
   }
   // NP and avg power as distinct tiles — NP (the variability-aware figure that IF/execution read
