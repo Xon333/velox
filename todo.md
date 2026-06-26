@@ -14,11 +14,16 @@ P2 high-value UX/feature · P3 polish/education · Type: `bug` `ux` `feat` `audi
 
 ## Open
 
+> 📌 **PINNED — RV2-15: re-center the strain bands once `deriveStrainHigh` has real ledger stamps.** The
+> wellness strain adapter feeds neutral `sleep=3`, so strain's live range is 6–18 not 4–20 and the
+> `med 12 / high 15` bands were never re-centered. Safe today (guards fall back to population), but DON'T
+> FORGET to re-fit once the ledger carries enough stamped strain values to derive the high band honestly.
+> _[morning-check.ts](lib/morning-check.ts) · ROADMAP Inc 2._
+
 **RV2-2026-06-25 — senior-dev accuracy review (engine deep-read).** 15 findings. Theme: **windows that
 include their own comparison point**, **divisors that assume full history**, **open-top scoring bands**.
-**12 shipped this session** (`125fde9` rolling-window cluster, `f9d2510` engine cluster); RV2-1 resolved as
-not-a-bug; RV2-12 accepted limitation; RV2-14 part-shipped; RV2-15 data-gated. **One open question for you:
-RV2-14 protein scaling.**
+**13 shipped** (`125fde9` rolling-window cluster, `f9d2510` engine cluster, `15789ea` nutrition); RV2-1
+resolved as not-a-bug; RV2-12 accepted limitation; RV2-15 data-gated (pinned above).
 
 ### Shipped this session
 
@@ -43,25 +48,22 @@ RV2-14 protein scaling.**
 - ☑ P3 `cleanup` **RV2-10 (#10)** — `interval-match` uses `stats.median` instead of a local copy.
   _[interval-match.ts](lib/interval-match.ts) · `f9d2510`._
 - ☑ P3 `polish` **RV2-13 (#13)** — power-curve match tolerance clamped to [5s, 120s]. _[intervals-api.ts](lib/intervals-api.ts) · `f9d2510`._
+- ☑ P2 `audit` **RV2-14 (#14)** — _Resolved by deletion._ The athlete only uses pre/intra-ride carbs, so the
+  whole post-ride meal recommendation (carbs + protein) was removed from the plan, the reference table, and the
+  prompt — no protein-scaling decision needed. _[nutrition.ts](lib/nutrition.ts) · `15789ea`._
 - ☑ P3 `audit` **RV2-1 (#1)** — _Resolved: not an accuracy bug._ `bucketZones` already skips `v <= 0`
   ([zones.ts](lib/zones.ts)), so zero-filled stream gaps are excluded from zone time, and the aerobic signal
   uses Intervals' precomputed `icu_power_hr_z2`, not these streams. The only effect is cosmetic dips in the
   ride-trace viz — and dropping samples would DESYNC the power/HR index pairing in `buildRideTrace`. Left as-is.
 
-### Still open
+### Still open (gated, not blocking)
 
-- ☐ P2 `audit` **RV2-14 (#14) — NEEDS YOUR CALL: should post-ride protein scale with body weight?** Carbs
-  scale per-kg but protein is a flat 30g, so a 90kg and a 55kg rider get the same. Standard guidance is
-  ~0.3 g/kg → ~16–27g across that range. Changing it is a nutrition-spec decision, so it's parked. (The other
-  two parts are settled: the VO2max<Threshold session-intensity factor is now commented as deliberate `f9d2510`;
-  rest days staying flat — no buffer/trend — is the documented design, not a bug.) _[nutrition.ts:133](lib/nutrition.ts:133)._
+- 📌 P2 `audit` **RV2-15 (#15) — PINNED at top.** Strain bands need re-centering once `deriveStrainHigh` has
+  ledger stamps. Data-gated (chicken/egg); guards keep it safe meanwhile. _[morning-check.ts](lib/morning-check.ts)._
 - ☐ P3 `audit` **RV2-12 (#12) — accepted limitation.** `computeIntensityDistribution` buckets zone-data rides
   by zone seconds and no-zone rides by a single NP/FTP number; they can't be fully reconciled (an NP scalar
   can't yield time-in-zone). Inherent to the data, not fixable without per-sample streams for every ride;
   documented so it isn't re-surfaced. _[readiness.ts:215](lib/readiness.ts:215)._
-- ☐ P2 `audit` **RV2-15 (#15) — data-gated.** The strain adapter feeds neutral `sleep=3`, so strain's range is
-  6–18 not 4–20 and the bands weren't re-centered. Re-center once `deriveStrainHigh` has real ledger stamps to
-  fit against (chicken/egg until then; guards keep it safe). Tracked in ROADMAP Inc 2. _[morning-check.ts](lib/morning-check.ts)._
 
 **BUG-2026-06-25 — interval-order misparse on multi-step repeat blocks.**
 - ☑ P1 `bug` `parsePrescription` expanded "Main Set 3x { Over 1m, Under 2m, … }" as each-step-×3
@@ -74,13 +76,14 @@ RV2-14 protein scaling.**
   block **self-heals on the next sync** (re-sync today, then Re-analyse for the note) — no re-generate.
   3 parser tests incl. the exact reported session; the old test that encoded the bug was corrected.
   _[prescription.ts](lib/prescription.ts) · [sync/route.ts:340](app/api/sync/route.ts)._
-- ☐ P3 `feat` **Follow-up (the lap-data idea — NOT the cause of the above).** Prefer device LAP markers
-  over intervals.icu auto-detection for the *executed* side when laps are present (a Wahoo auto-laps each
-  structured interval, so laps are a ground-truth record of the ridden structure; auto-detection can
-  merge/split differently). Would harden the matcher's rep-count + structural-mismatch logic. Needs care
-  to distinguish workout laps from incidental ones (e.g. the commute to/from the climb), and a clean
-  fallback to detection when no usable laps exist. Scoping TBD — separate change to the executed source
-  in [intervals-api.ts](lib/intervals-api.ts) + [interval-match.ts](lib/interval-match.ts).
+- ☑ P3 `feat` **Follow-up (the lap-data idea) — shipped, with a caveat.** `fetchIntervals` now prefers device
+  laps (>1 in the response) for the executed side, falling back to `icu_intervals` otherwise; incidental laps
+  (warm-up/recoveries/commute) are excluded by `matchPrescription`'s work-power band. **⚠️ The separate `laps`
+  field is UNCONFIRMED against a live payload** — Intervals' public docs fold laps into `icu_intervals` via the
+  per-activity **"Keep All Laps"** setting, so the surest lever may just be enabling that in Intervals.icu (the
+  app already consumes `icu_intervals`). Absent `laps` → byte-identical to before, so this can't regress.
+  🔎 **Confirm:** does a real structured-ride `/activity/{id}/intervals` response carry a `laps` array? If not,
+  the lap path is a harmless no-op and "Keep All Laps" is the real fix. _[intervals-api.ts](lib/intervals-api.ts) · `f81f4dc`._
 
 **ACC-2026-06-25 — second-brain state accuracy (athlete request).**
 - ☑ P2 `bug` **Aerobic signal → intervals.icu's Z2-isolated Pw:HR (`icu_power_hr_z2`).** The state fed
@@ -101,9 +104,8 @@ RV2-14 protein scaling.**
   the further-robust upgrade if ever needed. _[nutrition.ts](lib/nutrition.ts)._
 
 **RV-2026-06-24 — senior-dev general review (architecture + edge cases).** 10 findings from a
-full read of the deterministic core, sync orchestrator, routes, and Intervals client. **9 of 10 shipped**
-(RV-1…RV-6, RV-8, RV-9, RV-5b). Only **RV-7** (AI spend cap) is left — de-prioritised: usage/spend is
-very low, so a hard cap isn't worth the friction yet. Verdict: 8.5/10.
+full read of the deterministic core, sync orchestrator, routes, and Intervals client. **All closed** —
+RV-1…RV-6, RV-8, RV-9, RV-5b shipped; RV-7 (AI spend cap) closed as won't-do (spend is cents). Verdict: 8.5/10.
 
 ### P1 — fixed this session
 
@@ -147,9 +149,8 @@ very low, so a hard cap isn't worth the friction yet. Verdict: 8.5/10.
 - ☑ P3 `arch` **RV-5b** — `reconcile` now caps physiology `history` at the most recent 23 superseded
   snapshots (+ current = 24; ~2 years of monthly changes, far past the 182-day window). Pre-earliest
   dates still anchor gracefully via `physiologyAsOf`. 1 test. _[physiology.ts](lib/physiology.ts)._
-- ☐ P3 `feat` **RV-7** — _Deferred (usage/spend is very low — revisit only if it grows)._ AI spend is
-  measured (`ai-usage.ts`) but never capped: `recordUsage` only accumulates; nothing refuses a call past
-  a threshold. If revisited, needs a monthly cap value + behaviour (warn vs hard-429). _[ai-usage.ts](lib/ai-usage.ts)._
+- ☑ P3 `feat` **RV-7** — _Closed: won't-do (athlete decision)._ AI spend is cents, so a hard cap isn't worth
+  the friction. Usage stays measured in `ai-usage.ts`; reopen only if spend ever grows. _[ai-usage.ts](lib/ai-usage.ts)._
 
 ### P3 — altitude / cleanup
 
