@@ -107,7 +107,7 @@ export default function Trends() {
                     : "—"
                 }
               />
-              <StatTile label="7-day load" value={data.recent.load7Day != null ? `${data.recent.load7Day} TSS` : "—"} />
+              <StatTile label="7-day load" value={data.recent.load7Day != null ? String(data.recent.load7Day) : "—"} />
               <StatTile
                 label="Last intake"
                 value={data.recent.lastKcalConsumed != null ? `${data.recent.lastKcalConsumed} kcal` : "—"}

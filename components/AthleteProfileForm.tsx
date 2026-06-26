@@ -78,20 +78,32 @@ const SYSTEM_LABELS: Record<PowerSystem, string> = {
 
 // ---------- Shared helpers ----------
 
+// The second-brain split, made visible (C): `synced` sections are measured by Intervals.icu (cyan
+// badge, read-only here); `editHref` sections are owned intent the athlete edits. The two never overlap
+// — a synced number is never hand-edited, an owned one is never synced.
 function Section({
   title,
   editHref,
+  synced,
   children,
 }: {
   title: string;
   editHref?: string;
+  synced?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <Card
       title={title}
       action={
-        editHref ? (
+        synced ? (
+          <span
+            title="Measured by Intervals.icu — synced, not editable here"
+            className="rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-700 dark:bg-[#00d4ff]/10 dark:text-[#00d4ff]"
+          >
+            synced
+          </span>
+        ) : editHref ? (
           <Link href={editHref} className="whitespace-nowrap text-xs text-cyan-700 hover:underline dark:text-[#00d4ff]">
             Edit →
           </Link>
@@ -211,7 +223,7 @@ export default function AthleteProfileForm() {
       {/* Rider profile — auto-derived from the curve shape (Track A). Leads above the raw PR grid: the
           "what am I / what to target" read is the decision-critical content, the PR numbers are reference. */}
       {powerProfile && powerProfile.confident && (
-        <Section title="Rider profile">
+        <Section title="Rider profile" synced>
           <p className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">
             auto-derived from your power-curve shape · a hint the coach plans around, not a fixed label
           </p>
@@ -260,7 +272,7 @@ export default function AthleteProfileForm() {
       {/* Power PRs — reference grid below the rider read; W/kg demoted to a hover (title + cursor-help)
           so each of the 9 tiles is two lines, not three. */}
       {(syncedPowerCurve.length > 0 || athleteMd.powerProfile.length > 0) && (
-        <Section title="Power PRs" editHref={syncedPowerCurve.length > 0 ? undefined : "/knowledge"}>
+        <Section title="Power PRs" synced={syncedPowerCurve.length > 0} editHref={syncedPowerCurve.length > 0 ? undefined : "/knowledge"}>
           {syncedPowerCurve.length > 0 ? (
             <>
               <p className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">

@@ -128,20 +128,9 @@ export function TodayRideCard({
     metrics.push({ label: "NP", value: `${analysis.activityNormalizedPower}W` });
   if (analysis.activityAvgWatts != null)
     metrics.push({ label: "Avg power", value: `${analysis.activityAvgWatts}W` });
-  // Avg speed from the synced distance + moving time (RC-1).
-  if (analysis.activityDistanceMeters != null && analysis.activityDurationMin > 0) {
-    const kmh = analysis.activityDistanceMeters / 1000 / (analysis.activityDurationMin / 60);
-    metrics.push({ label: "Avg speed", value: `${kmh.toFixed(1)} km/h` });
-  }
-  if (analysis.activityDecoupling != null)
-    metrics.push({
-      label: "Decoupling",
-      value: `${analysis.activityDecoupling.toFixed(1)}%`,
-      // Honesty stamp (B): decoupling was demoted out of execution scoring (ACC-2026-06-25 — too noisy
-      // per-ride, whole-ride drift is a structure artifact on non-steady days). Say so, so it doesn't
-      // read as if it counts toward the score next to it.
-      tip: "Aerobic drift — how much power-to-HR drifted across the ride. Context only: it's no longer part of your execution score (too noisy per-ride), kept as a steady-ride durability reference. Lower is better; ~5%+ on a steady endurance ride hints at fatigue or under-fuelling.",
-    });
+  // Avg speed removed from the glance (C): terrain/wind-dependent, rarely a training decision; it lives
+  // in Intervals.icu if needed. Decoupling moved to the Power-execution drill-down below (C): it's no
+  // longer a scored signal (ACC-2026-06-25), so it shouldn't sit in the strip implying it counts.
   if (analysis.activityRpe != null)
     metrics.push({ label: "RPE", value: `${analysis.activityRpe}/10` });
 
@@ -266,7 +255,7 @@ export function TodayRideCard({
       {/* Power execution — the card's focal group: prescription vs execution, the
           power/HR trace, and power time-in-zone. There is no separate HR zone bar;
           HR comparison lives in the trace overlay (decoupling = the gap widening). */}
-      {(analysis.powerZoneTimes || analysis.trace || (analysis.intervalComparison && analysis.intervalComparison.reps.length > 0)) && (
+      {(analysis.powerZoneTimes || analysis.trace || analysis.activityDecoupling != null || (analysis.intervalComparison && analysis.intervalComparison.reps.length > 0)) && (
         <details className="mt-3">
           <summary className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             Power execution
@@ -277,6 +266,19 @@ export function TodayRideCard({
             )}
           </summary>
           <div className="mt-2 space-y-2">
+
+          {/* Decoupling (C): relocated here from the metric strip — context, not a scored signal. */}
+          {analysis.activityDecoupling != null && (
+            <div className="group relative inline-flex items-center gap-1.5 rounded bg-zinc-100 px-2.5 py-1.5 dark:bg-zinc-900">
+              <span className="flex items-center gap-1 text-[10px] text-zinc-500 dark:text-zinc-400">
+                Decoupling <span className="opacity-60">ⓘ</span>
+              </span>
+              <span className="font-mono text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+                {analysis.activityDecoupling.toFixed(1)}%
+              </span>
+              <MetricTip text="Aerobic drift — how much power-to-HR drifted across the ride. Context only: it's no longer part of your execution score (too noisy per-ride), kept as a steady-ride durability reference. Lower is better; ~5%+ on a steady endurance ride hints at fatigue or under-fuelling." />
+            </div>
+          )}
 
           {analysis.intervalComparison && analysis.intervalComparison.reps.length > 0 && (
             <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900">

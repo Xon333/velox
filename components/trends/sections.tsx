@@ -163,7 +163,7 @@ export function baselineCards(b: RollingBaselines) {
   // Avg CTL removed — redundant with the CTL graph. Replaced with weekly volume: a higher-value,
   // training-behaviour metric Intervals doesn't foreground the same way. All four tiles are now
   // 90-day rolling so the card reads on one consistent horizon (MR-2).
-  if (b.avgTss90d != null) cards.push({ label: "Avg TSS / ride", value: String(Math.round(b.avgTss90d)) });
+  if (b.avgTss90d != null) cards.push({ label: "Avg load / ride", value: String(Math.round(b.avgTss90d)) });
   if (b.avgWeeklyHours90d != null) cards.push({ label: "Weekly hours", value: `${b.avgWeeklyHours90d.toFixed(1)} h` });
   if (b.avgDecoupling90d != null) cards.push({ label: "Avg decoupling", value: `${b.avgDecoupling90d.toFixed(1)}%` });
   if (b.avgCadence90d != null) cards.push({ label: "Avg cadence", value: `${Math.round(b.avgCadence90d)} rpm` });

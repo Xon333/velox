@@ -65,7 +65,7 @@ export function WeeklyDebrief({ sync }: { sync: SyncData }) {
     <Card title="This week">
       <div className="flex flex-wrap gap-2">
         <StatTile label="Hours" value={`${weekHours.toFixed(1)} h`} />
-        {weekTss > 0 && <StatTile label="TSS" value={String(Math.round(weekTss))} />}
+        {weekTss > 0 && <StatTile label="Load" value={String(Math.round(weekTss))} />}
         {avgHrv !== null && <StatTile label="Avg HRV" value={String(avgHrv)} />}
         {avgSleep !== null && <StatTile label="Avg sleep" value={`${avgSleep} h`} />}
       </div>
@@ -74,7 +74,7 @@ export function WeeklyDebrief({ sync }: { sync: SyncData }) {
           <p className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Top session</p>
           <p className="mt-0.5 text-sm font-medium leading-snug text-zinc-800 dark:text-zinc-100">{topSession.name}</p>
           {topSession.trainingLoad != null && (
-            <p className="mt-0.5 font-mono text-[11px] text-zinc-500 dark:text-zinc-400">{topSession.trainingLoad} TSS</p>
+            <p className="mt-0.5 font-mono text-[11px] text-zinc-500 dark:text-zinc-400">{topSession.trainingLoad} Load</p>
           )}
         </div>
       )}
