@@ -20,8 +20,11 @@ marquee data-play — context-stamp the ledger, then auto-derive off it — has 
 stamp (`formState`; the morning-check stamp was removed with the subjective-wellness revert), the first
 derived edge (`deriveTsbDeepFatigue`), and the shared `deriveExecutionEdge` engine it now rides on (all in
 ARCHIVE). What's left:
-- **Per-type IF cutoffs — open slivers:** surface the offsets on Settings (derived live from zones, not
-  yet in `CalibrationStore`); anchor RaceSim. Shares the curve read with **Track A**.
+- **Per-type IF cutoffs — open slivers:** ✅ offsets now surfaced read-only on `/model`
+  (`ifBandOffsetRows` → `IfBandOffsets`, derived live from synced zones). Left: RaceSim stays intentionally
+  unanchored (surgy/mixed — no single zone edge; revisit only if real use wants it); the offsets are
+  derived-live (not persisted in `CalibrationStore`) — fine unless a manual override is ever wanted. Shares
+  the curve read with **Track A**.
 - **More honest auto-derivations off the engine** — each new edge is a *spec* over
   `lib/correlation.ts`, not new code, but only where an **honest** execution outcome separates failures
   from successes. (The morning-check strain edge was dropped with the subjective-wellness revert — the
