@@ -5,6 +5,7 @@
 // compliance capping, advised intake, coach-note preservation) unit-testable without mocking HTTP.
 import { adjustBuffer } from "./nutrition";
 import { computeExecutionScore, resolveCompliance, timeAboveZ2Fraction, type ScoringCalibration } from "./execution-score";
+import { inferWorkoutType } from "./ride-classify";
 import type {
   ActivitySummary,
   CurrentBlockDay,
@@ -107,10 +108,14 @@ export function buildTodayAnalysis(input: TodayAnalysisInputs): TodayAnalysisRes
   // On interval days, power-target adherence is the primary execution signal; otherwise duration
   // compliance. A structural plan/detection mismatch drops adherence so a correct session isn't
   // mis-scored on an untrustworthy rep-duration comparison.
+  // Off-plan (no planned session) → infer a scoring type so the VI pacing read applies, exactly as the
+  // ledger does. `intrinsic` still guards the circular intensity-vs-type branch, so this only enables VI;
+  // the OUTPUT plannedType field below stays null (nothing was planned).
+  const scoringType = plannedDay?.type ?? inferWorkoutType(metrics.intensityFactor, metrics.actualMin);
   const executionScore = computeExecutionScore({
     compliancePct: metrics.compliancePct,
     intensityFactor: metrics.intensityFactor,
-    plannedType: plannedDay?.type ?? null,
+    plannedType: scoringType,
     variabilityIndex: metrics.variabilityIndex,
     adherencePct:
       intervalComparison && !intervalComparison.structuralMismatch

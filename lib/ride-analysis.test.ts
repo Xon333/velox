@@ -94,6 +94,21 @@ describe("buildTodayAnalysis (CR-G)", () => {
     expect(resolvedCompliancePct! <= 100).toBe(true);
   });
 
+  it("applies the VI pacing read to an off-plan ride (infers a type so steady ≠ surgy)", () => {
+    // Off-plan = no planned session; both rides infer the same type (IF 0.80 → Threshold), so only VI
+    // differs. Without inferring a scoring type, off-plan rides got no VI and these would tie.
+    const offPlan = (avgWatts: number) => ({
+      ...base,
+      plannedDay: null,
+      activity: activity({ avgWatts, normalizedPower: 200, rpe: null }),
+    });
+    const steady = buildTodayAnalysis(offPlan(190)).executionScore!; // VI 1.05 → controlled (+1)
+    const surgy = buildTodayAnalysis(offPlan(165)).executionScore!; // VI 1.21 → surgy (−1)
+    expect(steady).toBeGreaterThan(surgy);
+    // The OUTPUT plannedType stays null (nothing was planned) even though scoring inferred one.
+    expect(buildTodayAnalysis(offPlan(190)).todayAnalysis.plannedType).toBeNull();
+  });
+
   it("preserves an existing coach note + provenance for the same day", () => {
     const preserved = { activityDate: "2026-06-22", coachNote: "keep me", model: "m", promptVersion: 3 } as unknown as TodayAnalysis;
     const { todayAnalysis } = buildTodayAnalysis({ ...base, preserved });
