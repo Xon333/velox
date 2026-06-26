@@ -76,6 +76,9 @@ export interface TodayAnalysisInputs {
   // The athlete's power-zone tops as %FTP, as-of the ride's date (Intervals.icu's synced zone defs) — the
   // boundary source of truth for the IF effort-band label. Null when no zones are on file.
   powerZoneTopsPct: number[] | null;
+  // Off-plan aerobic read: this ride's Z2 Pw:HR vs the athlete's baseline (signed %Δ), computed by the
+  // route from the ride history. Only scored when today is off-plan; null → no effect.
+  aerobicEffPct: number | null;
   intervalComparison: IntervalComparison | null;
   trace: RideTrace | null;
   powerPRs: PowerPR[];
@@ -116,6 +119,9 @@ export function buildTodayAnalysis(input: TodayAnalysisInputs): TodayAnalysisRes
     rpe: activity.rpe,
     // Easy-ride discipline (Z2/Recovery only) from the route-rebucketed zone times.
     aboveZ2Frac: timeAboveZ2Fraction(input.powerZoneTimes),
+    // Off-plan (no planned session today) → score the non-circular aerobic read, matching the ledger.
+    intrinsic: plannedDay == null,
+    aerobicEffPct: input.aerobicEffPct,
     calibration: input.resolvedCal,
   });
 

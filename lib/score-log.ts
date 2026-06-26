@@ -5,6 +5,7 @@
 // FTP it used so the immutable ledger never re-shifts when FTP later changes.
 
 import { computeExecutionScore, resolveCompliance, timeAboveZ2Fraction, type ScoringCalibration } from "./execution-score";
+import { aerobicEffPct, z2PwHrBaselineBefore } from "./aerobic";
 import { inferWorkoutType } from "./ride-classify";
 import { round1, round2 } from "./stats";
 import type { ActivitySummary, BehaviourSummary, CurrentBlock, CurrentBlockDay, RideEntryContext, RideScoreEntry } from "./types";
@@ -142,6 +143,9 @@ export function buildRideScores(
         variabilityIndex,
         aboveZ2Frac, // gated to prescribed Z2/Recovery in computeExecutionScore — inert here (intrinsic)
         intrinsic: true,
+        // The non-circular aerobic read for off-plan rides: this ride's Z2 Pw:HR vs the athlete's baseline
+        // from qualifying rides BEFORE it (no self-reference). Null (too little Z2 / no baseline) → no effect.
+        aerobicEffPct: aerobicEffPct(act, z2PwHrBaselineBefore(activities, act.date)),
         calibration,
       });
       if (executionScore !== null) {

@@ -1,7 +1,9 @@
 // Deterministic 1-10 ride execution quality score.
 // Based on: interval-target adherence (when an interval workout was prescribed) or
-// duration compliance, intensity appropriateness, effort (RPE vs intensity), aerobic
-// decoupling, and pacing smoothness (variability index). No AI.
+// duration compliance, intensity appropriateness, effort (RPE vs intensity), the off-plan
+// aerobic read (Z2 Pw:HR vs baseline), and pacing smoothness (variability index). No AI.
+
+import { AEROBIC_DEADBAND_PCT } from "./aerobic";
 
 // Population default for the decoupling "good" cutoff. At this value the bands are the historical
 // absolute cutoffs [2, 4, 7, 10], so an uncalibrated score is byte-identical to before.
@@ -29,10 +31,13 @@ export interface ExecutionScoreInput {
   aboveZ2Frac?: number | null;
   // Off-plan ride: the type was inferred FROM intensity, so scoring intensity against that
   // type would be circular. When set, the intensity-vs-type branch is skipped and the score
-  // rests on the intent-independent signals (pacing, RPE). (Decoupling was demoted to a durability-only
-  // signal — too noisy per-ride to grade execution — so it no longer contributes here. ACC follow-up:
-  // give off-plan rides a non-circular aerobic signal, e.g. Pw:HR-Z2-vs-baseline.)
+  // rests on the intent-independent signals (pacing, RPE, and the aerobic read below).
   intrinsic?: boolean;
+  // Off-plan aerobic signal (the gap decoupling left): signed %Δ of the ride's Z2-isolated Pw:HR vs the
+  // athlete's own baseline (lib/aerobic.ts). Intent-INDEPENDENT — it doesn't infer intensity from the
+  // inferred type. Only applied for intrinsic rides; null/absent → no effect. Positive = above baseline =
+  // better aerobic efficiency = a good off-plan endurance day.
+  aerobicEffPct?: number | null;
   // Per-athlete calibration (ROADMAP #2): shifts the IF-vs-type bands to the athlete's own zone edges.
   // Absent → population behaviour (unchanged scoring).
   calibration?: ScoringCalibration | null;
@@ -134,6 +139,20 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
     else if (f <= 0.15) score += 0; // fine — the odd roller or surge
     else if (f <= 0.3) score -= 1; // drifted above the aerobic cap repeatedly
     else score -= 2; // spent so long above zone it wasn't really an easy ride
+  }
+
+  // --- Off-plan aerobic quality (±2) --- intrinsic rides only.
+  // The non-circular aerobic read that replaces decoupling for off-plan rides: the ride's Z2-isolated
+  // Pw:HR vs the athlete's own baseline (signed %Δ; the qualifying gate + baseline live in lib/aerobic.ts).
+  // Off-plan rides skip the intensity-vs-type branch (circular) and carry no duration target, so without
+  // this they'd score almost flat on pacing + RPE alone — this is their main quality differentiator. An
+  // absent signal (too little Z2, no baseline) → no effect.
+  if (intrinsic && input.aerobicEffPct != null) {
+    const d = input.aerobicEffPct;
+    if (d >= 2 * AEROBIC_DEADBAND_PCT) score += 2; // notably above baseline = efficient/fresh aerobic day
+    else if (d >= AEROBIC_DEADBAND_PCT) score += 1;
+    else if (d <= -2 * AEROBIC_DEADBAND_PCT) score -= 2; // well below = aerobic strain (fatigue / heat / under-fuel)
+    else if (d <= -AEROBIC_DEADBAND_PCT) score -= 1;
   }
 
   // --- Pacing smoothness via variability index (±1) ---

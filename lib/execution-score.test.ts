@@ -16,6 +16,23 @@ describe("computeExecutionScore", () => {
     expect(computeExecutionScore(base)).toBeNull();
   });
 
+  it("grades off-plan rides on the aerobic read (Z2 Pw:HR vs baseline) — the gap decoupling left", () => {
+    // Off-plan: intrinsic, no duration target, neutral VI → without the aerobic read it scores ~flat.
+    const offPlan = (aerobicEffPct: number | null) =>
+      computeExecutionScore({ ...base, intensityFactor: 0.7, plannedType: "Z2", variabilityIndex: 1.1, intrinsic: true, aerobicEffPct })!;
+    const neutral = offPlan(null);
+    expect(offPlan(8)).toBeGreaterThan(neutral); // well above baseline = good aerobic day (+2)
+    expect(offPlan(4)).toBeGreaterThan(neutral); // modestly above (+1)
+    expect(offPlan(-8)).toBeLessThan(neutral); // well below = aerobic strain (−2)
+    expect(offPlan(0)).toBe(neutral); // within the deadband = no signal
+  });
+
+  it("ignores the aerobic read on a planned (non-intrinsic) ride", () => {
+    const planned = (aerobicEffPct: number | null) =>
+      computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.7, plannedType: "Z2", variabilityIndex: 1.1, aerobicEffPct })!;
+    expect(planned(8)).toBe(planned(null)); // not intrinsic → no aerobic contribution
+  });
+
   it("rewards a hard, variable RaceSim and penalises a soft one", () => {
     const hard = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.86, plannedType: "RaceSim" });
     const soft = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.62, plannedType: "RaceSim" });

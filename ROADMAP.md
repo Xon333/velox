@@ -23,9 +23,8 @@ stamps (`formState` + morning-check), the first derived edge (`deriveTsbDeepFati
   yet in `CalibrationStore`); anchor RaceSim. Shares the curve read with **Track A**.
 - **More honest auto-derivations off the engine** — each new edge is a *spec* over
   `lib/correlation.ts`, not new code, but only where an **honest** execution outcome separates failures
-  from successes. Active build = the morning-check **strain edge**, but **re-sourced**: motivation (and the
-  whole morning read) now comes from the **Intervals.icu wellness sync**, not a NodeVelo form — see
-  *Subjective wellness from Intervals.icu* below. Still lacking a defensible outcome signal: the
+  from successes. (The morning-check strain edge was dropped with the subjective-wellness revert — the
+  morning read is now a manual flag, not a derived signal.) Still lacking a defensible outcome signal: the
   `productiveOverload`/`balanced` edges and the #3 reschedule thresholds. Carbs is the other consumer →
   **Track C** (ties **#4**).
 - **Pattern (follow per param):** default = today's literal value; derive with confidence-gated
@@ -45,13 +44,11 @@ Removed: the six subjective `WellnessEntry` fields, `wellnessToMorningAnswers`, 
   athlete-state), replacing the manual flag for the fatigue case.
 
 ### Scoring-core gaps (route through #2 — they touch `execution-score.ts`)
-- **Off-plan aerobic signal — fill the gap decoupling left** ⭐ — decoupling was demoted out of execution
-  scoring (`ACC-2026-06-25`: too noisy per-ride, whole-ride drift is a ride-structure artifact on
-  non-steady days; it's now a steady-ride **durability** reference only — `decouplingGood`). Off-plan
-  rides now rest on pacing (VI) + RPE alone — the intent-independent aerobic read is gone. Give them a
-  **non-circular** aerobic signal, e.g. Z2-isolated Pw:HR vs the athlete's own baseline (the same signal
-  the athlete-state path already uses), so an off-plan endurance ride is graded on aerobic quality without
-  inferring intensity from the type it was inferred from.
+- ✅ **Off-plan aerobic signal — fill the gap decoupling left (shipped → ARCHIVE).** Off-plan rides are now
+  graded on a non-circular aerobic read: the ride's Z2-isolated Pw:HR vs the athlete's own trailing baseline
+  (`lib/aerobic.ts`, shared with the athlete-state driver), ±2 in `computeExecutionScore` for intrinsic
+  rides. Baseline is per-ride strictly-before (no self-reference); a thin-Z2 ride or missing baseline → no
+  effect. Applies in the ledger + the Today card.
 - **Recovery-specific Z2 cap** — give Recovery its own "dialed-in" cap (above Z1, not Z2) *if* the
   lenient shared aerobic cap proves too soft in real use.
 - **Power-zone source of truth** — decide: keep zones strictly Intervals.icu vs. a sanctioned local

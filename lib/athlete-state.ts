@@ -12,6 +12,7 @@
 import { DEFAULT_ATHLETE_STATE_WEIGHTS, type AthleteStateWeights } from "./calibration";
 import { round2 } from "./stats";
 import { utcToday } from "./date";
+import { AEROBIC_BASELINE_DAYS, AEROBIC_MIN_BASELINE, qualifyingPwHr } from "./aerobic";
 import type { AcwrResult, ActivitySummary, AthleteModel, AthleteState, SignalContribution, SyncData } from "./types";
 
 export interface AthleteStateInputs {
@@ -158,10 +159,10 @@ function meanRpe(activities: ActivitySummary[], sinceIso: string, minN: number, 
   return rpes.length >= minN ? Math.round((rpes.reduce((s, v) => s + v, 0) / rpes.length) * 10) / 10 : null;
 }
 
+// Window/sample constants for the Z2 Pw:HR aerobic signal are shared with the off-plan execution score
+// (lib/aerobic.ts) so the "qualifying ride" definition can't drift between the two consumers. The recency
+// exclusion is athlete-state-specific (the "now" state grades the latest reading against its own history).
 const AEROBIC_RECENCY_DAYS = 14; // a reading older than this isn't "now" aerobic state
-const AEROBIC_BASELINE_DAYS = 90;
-const AEROBIC_MIN_BASELINE = 3; // need a few readings before the baseline is trustworthy
-const AEROBIC_MIN_Z2_MINS = 15; // trust a ride's Z2 Pw:HR only above this much Z2 (a few warmup mins is noisy)
 const RPE_MIN_RECENT = 2; // a single recent ride is too noisy to call a trend (RV2-5)
 const RPE_MIN_BASELINE = 3;
 
@@ -181,7 +182,7 @@ export function athleteStateInputsFrom(
   // interval days — no ride-structure confound (that was the whole-ride-decoupling problem). Trusted only
   // above a Z2-minutes floor (a few warmup minutes are noisy); the latest must be recent. Baseline = mean
   // over qualifying rides in the window; too few → null → the signal sits out (better absent than wrong).
-  const qualifying = acts.filter((a) => a.powerHrZ2 !== null && (a.powerHrZ2Mins ?? 0) >= AEROBIC_MIN_Z2_MINS);
+  const qualifying = acts.filter((a) => qualifyingPwHr(a) != null);
   const latestQual = [...qualifying].sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
   const aerobicEffLatest =
     latestQual && latestQual.date >= daysAgo(AEROBIC_RECENCY_DAYS) ? latestQual.powerHrZ2 : null;

@@ -45,6 +45,7 @@ import { applyDispositions, compromisedDates } from "@/lib/disposition";
 import { buildFormStateLookup, computeAcwr, computeFatigueAlert, computeIntensityDistribution, computeLoadRamp, computeReadiness, computeRollingBaselines } from "@/lib/readiness";
 import { deriveDecouplingGood, deriveIfBandOffsets, resolveAcwrBands, resolveAthleteStateWeights } from "@/lib/calibration";
 import { buildCoachSnapshotFromSources } from "@/lib/coach-snapshot";
+import { aerobicEffPct, z2PwHrBaselineBefore } from "@/lib/aerobic";
 import { resolveToday } from "@/lib/date";
 import type { ExecutedInterval, RideEntryContext, TodayAnalysis } from "@/lib/types";
 
@@ -379,6 +380,8 @@ export async function POST(req: Request) {
             // The athlete's synced zone tops (%FTP) as-of the ride — the IF band label's boundaries, so it
             // reflects their own Intervals.icu zones and tracks any FTP/zone change (effective-dated).
             powerZoneTopsPct: physiologyAsOf(physStore, todayActivity.date)?.powerZonePct ?? null,
+            // Off-plan aerobic read: today's Z2 Pw:HR vs the athlete's baseline from prior qualifying rides.
+            aerobicEffPct: aerobicEffPct(todayActivity, z2PwHrBaselineBefore(lastSync.activities, todayActivity.date)),
             intervalComparison,
             trace,
             powerPRs,
