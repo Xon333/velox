@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, timeAgo } from "@/lib/client-api";
 import { Card } from "./ui";
+import PowerCurveChart from "./PowerCurveChart";
 import type { AthleteMdSnapshot } from "@/lib/kb-loader";
 import type { PowerCurvePoint, PowerProfile, PowerSystem } from "@/lib/types";
 
@@ -278,6 +279,9 @@ export default function AthleteProfileForm() {
               <p className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">
                 all-time best efforts · from Intervals.icu · {timeAgo(autoSync.syncedAt)}
               </p>
+              <div className="mb-3">
+                <PowerCurveChart points={syncedPowerCurve} />
+              </div>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                 {syncedPowerCurve.map((pt) => {
                   const label = POWER_CURVE_LABELS[pt.durationSec] ?? `${pt.durationSec}s`;
