@@ -20,13 +20,11 @@ EA exercise-burn label, w/kg stale-FTP flag) shipped → ARCHIVE.
 
 ### P2 — correctness / signal quality
 
-- ☐ P2 `audit` **EC-1 — aerobic Pw:HR baseline isn't outdoor-filtered.** `z2PwHrBaselineBefore(activities, …)`
-  builds the Z2 Pw:HR baseline over ALL activities (feeds the off-plan execution signal AND the athlete-state
-  aerobic driver), but the Trends Pw:HR is deliberately OUTDOOR-ONLY (README §4 — indoor/ERG-flattened power +
-  cardiac drift distort Pw:HR). So an indoor ride can both pollute the baseline and be graded against a
-  mostly-outdoor one → an indoor-conditions penalty misread as aerobic strain. Filter to outdoor (exclude
-  trainer/virtual) for parity. _[aerobic.ts](lib/aerobic.ts) · [score-log.ts:153](lib/score-log.ts:153) ·
-  [athlete-state.ts:185](lib/athlete-state.ts:185) · [sync/route.ts:384](app/api/sync/route.ts:384)._
+- ☑ P2 `audit` **EC-1 — aerobic Pw:HR baseline now outdoor-filtered.** `qualifyingPwHr` requires
+  `type === "Ride"` (excludes VirtualRide), so the Z2 Pw:HR baseline AND the per-ride read both drop indoor
+  rides whose Pw:HR is distorted (ERG-flat power + cardiac drift) — parity with the Trends Pw:HR
+  (`isSteadyEnduranceRide`). One shared gate covers all three consumers (off-plan execution signal,
+  athlete-state aerobic driver, today path). +1 test. _[aerobic.ts](lib/aerobic.ts)._
 - ☐ P2 `bug` **EC-2 — durability effort timing assumes 1 Hz, no-pause sampling.** `gradeDurabilityDelivery`
   computes an effort's ride-fraction as `startIndex / movingTimeSec`, but `start_index` indexes the
   ELAPSED-time stream (and at smart-recording rates ≠ seconds) while `movingTimeSec` excludes pauses. A paused

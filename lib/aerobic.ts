@@ -12,13 +12,19 @@ export const AEROBIC_DEADBAND_PCT = 3; // within ±this of baseline = no signal 
 
 export interface PwHrRide {
   date: string; // YYYY-MM-DD
+  type: string; // activity type — only OUTDOOR "Ride" qualifies (see qualifyingPwHr)
   powerHrZ2: number | null;
   powerHrZ2Mins: number | null;
 }
 
-// A ride's Z2 Pw:HR if it clears the Z2-minutes floor, else null (not enough Z2 to trust the reading).
+// A ride's Z2 Pw:HR if it's an OUTDOOR ride that clears the Z2-minutes floor, else null. Outdoor-only
+// (`type === "Ride"`, excluding VirtualRide) for parity with the Trends Pw:HR (`isSteadyEnduranceRide`):
+// indoor/virtual rides have no wind cooling → cardiac drift, and ERG holds power flat, so their Z2 Pw:HR is
+// distorted. Including them would both pollute the baseline AND mis-grade an indoor ride against a
+// mostly-outdoor baseline (an indoor-conditions penalty misread as aerobic strain — EC-1). One gate, so the
+// baseline builder and the per-ride read can't drift apart.
 export function qualifyingPwHr(r: PwHrRide): number | null {
-  return r.powerHrZ2 != null && (r.powerHrZ2Mins ?? 0) >= AEROBIC_MIN_Z2_MINS ? r.powerHrZ2 : null;
+  return r.type === "Ride" && r.powerHrZ2 != null && (r.powerHrZ2Mins ?? 0) >= AEROBIC_MIN_Z2_MINS ? r.powerHrZ2 : null;
 }
 
 // The athlete's aerobic baseline as-of a ride: mean Z2 Pw:HR over qualifying rides STRICTLY BEFORE `date`
