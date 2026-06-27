@@ -382,6 +382,7 @@ export async function POST(req: Request) {
             powerZoneTopsPct: physiologyAsOf(physStore, todayActivity.date)?.powerZonePct ?? null,
             // Off-plan aerobic read: today's Z2 Pw:HR vs the athlete's baseline from prior qualifying rides.
             aerobicEffPct: aerobicEffPct(todayActivity, z2PwHrBaselineBefore(lastSync.activities, todayActivity.date)),
+            executed, // Track B: the ride's intervals, to grade a durability long ride's effort delivery
             intervalComparison,
             trace,
             powerPRs,

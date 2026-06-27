@@ -6,9 +6,11 @@
 import { adjustBuffer } from "./nutrition";
 import { computeExecutionScore, resolveCompliance, timeAboveZ2Fraction, type ScoringCalibration } from "./execution-score";
 import { inferWorkoutType } from "./ride-classify";
+import { gradeDurabilityDelivery } from "./durability-score";
 import type {
   ActivitySummary,
   CurrentBlockDay,
+  ExecutedInterval,
   IntervalComparison,
   PowerPR,
   RideTrace,
@@ -67,7 +69,7 @@ export function computeAdvisedIntake(
 export interface TodayAnalysisInputs {
   today: string;
   activity: ActivitySummary;
-  plannedDay: Pick<CurrentBlockDay, "name" | "type" | "durationMin"> | null;
+  plannedDay: Pick<CurrentBlockDay, "name" | "type" | "durationMin" | "durabilityTemplate"> | null;
   ftp: number;
   nutrition: { baseCalories: number; buffer: number };
   weightTrend7Day: number;
@@ -80,6 +82,9 @@ export interface TodayAnalysisInputs {
   // Off-plan aerobic read: this ride's Z2 Pw:HR vs the athlete's baseline (signed %Δ), computed by the
   // route from the ride history. Only scored when today is off-plan; null → no effect.
   aerobicEffPct: number | null;
+  // The ride's executed intervals (Track B): used to grade whether a durability long ride delivered its
+  // template's prescribed efforts. Empty when none were fetched.
+  executed: ExecutedInterval[];
   intervalComparison: IntervalComparison | null;
   trace: RideTrace | null;
   powerPRs: PowerPR[];
@@ -112,6 +117,10 @@ export function buildTodayAnalysis(input: TodayAnalysisInputs): TodayAnalysisRes
   // ledger does. `intrinsic` still guards the circular intensity-vs-type branch, so this only enables VI;
   // the OUTPUT plannedType field below stays null (nothing was planned).
   const scoringType = plannedDay?.type ?? inferWorkoutType(metrics.intensityFactor, metrics.actualMin);
+  // Track B: grade a durability long ride against its template's expected signal — did the prescribed
+  // efforts happen, at the right intensity + timing? Only the today path has the ride's intervals. Null
+  // (template A, off-plan, or no intervals) → no effect.
+  const durabilityDelivery = gradeDurabilityDelivery(plannedDay?.durabilityTemplate ?? null, input.executed, ftp, activity.movingTimeSec);
   const executionScore = computeExecutionScore({
     compliancePct: metrics.compliancePct,
     intensityFactor: metrics.intensityFactor,
@@ -127,6 +136,8 @@ export function buildTodayAnalysis(input: TodayAnalysisInputs): TodayAnalysisRes
     // Off-plan (no planned session today) → score the non-circular aerobic read, matching the ledger.
     intrinsic: plannedDay == null,
     aerobicEffPct: input.aerobicEffPct,
+    durabilityTemplate: plannedDay?.durabilityTemplate ?? null,
+    durabilityDelivery: durabilityDelivery?.signal ?? null,
     calibration: input.resolvedCal,
   });
 

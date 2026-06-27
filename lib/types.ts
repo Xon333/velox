@@ -267,6 +267,10 @@ export interface CurrentBlockDay {
   name: string;
   type: WorkoutType;
   durationMin: number;
+  // Track B: the block's durability template (A–E), stamped on the week's long Z2 ride at write time so
+  // scoring can grade that ride against its template's expected signal. Absent on non-long-ride days and
+  // on blocks written before stamping landed.
+  durabilityTemplate?: string;
   workoutText?: string; // Intervals.icu step syntax — the coach's prescription
   prescription?: PrescribedInterval[]; // structured work intervals parsed from workoutText
   // The Intervals.icu event id this day was written as. Stored so the block's planned-workout events

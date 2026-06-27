@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildTodayAnalysis, computeAdvisedIntake, computeRideMetrics } from "./ride-analysis";
-import type { ActivitySummary, TodayAnalysis } from "./types";
+import type { ActivitySummary, ExecutedInterval, TodayAnalysis } from "./types";
 
 const activity = (over: Partial<ActivitySummary> = {}): ActivitySummary => ({
   id: "a1",
@@ -75,6 +75,7 @@ describe("buildTodayAnalysis (CR-G)", () => {
     hrZoneTimes: null,
     powerZoneTopsPct: null as number[] | null,
     aerobicEffPct: null as number | null,
+    executed: [] as ExecutedInterval[],
     intervalComparison: null,
     trace: null,
     powerPRs: [],

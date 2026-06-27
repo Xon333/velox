@@ -33,6 +33,20 @@ describe("computeExecutionScore", () => {
     expect(planned(8)).toBe(planned(null)); // not intrinsic → no aerobic contribution
   });
 
+  it("doesn't penalise above-Z2 time on a durability template that embeds efforts; template A still does (Track B)", () => {
+    const drifted = { ...base, compliancePct: 100, intensityFactor: 0.7, plannedType: "Z2", variabilityIndex: 1.05, aboveZ2Frac: 0.4 };
+    const plainZ2 = computeExecutionScore(drifted)!; // easy-discipline penalty applies
+    expect(computeExecutionScore({ ...drifted, durabilityTemplate: "B" })!).toBeGreaterThan(plainZ2); // B embeds efforts → not penalised
+    expect(computeExecutionScore({ ...drifted, durabilityTemplate: "A" })!).toBe(plainZ2); // A = unbroken Z2 → still penalised
+  });
+
+  it("applies the durability effort-delivery signal (Track B)", () => {
+    const longRide = { ...base, compliancePct: 100, intensityFactor: 0.7, plannedType: "Z2" as const, variabilityIndex: 1.05, durabilityTemplate: "B" };
+    expect(computeExecutionScore({ ...longRide, durabilityDelivery: 2 })!).toBeGreaterThan(
+      computeExecutionScore({ ...longRide, durabilityDelivery: -2 })!
+    );
+  });
+
   it("rewards a hard, variable RaceSim and penalises a soft one", () => {
     const hard = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.86, plannedType: "RaceSim" });
     const soft = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.62, plannedType: "RaceSim" });

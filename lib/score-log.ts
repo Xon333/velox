@@ -110,6 +110,10 @@ export function buildRideScores(
         plannedType: planned.type,
         variabilityIndex,
         aboveZ2Frac,
+        // Track B: a durability long ride carries its template — makes the above-Z2 rule template-aware
+        // (B–E embed efforts, so above-Z2 time isn't a lapse). The effort-delivery grade needs interval
+        // timing the ledger doesn't fetch, so that lands on the today path only.
+        durabilityTemplate: planned.durabilityTemplate ?? null,
         calibration,
       });
       if (executionScore !== null) {
@@ -126,6 +130,7 @@ export function buildRideScores(
           ftpUsed: ftp,
           durationMin: actualMin,
           tss: act.trainingLoad,
+          ...(planned.durabilityTemplate ? { durabilityTemplate: planned.durabilityTemplate } : {}), // Track B: attribute outcomes per template (#4)
           ...calStampFor(calibration, planned.type, false),
           ...contextStamp,
           ...fuelStampFor(act),

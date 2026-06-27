@@ -7,7 +7,7 @@ import { planDayToEvent } from "@/lib/plan-parser";
 import { staleEventIds } from "@/lib/block-events";
 import { utcToday } from "@/lib/date";
 import { parsePrescription } from "@/lib/prescription";
-import type { CurrentBlock, GeneratedPlan, PlannedDay, WriteResult } from "@/lib/types";
+import type { CurrentBlock, CurrentBlockDay, GeneratedPlan, PlannedDay, WriteResult } from "@/lib/types";
 import { WORKOUT_TYPES } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -118,20 +118,28 @@ export async function POST(req: Request) {
     model: plan.model,
     promptVersion: plan.promptVersion,
     durabilityTemplate: plan.durabilityTemplate,
-    days: plan.days.map((d) => {
-      // Capture the coach's prescription structurally so execution can be compared.
-      const prescription = parsePrescription(d.workoutText, ftp);
-      const eventId = eventIdByDate.get(d.date) ?? null;
-      return {
-        date: d.date,
-        name: d.name,
-        type: d.type,
-        durationMin: d.durationMin,
-        ...(d.workoutText ? { workoutText: d.workoutText } : {}),
-        ...(prescription.length > 0 ? { prescription } : {}),
-        ...(eventId !== null ? { eventId } : {}),
-      };
-    }),
+    // Track B: stamp the template on the week's long Z2 ride(s) — a Z2 day at/near the block's longest Z2
+    // duration — so scoring can grade that ride against the template's expected signal. Short easy Z2 days
+    // (well below the long-ride duration) aren't durability rides and stay unstamped.
+    days: ((): CurrentBlockDay[] => {
+      const maxZ2 = Math.max(0, ...plan.days.filter((d) => d.type === "Z2").map((d) => d.durationMin));
+      const isLongRide = (d: { type: string; durationMin: number }) => d.type === "Z2" && maxZ2 >= 120 && d.durationMin >= 0.8 * maxZ2;
+      return plan.days.map((d) => {
+        // Capture the coach's prescription structurally so execution can be compared.
+        const prescription = parsePrescription(d.workoutText, ftp);
+        const eventId = eventIdByDate.get(d.date) ?? null;
+        return {
+          date: d.date,
+          name: d.name,
+          type: d.type,
+          durationMin: d.durationMin,
+          ...(isLongRide(d) && plan.durabilityTemplate ? { durabilityTemplate: plan.durabilityTemplate } : {}),
+          ...(d.workoutText ? { workoutText: d.workoutText } : {}),
+          ...(prescription.length > 0 ? { prescription } : {}),
+          ...(eventId !== null ? { eventId } : {}),
+        };
+      });
+    })(),
   };
   await writeCurrentBlock(currentBlock);
 

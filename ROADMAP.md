@@ -89,9 +89,14 @@ already fed block generation. Left: the population reference multiples → `#2` 
 block barely moves the curve, so the over-time read only pays off across a season).
 
 ### Track B · Session selection & variety
-Per-template scoring loop (grade each long ride vs its template's expected signal — the
-`durabilityTemplate` stamp is in place; ties #4 + Track C); tighten per-loading-week RaceSim only if real
-use shows the LLM under-delivering.
+✅ Per-template scoring loop shipped: the durability template is stamped on the week's long Z2 ride at write
+time, and `computeExecutionScore` grades that ride against its template's expected signal — above-Z2 time is
+no longer penalised for B–E (they embed efforts), and `gradeDurabilityDelivery` (`lib/durability-score.ts`)
+checks whether the prescribed efforts actually landed at the right intensity + timing (±2). The template is
+also stamped on the ledger entry for #4 outcome attribution. Limits: the effort-delivery grade needs
+interval timing only the **today** path fetches (the ledger gets the template-aware above-Z2 only); the
+**long-ride identification** is a write-time heuristic (Z2 day near the block's longest Z2), and it activates
+on the next written block. Left: tighten per-loading-week RaceSim only if real use shows under-delivery.
 
 ### Track C · Fueling intelligence + the shared correlation engine  (high value)
 Turn fueling from a static formula into a learned signal, on the **shared correlation engine**. The

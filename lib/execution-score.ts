@@ -4,6 +4,7 @@
 // aerobic read (Z2 Pw:HR vs baseline), and pacing smoothness (variability index). No AI.
 
 import { AEROBIC_DEADBAND_PCT } from "./aerobic";
+import { EXPECTS_EMBEDDED_EFFORTS } from "./durability-score";
 
 // Population default for the decoupling "good" cutoff. At this value the bands are the historical
 // absolute cutoffs [2, 4, 7, 10], so an uncalibrated score is byte-identical to before.
@@ -38,6 +39,14 @@ export interface ExecutionScoreInput {
   // inferred type. Only applied for intrinsic rides; null/absent → no effect. Positive = above baseline =
   // better aerobic efficiency = a good off-plan endurance day.
   aerobicEffPct?: number | null;
+  // Track B — durability long ride: the block's template (A–E) this Z2 ride was built around. Makes the
+  // "above Z2" rule template-aware (A expects unbroken Z2; B–E embed efforts, so above-Z2 time is the
+  // point, not a discipline lapse). Absent → plain Z2 behaviour.
+  durabilityTemplate?: string | null;
+  // Track B — the effort-delivery grade for a durability ride (gradeDurabilityDelivery): did the template's
+  // prescribed efforts actually happen, at the right intensity + timing? +2 delivered · 0 mis-placed · -2
+  // skipped. Null/absent → no effect (no interval data, or template A). Only the today path can compute it.
+  durabilityDelivery?: number | null;
   // Per-athlete calibration (ROADMAP #2): shifts the IF-vs-type bands to the athlete's own zone edges.
   // Absent → population behaviour (unchanged scoring).
   calibration?: ScoringCalibration | null;
@@ -128,10 +137,16 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
   // time above the aerobic cap means the "easy" ride wasn't dialed in. Skipped for off-plan rides
   // (the type was inferred from intensity — no plan to be disciplined against) and when zone data is
   // absent, so existing rides without power-zone times score exactly as before.
+  // Skipped for durability templates B–E (Track B): those embed efforts INSIDE the long Z2 ride, so
+  // above-Z2 time is the prescribed stimulus, not a discipline lapse — penalising it would mark down a
+  // correctly-ridden durability session. Template A (pure accumulation) stays unbroken Z2 and is still held
+  // to the easy-discipline standard.
+  const embedsEfforts = EXPECTS_EMBEDDED_EFFORTS.has(input.durabilityTemplate ?? "");
   if (
     input.aboveZ2Frac != null &&
     Number.isFinite(input.aboveZ2Frac) &&
     !intrinsic &&
+    !embedsEfforts &&
     (plannedType === "Z2" || plannedType === "Recovery")
   ) {
     const f = input.aboveZ2Frac;
@@ -139,6 +154,13 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
     else if (f <= 0.15) score += 0; // fine — the odd roller or surge
     else if (f <= 0.3) score -= 1; // drifted above the aerobic cap repeatedly
     else score -= 2; // spent so long above zone it wasn't really an easy ride
+  }
+
+  // --- Track B: durability effort delivery (±2) --- did the template's prescribed efforts actually
+  // happen, at the right intensity + timing (gradeDurabilityDelivery, computed by the today path from the
+  // ride's intervals)? Absent → no effect (no interval data, or template A).
+  if (input.durabilityDelivery != null && Number.isFinite(input.durabilityDelivery)) {
+    score += Math.max(-2, Math.min(2, Math.round(input.durabilityDelivery)));
   }
 
   // --- Off-plan aerobic quality (±2) --- intrinsic rides only.
