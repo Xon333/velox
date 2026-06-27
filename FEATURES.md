@@ -45,10 +45,17 @@ AI — and the AI only ever phrases numbers the code already computed.
   motivation + illness) → a deterministic *proceed* or *downgrade + reschedule* decision; applying it
   downgrades today and moves the stimulus to the next rest day (else swaps with an easy day).
   `components/MorningCheckIn.tsx`, `lib/morning-check.ts`, `app/api/morning-check`
-- **Today's ride card** — planned vs actual, a metric strip (IF + effort band · NP · avg power · avg
-  speed · decoupling · RPE), the 1–10 execution score, prescription-vs-execution rep breakdown, a
-  smoothed power/HR trace with interval bands, power-zone bars, and advised daily intake.
-  `components/dashboard/today.tsx`, `lib/trace.ts`
+- **Today's ride card** — planned vs actual, a curated metric strip (IF + effort band + **basis stamp**
+  `· NP`/`· avg` · NP · avg power · RPE), the 1–10 execution score, prescription-vs-execution rep breakdown,
+  a smoothed power/HR trace with interval bands, power-zone bars, and advised daily intake. *Decoupling*
+  lives in the collapsed "Power execution" drill-down (it's context, not a scored signal); avg speed was
+  dropped. `components/dashboard/today.tsx`, `lib/trace.ts`
+- **Energy-availability tile** ⭐ — a deterministic fuel proxy `(logged intake − ride burn)/kg`, averaged
+  over recent *complete* days (today excluded), with a week-over-week trend. No clinical band (it's a
+  body-weight proxy off self-logged intake — said so in copy); withheld below 3 logged days. `lib/nutrition.ts`
+- **Calibrated-honesty UX** — the UI grades its own certainty: metric **provenance** stamped (IF NP-vs-avg),
+  thin **Athlete-State** reads flagged (amber "low confidence"), and numbers the engine can't trust yet are
+  withheld (`—`) rather than shown flaky. `components/AthleteStateCard.tsx`, `components/dashboard/today.tsx`
 - **Power-PR trophy** — a new best vs the previous sync's curve is called out (banner + coach note). `lib/pr.ts`
 - **Session disposition** — attribute a ride completed/partial/compromised; only *compromised* changes scoring.
 - **Coach note** — AI 2–3 sentence narrative of today vs plan; re-analysable. `app/api/analyze`
@@ -80,6 +87,8 @@ AI — and the AI only ever phrases numbers the code already computed.
 - **Pw:HR efficiency trajectory** (outdoor-only, endurance band, ≥45 min) · **CTL fitness** curve ·
   **execution-quality** + **weekly-volume** bars (magnitude-shaded, with hovers) · **fueling & weight**
   (complete weeks only) · **insight track record** · **block history**. `lib/trends.ts`, `components/Trends.tsx`
+- **Recent baselines (curated)** — single numbers not already a chart: **w/kg @ threshold** · weekly hours ·
+  rides/week · avg load/ride (90-day rolling, "Load" naming aligned to Intervals.icu). `components/trends/sections.tsx`
 
 ## Nutrition (code, not AI)
 - **Deterministic targets** — daily kcal (base + session kJ + buffer; flat on rest days) + pre/in/post

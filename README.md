@@ -431,9 +431,13 @@ deliberate cornering practice.
 | `ride-classify.ts` | Infer a ride's workout type from its intensity/structure |
 | `pr.ts` | Power-PR detection — freshly-synced curve vs the previous sync's curve |
 | `athlete-model.ts` | EWMA model + trend detection + insight derivation |
+| `power-profile.ts` | Rider-type classification from the power-curve *shape* + "easy win" weak point (Track A) |
+| `aerobic.ts` | Z2-isolated Pw:HR (`icu_power_hr_z2`) — intent-independent aerobic read vs the athlete's baseline |
+| `durability-score.ts` | Grade a long ride against its durability template's expected signal (Track B) |
 | `synthesis.ts` | Rank model insights into one coaching-directive block for generation |
 | `intervention.ts` | Snapshot directives at block-write, validate/refute them after maturity |
-| `calibration.ts` | Auto-tuned EWMA alpha + ACWR bands |
+| `correlation.ts` | Shared guarded-regression engine (`deriveExecutionEdge`) for auto-derived calibration edges (#2/Track C) |
+| `calibration.ts` | Auto-tuned EWMA alpha + ACWR bands + per-athlete edge resolvers |
 | `readiness.ts` | ACWR, intensity distribution, fatigue/load-ramp signals |
 | `reschedule.ts` | Reschedule missed/compromised quality sessions (reactive) + proactive downgrade/swap onto a rest-or-easy day |
 | `athlete-state.ts` | §5 signal fusion: one 0–100 athlete-state score + drivers from the fused signals |
@@ -442,7 +446,9 @@ deliberate cornering practice.
 | `session-requirements.ts` | Goal/weakpoint → required session types (terrain/race ⇒ RaceSim), injected + validated (Track B) |
 | `durability.ts` | Durability template taxonomy (A–E) + deterministic, limiter-driven/rotated selection (Track B) |
 | `zones.ts` | Re-bucket power/HR streams into the athlete's own zones |
-| `nutrition.ts` | Deterministic calorie/carb/protein formula |
+| `ride-analysis.ts` | Build today's analysis from a synced activity — metrics, IF, execution, trace (pure; route does IO) |
+| `sync-analysis.ts` | The single LLM step of a sync (coach note), split out so `/api/sync` returns the deterministic analysis fast |
+| `nutrition.ts` | Deterministic calorie/carb/protein formula + energy-availability proxy |
 | `kb-loader.ts` | Knowledge-base + retrospective IO and parsing |
 | `trends.ts` | Trends time-series transforms (outdoor-only Pw:HR, complete-week energy) |
 | `trace.ts` | Downsampled + 30s-smoothed ride streams + interval bands for the power chart |
@@ -461,7 +467,7 @@ and only phrases them in natural language — it never calculates nutrition.
 ## Development
 
 ```bash
-npm test       # vitest (550 tests across 52 suites: physiology, scoring, interval match, athlete model, interventions, nutrition, plan schema, trends, PR detection, trace, coach-snapshot, morning-check, durability, session-requirements, …)
+npm test       # vitest (556 tests across 55 suites: physiology, scoring, interval match, athlete model, interventions, nutrition, energy-availability, plan schema, trends, PR detection, trace, coach-snapshot, morning-check, durability, session-requirements, …)
 npm run lint
 npm run build
 ```

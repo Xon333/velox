@@ -12,6 +12,34 @@ exact commits.
 
 ---
 
+## Calibrated-honesty UX pass — Today / Trends / Profile
+
+The UI now grades its own certainty the way the engine already does: provenance stamped, thin reads
+flagged, flaky/off-vocabulary numbers pruned or relabelled. Display-only — no engine changes.
+
+- **A — confidence tiers.** Athlete-State `low` confidence renders as an amber caution (thin read — few
+  core signals or a tiny exec sample); thin aggregates the engine can't trust are withheld (`—`) rather
+  than shown (ACWR already returns `null` below 14 days, RV2-2). _[AthleteStateCard.tsx](components/AthleteStateCard.tsx)._
+- **B — provenance stamps.** The IF tile stamps its basis (`· NP` vs `· avg`, since `ride-analysis` reads
+  `normalizedPower ?? avgWatts` and an avg-based IF understates variable efforts); decoupling carries a
+  "context only — not in your execution score" note. _[dashboard/today.tsx](components/dashboard/today.tsx)._
+- **C — prune to a trusted core.** Avg speed removed from the Today glance; decoupling relocated to the
+  "Power execution" drill-down (it's not a scored signal). Profile makes the two-memory split visible —
+  measured sections carry a cyan "synced" badge, owned intent keeps "Edit →". Metric name standardised to
+  **"Load"** (Intervals.icu's term) across Today/Trends/Plan; the readiness tooltip stopped claiming HRV
+  (it's gated off). _[today.tsx](components/dashboard/today.tsx) · [AthleteProfileForm.tsx](components/AthleteProfileForm.tsx)._
+- **Recent Baselines curated.** The card now holds single numbers that aren't already a chart: **w/kg @
+  threshold** (a current snapshot, FTP ÷ latest weight, resolved in the trends route) · weekly hours ·
+  **rides/week** (new 90-day rolling metric) · avg load/ride. Dropped cadence (low value) + decoupling (the
+  Pw:HR chart tells it). _[trends/sections.tsx](components/trends/sections.tsx) · [readiness.ts](lib/readiness.ts)._
+- **Energy-availability tile** ⭐ — deterministic fuel proxy `(intake − ride burn)/kg`, trailing mean over
+  complete days (today excluded), week-over-week trend, **no clinical band** (a body-weight proxy off
+  self-logged intake can't claim the 30/45 kcal/kg·FFM cutoff; on real data the athlete straddles 30 day to
+  day, so a band would flicker). Withheld below 3 logged days. `computeEnergyAvailability` + 3 tests.
+  _[nutrition.ts](lib/nutrition.ts) · [dashboard/today.tsx](components/dashboard/today.tsx)._
+- **Device-lap path reverted** (`f81f4dc` → `c439ba4`) — Intervals.icu's one-click "use laps" already folds
+  laps into `icu_intervals`, so the app stays single-source; no second fetch path. _[intervals-api.ts](lib/intervals-api.ts)._
+
 ## Accuracy & hardening sweeps — Jun 24–25
 
 Three senior-dev deep-reads of the deterministic core plus an athlete-requested accuracy pass, all shipped;

@@ -127,14 +127,12 @@ could fire. What's left:
 
 ## UI refinements
 
-- **Nutrition-availability tile on Today** ⭐ — EA proxy `(intake − ride burn)/kg`; overlaps §6 / Track C;
-  feeds `CoachSnapshot.fuel`. Deterministic.
-- **Recent Baselines — pick the useful ~4** (w/kg@threshold, weekly TSS, rides/wk, CTL ramp, decoupling
-  trend). Fix TSS-vs-Load naming + the weekly-hours window (todo `MR-2`); split NP from Avg + annotate-or-
-  demote IF; verify tiles populate post-sync (todo `TR-4`, avg-speed `RC-1`).
+- **Energy-availability tile — open slivers** — the deterministic EA proxy shipped (Today, trailing-window
+  `(intake − ride burn)/kg`, no clinical band → ARCHIVE). Left: feed it into `CoachSnapshot.fuel`'s reserved
+  `intakeVsNeed`/`fuelingState` slots (`← #1`), and a *personalised* "adequate" line `← Track C` calibration.
 - **Pw:HR × fuel Trends overlay** — carb-intake g/h on the existing `efSeries` chart (build w/ Track C).
-- **Page density** — **Trends** (~1.6/2.2 folds) and **Today on mobile** still run over the fold —
-  tighten card rhythm / collapse there next.
+- **Page density** — **Trends** (~1.6/2.2 folds) and **Today on mobile** still run over the fold (the EA tile
+  added one more row to the readiness glance) — tighten card rhythm / collapse there next.
 
 ---
 
