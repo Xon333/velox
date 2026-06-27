@@ -158,14 +158,17 @@ export function WeeklyVolumeBars({ weeks }: { weeks: TrendsData["weeklyHours"] }
   );
 }
 
-export function baselineCards(b: RollingBaselines, wkgAtThreshold: number | null) {
+export function baselineCards(b: RollingBaselines, wkgAtThreshold: number | null, wkgStale = false) {
   const cards: Array<{ label: string; value: string }> = [];
   // Curated to single numbers that aren't already a chart elsewhere on Trends (athlete-chosen set):
   // w/kg @ threshold · weekly hours · rides/week · avg load/ride. Avg CTL stays out (the CTL graph
   // shows it); cadence + decoupling were dropped — decoupling's story is the Pw:HR chart, cadence is
   // low decision-value. (avgDecoupling90d is still computed for the calibration cutoff; avgCadence90d
   // is now card-unused — a candidate to retire from the store later.)
-  if (wkgAtThreshold != null) cards.push({ label: "w/kg @ threshold", value: wkgAtThreshold.toFixed(1) });
+  // w/kg's denominator (FTP) ages; flag "stale FTP" when >90d so it agrees with Profile's warning.
+  if (wkgAtThreshold != null) {
+    cards.push({ label: wkgStale ? "w/kg @ threshold · stale FTP" : "w/kg @ threshold", value: wkgAtThreshold.toFixed(1) });
+  }
   if (b.avgWeeklyHours90d != null) cards.push({ label: "Weekly hours", value: `${b.avgWeeklyHours90d.toFixed(1)} h` });
   if (b.ridesPerWeek90d != null) cards.push({ label: "Rides / week", value: b.ridesPerWeek90d.toFixed(1) });
   if (b.avgTss90d != null) cards.push({ label: "Avg load / ride", value: String(Math.round(b.avgTss90d)) });

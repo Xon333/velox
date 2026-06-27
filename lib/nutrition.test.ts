@@ -200,6 +200,17 @@ describe("computeEnergyAvailability", () => {
     expect(ea).toBeNull();
   });
 
+  it("ignores a logged 0-intake day (treated as not-logged, not a real fasted day → no negative drag)", () => {
+    const wellness = [
+      w("2026-06-11", 3000), w("2026-06-12", 3000), w("2026-06-13", 3000),
+      w("2026-06-14", 0), // 0 kcal — excluded; counting it as (0 − burn)/kg would push the mean negative
+    ];
+    const acts = ["2026-06-11", "2026-06-12", "2026-06-13", "2026-06-14"].map((d) => ride(d, 1200));
+    const ea = computeEnergyAvailability(wellness, acts, "2026-06-15")!;
+    expect(ea.eaKcalPerKg).toBe(30); // (3000 − 1200)/60 over the 3 real days
+    expect(ea.daysUsed).toBe(3);
+  });
+
   it("reports the trend vs the prior equal window", () => {
     const wellness = [
       // prior window [06-01, 06-08): (2400 − 1200)/60 = 20

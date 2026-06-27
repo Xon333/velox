@@ -503,7 +503,7 @@ export function EnergyAvailabilityTile({ sync }: { sync: SyncData | null }) {
     <div className="group relative mt-2 flex items-center justify-between gap-2 rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
       <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
         <span className="underline decoration-dotted underline-offset-2">Energy availability</span>
-        <MetricTip text={`Energy left for recovery after exercise — your logged intake minus ride burn, per kg body weight, averaged over the last ${ea.daysUsed} complete days (today is excluded — it's still being logged). A proxy, not a clinical figure: it's on body weight (not fat-free mass) and reads low if you under-log intake. The arrow is vs the prior week; a personalised "adequate" line comes once enough data accrues.`} />
+        <MetricTip text={`Energy left for recovery after exercise — your logged intake minus exercise burn (all activities with power/energy data, kJ≈kcal), per kg body weight, averaged over the last ${ea.daysUsed} complete days (today is excluded — it's still being logged). A proxy, not a clinical figure: it's on body weight (not fat-free mass) and reads low if you under-log intake. The arrow is vs the prior week; a personalised "adequate" line comes once enough data accrues.`} />
       </p>
       <p className="shrink-0 font-mono text-sm font-semibold text-zinc-700 dark:text-zinc-200">
         {ea.eaKcalPerKg}

@@ -174,7 +174,8 @@ export interface EnergyAvailability {
 const EA_MIN_DAYS = 3; // a few logged days before a trailing EA means anything (mirrors the other baselines)
 
 // Energy-availability PROXY: per-kg-body-mass energy left after exercise, averaged over recent COMPLETE
-// days. Deliberately simple ((intake − ride burn)/kg, kJ≈kcal as elsewhere) and honest about its limits:
+// days. Deliberately simple ((intake − exercise burn)/kg, kJ≈kcal as elsewhere — burn sums ALL activities
+// that carry a kJ value, not only rides; activities with no energy data contribute 0) and honest about limits:
 //   - TODAY is excluded — its intake is still being logged, so a partial day would read falsely low.
 //   - it uses body weight, not fat-free mass, so it is NOT the clinical 30/45 kcal/kg·FFM threshold — it's
 //     a trend signal ("am I fuelling more or less than usual?"), which is why this returns a delta, not a band.
@@ -204,7 +205,11 @@ export function computeEnergyAvailability(
   const cur: number[] = [];
   const prev: number[] = [];
   for (const w of wellness) {
-    if (w.date >= today || w.kcalConsumed === null) continue; // complete logged days only
+    // Complete logged days only. A 0 (or negative) daily intake is treated as NOT logged, not a real fasted
+    // DAY: Intervals sends null when absent, a daily total is never genuinely zero (you eat off the bike), and
+    // counting it would give a misleading negative EA that drags the mean. (Differs from FUEL-1, which keeps a
+    // logged 0 g of *per-ride* carbs — you can ride fasted, but you can't have a 0-kcal day.)
+    if (w.date >= today || w.kcalConsumed === null || w.kcalConsumed <= 0) continue;
     const weight = w.weightKg ?? fallbackWeight;
     if (weight <= 0) continue;
     const ea = (w.kcalConsumed - (burnByDate.get(w.date) ?? 0)) / weight;

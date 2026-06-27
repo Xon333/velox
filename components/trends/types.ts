@@ -38,6 +38,7 @@ export interface RecentSnapshot {
   load7Day: number | null;
   lastKcalConsumed: number | null;
   wkgAtThreshold: number | null; // current FTP ÷ latest weight — the cyclist's headline fitness number
+  wkgStale: boolean; // FTP backing w/kg is >90 days old (same basis as Profile's FTP-stale warning)
 }
 
 export interface ValidationData {

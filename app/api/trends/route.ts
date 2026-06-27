@@ -10,19 +10,21 @@ import {
 import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
 import { summariseValidation } from "@/lib/intervention";
 import { weightTrendFromWellness } from "@/lib/nutrition";
+import { readPhysiology } from "@/lib/physiology";
 import { efSeries, mondayOf, weeklyEnergy } from "@/lib/trends";
 
 // GET assembles the long-term, second-brain-derived trends. It deliberately does
 // NOT reproduce intervals.icu's raw PMC/power-curve charts — only signals that
 // tie training execution to the athlete's own blocks and adaptation.
 export async function GET() {
-  const [sync, profile, history, baselines, scoreLog, interventionLog] = await Promise.all([
+  const [sync, profile, history, baselines, scoreLog, interventionLog, physiology] = await Promise.all([
     readLastSync(),
     readAthleteProfile(),
     readBlockHistory(),
     readRollingBaselines(),
     readScoreLog(),
     readInterventionLog(),
+    readPhysiology(),
   ]);
 
   const ftp = profile.performance.ftp;
@@ -97,6 +99,11 @@ export async function GET() {
   // resolved here from the synced FTP + most recent weigh-in rather than stored in the rolling-baselines file.
   const weightKg = latestWeight?.weightKg ?? null;
   const wkgAtThreshold = ftp != null && weightKg != null && weightKg > 0 ? Math.round((ftp / weightKg) * 10) / 10 : null;
+  // The denominator (FTP) ages — flag staleness on the same >90-day basis Profile warns on, so the Trends
+  // tile and the Profile FTP-stale warning agree instead of one silently showing a stale number.
+  const ftpEffectiveFrom = physiology?.current.effectiveFrom ?? null;
+  const ftpStaleDays = ftpEffectiveFrom ? Math.floor((Date.now() - Date.parse(ftpEffectiveFrom)) / 86_400_000) : null;
+  const wkgStale = ftpStaleDays !== null && ftpStaleDays > 90;
   const recent = sync
     ? {
         latestWeightKg: weightKg,
@@ -104,6 +111,7 @@ export async function GET() {
         load7Day: load7Day > 0 ? Math.round(load7Day) : null,
         lastKcalConsumed: lastKcal?.kcalConsumed ?? null,
         wkgAtThreshold,
+        wkgStale,
       }
     : null;
 
