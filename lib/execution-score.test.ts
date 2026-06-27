@@ -47,6 +47,20 @@ describe("computeExecutionScore", () => {
     );
   });
 
+  it("suppresses the generic interval-adherence penalty on a durability ride graded by delivery (Track B)", () => {
+    // A fatigued 13.5/20m climb reads as a near-miss on the strict interval axis (low adherencePct),
+    // but the durability grader is the right lens for it — so the generic penalty must not double-count.
+    const longRide = { ...base, compliancePct: 95, intensityFactor: 0.7, plannedType: "Z2" as const, variabilityIndex: 1.05, durabilityTemplate: "B", durabilityDelivery: 2 };
+    const lowAdherence = computeExecutionScore({ ...longRide, adherencePct: 9 })!; // would be −2 if applied
+    const noAdherence = computeExecutionScore({ ...longRide, adherencePct: null })!;
+    expect(lowAdherence).toBe(noAdherence); // adherence ignored → climb not penalised twice
+    // Template A (no embedded effort, no delivery grade) still applies the generic penalty.
+    const templateA = { ...longRide, durabilityTemplate: "A", durabilityDelivery: null };
+    expect(computeExecutionScore({ ...templateA, adherencePct: 9 })!).toBeLessThan(
+      computeExecutionScore({ ...templateA, adherencePct: null })!
+    );
+  });
+
   it("rewards a hard, variable RaceSim and penalises a soft one", () => {
     const hard = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.86, plannedType: "RaceSim" });
     const soft = computeExecutionScore({ ...base, compliancePct: 100, intensityFactor: 0.62, plannedType: "RaceSim" });

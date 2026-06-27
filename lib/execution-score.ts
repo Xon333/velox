@@ -61,11 +61,19 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
   // Need at least one meaningful signal to produce a score.
   if (compliancePct === null && intensityFactor === null && adherencePct === null) return null;
 
+  // Track B: a durability long ride (template B–E) whose embedded effort is graded by the durability
+  // delivery grader below. That grader is the right lens for a fatigued mid-ride effort; the generic
+  // interval-adherence axis (which demands strict full-rep completion) would double-penalise the same
+  // climb — so it's suppressed here, and the ride rests on duration compliance + the delivery grade.
+  const embedsEfforts = EXPECTS_EMBEDDED_EFFORTS.has(input.durabilityTemplate ?? "");
+  const gradedByDurability =
+    embedsEfforts && input.durabilityDelivery != null && Number.isFinite(input.durabilityDelivery);
+
   let score = 5; // baseline
 
   // --- Execution: interval-target adherence (±2) takes precedence over duration when
   // an interval workout was prescribed; hitting the watts matters more than ride length.
-  if (adherencePct !== null) {
+  if (adherencePct !== null && !gradedByDurability) {
     const a = adherencePct;
     if (a >= 95 && a <= 106) score += 2; // nailed the targets
     else if ((a >= 90 && a < 95) || (a > 106 && a <= 112)) score += 1;
@@ -141,7 +149,6 @@ export function computeExecutionScore(input: ExecutionScoreInput): number | null
   // above-Z2 time is the prescribed stimulus, not a discipline lapse — penalising it would mark down a
   // correctly-ridden durability session. Template A (pure accumulation) stays unbroken Z2 and is still held
   // to the easy-discipline standard.
-  const embedsEfforts = EXPECTS_EMBEDDED_EFFORTS.has(input.durabilityTemplate ?? "");
   if (
     input.aboveZ2Frac != null &&
     Number.isFinite(input.aboveZ2Frac) &&

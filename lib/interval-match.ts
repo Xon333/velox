@@ -1,12 +1,14 @@
 // Match the coach's prescription against the intervals the athlete curated in
-// Intervals.icu, rep-by-rep, and roll it up. Order-based alignment: the i-th prescribed
-// rep is compared to the i-th executed work effort. Pure + deterministic.
+// Intervals.icu, rep-by-rep, and roll it up. Pure + deterministic.
 //
-// KNOWN LIMITATION (order-based alignment, RV-6): if a middle rep is skipped, every subsequent
-// executed rep shifts up one slot (executed rep 4 gets scored against prescribed target 3). It's
-// correct for the common case (all reps attempted, possibly under target) and for trailing extras
-// (handled below), but a ragged, gap-in-the-middle session mis-aligns. No positional/time matching
-// is attempted — Intervals' interval boundaries aren't reliable enough to align on.
+// Alignment is best-fit by DURATION (RV-6): each prescribed rep takes the unused executed effort
+// whose length is closest to it, ties broken by earliest index so equal-length reps keep their order.
+// This fixes the common real-world pattern where the athlete marks surges as intervals — a single
+// prescribed rep no longer grabs the first little surge; the effort that actually looks like the rep
+// (by length) wins, and the surges fall through to `extras`. Greedy, so not globally optimal on a
+// pathological mix, but correct for the realistic cases (equal-length reps, or one long rep among
+// short surges). Power is NOT used to align — only to score the matched rep — since a hard surge can
+// out-watt the real rep.
 
 import type { ExecutedInterval, IntervalAdherence, IntervalComparison, PrescribedInterval } from "./types";
 import { median } from "./stats";
@@ -37,20 +39,29 @@ export function matchPrescription(
   const typed = executed.filter((e) => e.type === "WORK");
   const work = typed.length > 0 ? typed : executed.filter((e) => filterPower(e) >= 0.8 * minTarget);
 
+  const used = new Set<number>();
   const reps: IntervalAdherence[] = [];
-  const n = Math.min(flat.length, work.length);
-  for (let i = 0; i < n; i++) {
-    const target = flat[i].targetWatts;
-    const targetDur = flat[i].durationSec;
-    const actual = Math.round(adherePower(work[i]));
-    const actualDur = work[i].durationSec;
+  for (const f of flat) {
+    let best = -1;
+    for (let j = 0; j < work.length; j++) {
+      if (used.has(j)) continue;
+      if (best === -1) {
+        best = j;
+      } else if (Math.abs(work[j].durationSec - f.durationSec) < Math.abs(work[best].durationSec - f.durationSec)) {
+        best = j; // strictly closer by duration; ties keep the earlier index
+      }
+    }
+    if (best === -1) break; // no executed efforts left to match
+    used.add(best);
+    const actual = Math.round(adherePower(work[best]));
+    const actualDur = work[best].durationSec;
     reps.push({
-      targetWatts: target,
+      targetWatts: f.targetWatts,
       actualWatts: actual,
       durationSec: actualDur,
-      targetDurationSec: targetDur,
-      adherencePct: target > 0 ? Math.round((actual / target) * 100) : 0,
-      durationPct: targetDur > 0 ? Math.round((actualDur / targetDur) * 100) : 100,
+      targetDurationSec: f.durationSec,
+      adherencePct: f.targetWatts > 0 ? Math.round((actual / f.targetWatts) * 100) : 0,
+      durationPct: f.durationSec > 0 ? Math.round((actualDur / f.durationSec) * 100) : 100,
     });
   }
 
@@ -82,12 +93,12 @@ export function matchPrescription(
   const powerNailed = reps.length > 0 && median(reps.map((r) => r.adherencePct)) >= 95;
   const structuralMismatch = countMatches && allRepsHalvedOrLess && powerNailed;
 
-  // Work efforts beyond the prescribed count = mid-ride added intervals (DI-3). Surface them as
-  // extras (no target to score against) instead of dropping them at the min(flat, work) cut.
-  const extras = work.slice(flat.length).map((e) => ({
-    actualWatts: Math.round(adherePower(e)),
-    durationSec: e.durationSec,
-  }));
+  // Work efforts not claimed by any prescribed rep = mid-ride added intervals or surge markers (DI-3).
+  // Surface them as extras (no target to score against), preserving ride order.
+  const extras = work
+    .map((e, j) => ({ e, j }))
+    .filter(({ j }) => !used.has(j))
+    .map(({ e }) => ({ actualWatts: Math.round(adherePower(e)), durationSec: e.durationSec }));
 
   return {
     prescribedLabels: prescription.map((p) => p.label),

@@ -55,6 +55,19 @@ describe("matchPrescription", () => {
     expect(matchPrescription([], [ex("WORK", 290)])).toBeNull();
   });
 
+  it("matches a prescribed rep to the best-fit effort by duration, not order (surge markers)", () => {
+    // Athlete marks surges as intervals; the real 20m climb sits in the middle. Order-based alignment
+    // grabbed the first 1:49 surge — best-fit picks the effort whose LENGTH actually matches the rep.
+    const c = matchPrescription(
+      [presc(1, 288)],
+      [ex("WORK", 291, 109), ex("WORK", 300, 807), ex("WORK", 405, 28)]
+    )!;
+    expect(c.reps).toHaveLength(1);
+    expect(c.reps[0].durationSec).toBe(807); // the climb, not the 1:49 (109s) surge
+    expect(c.reps[0].actualWatts).toBe(297); // 300 − 3
+    expect(c.extras.map((e) => e.durationSec).sort((a, b) => a - b)).toEqual([28, 109]);
+  });
+
   describe("extras (mid-ride added intervals, DI-3)", () => {
     it("surfaces work efforts beyond the prescribed rep count", () => {
       // plan = 2 reps, but the athlete rode a 3rd work effort on top.
