@@ -25,13 +25,11 @@ EA exercise-burn label, w/kg stale-FTP flag) shipped → ARCHIVE.
   rides whose Pw:HR is distorted (ERG-flat power + cardiac drift) — parity with the Trends Pw:HR
   (`isSteadyEnduranceRide`). One shared gate covers all three consumers (off-plan execution signal,
   athlete-state aerobic driver, today path). +1 test. _[aerobic.ts](lib/aerobic.ts)._
-- ☐ P2 `bug` **EC-2 — durability effort timing assumes 1 Hz, no-pause sampling.** `gradeDurabilityDelivery`
-  computes an effort's ride-fraction as `startIndex / movingTimeSec`, but `start_index` indexes the
-  ELAPSED-time stream (and at smart-recording rates ≠ seconds) while `movingTimeSec` excludes pauses. A paused
-  or smart-recorded ride mis-places efforts in the late/on-fatigue + distributed checks → a genuinely late
-  effort can read "mis-placed" (signal 0 not +2), under-scoring a correctly-ridden durability session. Use
-  elapsed seconds consistently, or the interval start TIME if exposed.
-  _[durability-score.ts:60](lib/durability-score.ts:60) · [ride-analysis.ts:123](lib/ride-analysis.ts:123)._
+- ☑ P2 `bug` **EC-2 — durability effort timing now sample-index based.** `gradeDurabilityDelivery` computes an
+  effort's ride-fraction as `start_index ÷ max(end_index)` (both stream sample indices, same stream) instead
+  of `start_index ÷ movingTimeSec` — immune to non-1 Hz smart-recording and paused time, where a sample index
+  ≠ elapsed seconds and moving time excludes pauses. A genuinely late effort no longer mis-reads as
+  "mis-placed" (signal 0 → 2). +1 test (half-rate stream). _[durability-score.ts](lib/durability-score.ts)._
 
 ### P3 — defensive / polish / cleanup
 

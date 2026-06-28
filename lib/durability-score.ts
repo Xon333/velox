@@ -57,7 +57,14 @@ export function gradeDurabilityDelivery(
     return { signal: -2, delivered: false, reason: `Template ${template}: the prescribed efforts weren't delivered — rode as plain Z2.` };
   }
 
-  const fracs = inBand.map((e) => e.startIndex).filter((s): s is number => s != null).map((s) => s / totalDurationSec);
+  // Effort timing as a fraction THROUGH THE RIDE, from stream SAMPLE indices: start_index ÷ the last
+  // recorded sample (max end_index across the ride's intervals, which span warm-up → cool-down). Both are
+  // sample indices from the same stream, so the ratio is the true position regardless of sample rate or
+  // paused time — unlike start_index ÷ movingTimeSec, which silently assumed 1 Hz with no pauses (EC-2).
+  const lastSample = executed.reduce((m, e) => Math.max(m, e.endIndex ?? 0), 0);
+  const fracs = lastSample > 0
+    ? inBand.map((e) => e.startIndex).filter((s): s is number => s != null).map((s) => s / lastSample)
+    : [];
   let timingOk: boolean;
   if (fracs.length === 0) {
     timingOk = false; // efforts present but no timing data → can't confirm the on-fatigue placement
