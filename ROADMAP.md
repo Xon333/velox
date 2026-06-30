@@ -65,6 +65,79 @@ honesty" UX (provenance stamps, confidence tiers, withheld thin reads) is a real
 4. **Periodization / season scope + event-aware planning** (`6a`) — high coaching value, but also needs
    the loop turning, so it ranks behind 1–2.
 
+_Expanded for brainstorming below: **Data substrate** (priorities 1–3) and **Macro periodization**
+(priority 4). Both are stubs — open questions flagged 🧠 — for the athlete to react to before we plan._
+
+---
+
+## Data substrate — turn the loop over ⭐ (audit P1–3 · brainstorm)
+
+The foundation: most of the learning engine is dormant for lack of first-party data, and the planned
+corpus isn't durable. Build this once → it unblocks `#2`, `#4`, **and** macro periodization below.
+
+### SUB-1 · Durable planned corpus (`block-history` + per-day prescriptions)
+**Problem.** `buildRideScores` matches rides only against the CURRENT block; no `block-history` keeps
+per-day prescriptions, so a planned ride whose block rolled off can't be re-matched on a rebuild (only
+frozen-in-place entries survive — LEDGER-1) and the trainable corpus can *shrink*. Today: 13 planned vs
+100 legacy.
+**Sketch.** Archive each written block (prescriptions + achieved-load summary + retro) to `block-history`;
+have `buildRideScores` match against ALL historical blocks, not just `current-block`. Keep the
+immutable-ledger guarantees.
+🧠 **Brainstorm:** archive at write-time or at block completion? an edited/regenerated block over the same
+dates — supersede vs version? match granularity — date-only (today) vs workout-id / intervals? mark
+re-matched historical entries distinctly from live-frozen ones?
+
+### SUB-2 · Legacy backfill importer ⭐
+**Problem.** The prior ~6 months (100 legacy rides) followed real structure, but the app has no
+prescription to grade them against → excluded from execution learning. Single biggest unlock for the
+current data situation.
+**Sketch.** Reconstruct planned days from Intervals.icu's own calendar/workout events (they carry the
+planned targets) across the legacy window → retroactively grade → turn legacy into corpus.
+🧠 **Brainstorm:** is "what was planned" recoverable from Intervals events for those months, or only where
+workouts were authored there? how to avoid mis-grading genuinely unstructured rides? flag backfilled
+entries as lower-trust (distinct from live-scored)? one-shot opt-in import vs ongoing?
+
+### SUB-3 · Route tests (`sync` + `generate`)
+The 494-line `sync` + 272-line `generate` routes (reconciliation, scoring orchestration, tool-use parsing)
+are the highest-stakes, least-tested code — and they guard the immutable ledger everything learns from.
+
+### SUB-4 · `data/` durability + branch discipline
+Off-machine backup of `data/` (the immutable ledger sits on one disk behind homegrown `.bak` files);
+lightweight branch discipline for the shared trunk checkout.
+
+---
+
+## Macro periodization & season scope ⭐ (audit P4 · brainstorm)
+
+Today the planning unit is a single 2–4 wk block generated in isolation. Week-theming exists (loading vs
+deload/taper, LLM-written) and RaceSim is treated as a peaking session; the carry-forward channels exist
+(`next_block_seeds`, `blockHistory[].structuredReflections`) — but they're empty (no completed block yet)
+and there is **no layer above the block**: no event/date, no weeks-to-event, no base→build→peak→taper
+sequence, no cross-block load progression, no taper-by-countdown. A coach's core value-add over a workout
+generator *is* that arc. Deterministic core, generative shell — same as everything else. Depends on `SUB-1`.
+
+### MACRO-1 · Season / Plan object (owned intent)
+One+ target events (date, priority A/B/C) + a phase plan, authored by the athlete (pillar 3 — owned intent,
+like goals). Minimal viable = a single A-event + date; everything else derives from it.
+
+### MACRO-2 · Deterministic progression + taper engine
+From the season anchor + `block-history` achieved load, compute the NEXT block's envelope: phase
+(base/build/peak/taper), weekly TSS ramp (e.g. +5–8 %, ACWR-capped), forced deload cadence (every 3rd–4th
+wk), and the taper (volume −40–60 %, intensity held) inside the countdown window. No LLM arithmetic — these
+are codifiable rules; the ramp-rate / deload-cadence constants are calibration hooks `← #2`.
+
+### MACRO-3 · Phase-aware generation + validation
+Inject *"phase: build · wk 9/16 · 5 wk to A-race · target CTL 95 · loading week"* into the prompt AND
+enforce the volume/intensity envelope as hard guards — mirror `workout-validate.ts` (guard on both ends).
+The LLM phrases the rationale; the engine owns the numbers.
+
+**Ties:** `6a` event-aware race planning is the surfacing of this; `§7` calendar; `#4` validates whether a
+phase sequence worked; `#2` calibrates the ramp/deload constants.
+🧠 **Brainstorm:** how prescriptive vs flexible should the arc be? single A-race vs a full multi-event
+season? default behaviour with NO event set (rolling base/build + deload cadence)? how much does the engine
+dictate vs the LLM shape? do blocks stay 2/4 wk or become phase-sized? how does a mid-season disruption
+(illness, life, a missed week) re-plan the arc?
+
 ---
 
 ## Next up
