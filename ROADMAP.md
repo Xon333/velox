@@ -12,6 +12,61 @@ leverage. `← X` = blocked-on / derives-from; numeric IDs (#1–4, §5–7) are
 
 ---
 
+## ⚑ State-of-the-app audit (2026-06-30)
+
+Senior-dev + cycling-coach review against the five README pillars. **Verdict: engineering quality
+substantially exceeds data maturity** — the deterministic core and the learning architecture are
+well-built, but the *self-correcting* loop (the thesis) has barely turned over.
+
+**Central finding — the trainable corpus is ~2 weeks, not 6 months.** The score ledger holds 114
+entries but only **13 `planned`** (planned rides are the only ones that teach the model); 100 are
+`legacy`. The cause is **not** elapsed time — the athlete has trained 6 mo / 6 days-a-wk (140 rides
+in-window). It's that the **first in-app block was written 2026-06-15**, so only rides on/after that
+date match an app prescription; the prior ~6 months are real training but **un-prescribed from the
+app's view**, so they're `legacy` and excluded from execution/adherence learning by design ("no plan
+to be off"). Compounding it: `buildRideScores` knows only the CURRENT block and **no `block-history`
+retains per-day prescriptions**, so historical planned rides can't be re-matched on a ledger rebuild
+(only frozen-in-place entries survive — LEDGER-1). `intervention-log.json` / `block-history.json`
+don't exist yet → **#4 validation has 0 records**; the athlete model runs at n=1–8 per type (below the
+≥3-obs trend gate and the correlation engine's discrimination gate) → most learning returns population
+defaults.
+
+**Holds well (don't disturb):** pillar 1 (layer-not-replacement), pillar 2 (deterministic core /
+generative shell — nutrition + interval protocols guarded on *both* ends, generation & validation),
+pillar 3 (two-memory split, structurally enforced), pillar 4 (immutable ledger). The "calibrated
+honesty" UX (provenance stamps, confidence tiers, withheld thin reads) is a real differentiator.
+
+**Strict findings (severity):**
+- ⚠️ **Learning loop dormant for lack of first-party data** (above). #4 *measures* but doesn't yet
+  *demote*; per-athlete calibration/correlation sit on defaults below their gates.
+- ⚠️ **Planned corpus isn't durable across blocks** — retain per-day prescriptions (`block-history`)
+  so adherence history survives block roll-off + rebuilds; consider a backfill path for the legacy
+  months where a plan genuinely existed. (The legacy rides *can* already feed FTP-independent trends —
+  Pw:HR, polarization, volume baselines — which need no prescription.)
+- ⚠️ **Test coverage lopsided** — ~all 49 suites are `lib/*`; the 494-line `sync` + 272-line `generate`
+  routes (reconciliation, scoring orchestration, tool-use parsing) are the highest-stakes, least-tested
+  code, and they guard the immutable ledger everything learns from.
+- 🔸 **No periodization above the block** — no season/macrocycle scope, no cross-block progression, no
+  taper/peak logic (`6a` deferred). The planner optimises 2–4 weeks in isolation; previous-block insight
+  only flows as retrospective `next_block_seeds`, and there are no completed blocks yet.
+- 🔸 **Local-first durability** rests on homegrown `.bak` files on one machine (no off-machine backup of
+  `data/`); trunk-based with a concurrent agent is operationally fragile.
+- 🔸 **Observability + cost guard absent (P8)** — silent `catch`es, unbounded AI routes; generation
+  blocks 1–2 min with no streaming (P9).
+- 🔸 **Fueling is per-session, not periodised**; strength is a stub (5 kcal/min); recovery is
+  one-dimensional (HRV honestly gated off — no source).
+- 🔸 **Doc drift** — README claims the nutrition formula computes protein (carbs only); "556 tests" (now 564).
+
+**Priorities (data > features):**
+1. **Turn the loop over.** Retain block prescriptions (`block-history`); close #4 (low hit-rate →
+   *demote*, not just annotate); reduce friction so generate→ride→score→learn actually accrues.
+2. **Test the `sync` + `generate` routes** — protect the ledger from silent reconciliation/scoring bugs.
+3. **Off-machine backup of `data/`** + branch discipline for the shared checkout.
+4. **Periodization / season scope + event-aware planning** (`6a`) — high coaching value, but also needs
+   the loop turning, so it ranks behind 1–2.
+
+---
+
 ## Next up
 
 ### #2 · Per-athlete calibration — extend the framework  ⭐ (the keystone)
