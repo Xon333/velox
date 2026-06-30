@@ -226,6 +226,18 @@ export function computeEnergyAvailability(
   };
 }
 
+// Soft, NON-CLINICAL read of an EA number, so the tile says what a value MEANS instead of a bare figure
+// (FB-2026-06-30). The clinical 30/45 kcal/kg cutoffs are defined on FAT-FREE mass; this proxy divides by
+// TOTAL body weight (a larger denominator → a structurally lower number), so the bands are shifted down to
+// a body-weight basis and kept deliberately coarse — a rough "is there much spare energy?" reference, NOT a
+// diagnosis. Under-logged intake reads low. A personalised line is still Track C / §6 calibration.
+export type EaLevel = "low" | "adequate" | "ample";
+export function eaLevel(eaKcalPerKg: number): EaLevel {
+  if (eaKcalPerKg < 25) return "low";
+  if (eaKcalPerKg < 40) return "adequate";
+  return "ample";
+}
+
 // ---------- Reference table injected into the AI prompt ----------
 
 export interface NutritionReferenceRow {

@@ -31,6 +31,17 @@ describe("detectPowerPRs", () => {
     const prs = detectPowerPRs(curve({ 5: 740 }), curve({ 5: 0, 30: 600 }));
     expect(prs).toEqual([]); // 5s baseline is 0 (skipped); 30s absent from current curve
   });
+
+  it("recognises the longer durations the synced curve now carries (2m/30m/60m)", () => {
+    const prev = curve({ 120: 380, 1800: 270, 3600: 240 });
+    const cur = curve({ 120: 392, 1800: 270, 3600: 248 });
+    // 2m (+12) and 60m (+8) rose; 30m unchanged → not a PR. These were previously invisible (PR_DURATIONS
+    // stopped at 20m), so the FB-2026-06-30 expansion is what surfaces them.
+    expect(detectPowerPRs(cur, prev)).toEqual([
+      { durationSec: 120, watts: 392, prevWatts: 380 },
+      { durationSec: 3600, watts: 248, prevWatts: 240 },
+    ]);
+  });
 });
 
 describe("prDurationLabel", () => {
@@ -38,6 +49,9 @@ describe("prDurationLabel", () => {
     expect(prDurationLabel(5)).toBe("5s");
     expect(prDurationLabel(30)).toBe("30s");
     expect(prDurationLabel(60)).toBe("1 min");
+    expect(prDurationLabel(120)).toBe("2 min");
     expect(prDurationLabel(1200)).toBe("20 min");
+    expect(prDurationLabel(1800)).toBe("30 min");
+    expect(prDurationLabel(3600)).toBe("60 min");
   });
 });

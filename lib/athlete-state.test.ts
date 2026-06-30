@@ -12,8 +12,6 @@ const base: AthleteStateInputs = {
   execSampleSize: 10,
   aerobicEffLatest: 1.5,
   aerobicEffBaseline: 1.5,
-  rpeRecent: 5,
-  rpeBaseline: 5,
   offPlanPct: 10,
 };
 
@@ -33,8 +31,6 @@ describe("computeAthleteState — directional logic (not exact numbers)", () => 
       execTrend: "up",
       aerobicEffLatest: 1.7,
       aerobicEffBaseline: 1.5,
-      rpeRecent: 4,
-      rpeBaseline: 6,
     })!;
     expect(["primed", "ready"]).toContain(s.band);
     expect(s.recommendation === "push" || s.recommendation === "proceed").toBe(true);
@@ -42,7 +38,7 @@ describe("computeAthleteState — directional logic (not exact numbers)", () => 
 
   it("corroborated fatigue caps a fresh-TSB athlete down (the lived-signal override)", () => {
     // TSB very fresh (+30) + optimal ACWR would read 'steady'/high, but execution-down +
-    // aerobic-efficiency-down + rpe-up (3 lived negatives) must pull it to ≤ strained.
+    // aerobic-efficiency-down (2 lived negatives, the override threshold) must pull it to ≤ strained.
     const fatigued = computeAthleteState({
       ...base,
       tsb: 30,
@@ -50,8 +46,6 @@ describe("computeAthleteState — directional logic (not exact numbers)", () => 
       execTrend: "down",
       aerobicEffLatest: 1.3,
       aerobicEffBaseline: 1.5,
-      rpeRecent: 6,
-      rpeBaseline: 5,
     })!;
     expect(["strained", "depleted"]).toContain(fatigued.band);
     expect(["soften", "recover"]).toContain(fatigued.recommendation);
@@ -65,8 +59,6 @@ describe("computeAthleteState — directional logic (not exact numbers)", () => 
       execTrend: "up",
       aerobicEffLatest: 1.3, // only this one is bad (below baseline)
       aerobicEffBaseline: 1.5,
-      rpeRecent: 5,
-      rpeBaseline: 5,
     })!;
     expect(["primed", "ready", "steady"]).toContain(s.band);
     expect(s.recommendation).not.toBe("recover");
@@ -87,12 +79,10 @@ describe("computeAthleteState — directional logic (not exact numbers)", () => 
       execEwma: 3,
       aerobicEffLatest: 1.3,
       aerobicEffBaseline: 1.5,
-      rpeRecent: 8,
-      rpeBaseline: 5,
     })!;
     const mags = s.drivers.map((d) => Math.abs(d.effect));
     expect([...mags]).toEqual([...mags].sort((a, b) => b - a));
-    expect(s.drivers.map((d) => d.key)).toEqual(expect.arrayContaining(["tsb", "acwr", "execution", "aerobicEff", "rpe"]));
+    expect(s.drivers.map((d) => d.key)).toEqual(expect.arrayContaining(["tsb", "acwr", "execution", "aerobicEff"]));
   });
 });
 
@@ -106,8 +96,6 @@ describe("computeAthleteState — confidence + availability", () => {
       execSampleSize: 0,
       aerobicEffLatest: null,
       aerobicEffBaseline: null,
-      rpeRecent: null,
-      rpeBaseline: null,
       offPlanPct: null,
     })!;
     expect(s).not.toBeNull();
@@ -124,8 +112,6 @@ describe("computeAthleteState — confidence + availability", () => {
         execSampleSize: 0,
         aerobicEffLatest: null,
         aerobicEffBaseline: null,
-        rpeRecent: null,
-        rpeBaseline: null,
         offPlanPct: null,
       })
     ).toBeNull();
@@ -198,20 +184,5 @@ describe("athleteStateInputsFrom — Z2 Pw:HR aerobic signal", () => {
     );
     expect(inputs.aerobicEffLatest).toBeNull();
     expect(inputs.aerobicEffBaseline).toBeNull();
-  });
-
-  it("RPE needs a minimum sample and the baseline excludes the recent window (RV2-4/RV2-5)", () => {
-    // One recent ride → below the recent-RPE floor of 2 → rpeRecent null (no n=1 trend).
-    const single = athleteStateInputsFrom(sync([act({ date: iso(1), rpe: 8 })]), model, null);
-    expect(single.rpeRecent).toBeNull();
-
-    // 2 recent (avg 8) + 3 older (avg 5). Recent clears its floor; baseline is the OLDER rides only.
-    const activities = [
-      act({ date: iso(1), rpe: 8 }), act({ date: iso(3), rpe: 8 }),
-      act({ date: iso(20), rpe: 5 }), act({ date: iso(30), rpe: 5 }), act({ date: iso(45), rpe: 5 }),
-    ];
-    const inputs = athleteStateInputsFrom(sync(activities), model, null);
-    expect(inputs.rpeRecent).toBe(8);
-    expect(inputs.rpeBaseline).toBe(5); // recent rides not folded into their own baseline
   });
 });

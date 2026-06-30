@@ -3,6 +3,7 @@ import {
   adjustBuffer,
   calculateDailyTarget,
   computeEnergyAvailability,
+  eaLevel,
   estimateWorkoutBurnKcal,
   inRideCarbTarget,
   preRideCarbTarget,
@@ -222,5 +223,17 @@ describe("computeEnergyAvailability", () => {
     const ea = computeEnergyAvailability(wellness, acts, "2026-06-15")!;
     expect(ea.eaKcalPerKg).toBe(30);
     expect(ea.trend).toBe(10); // 30 now vs 20 the prior week
+  });
+});
+
+describe("eaLevel — soft body-weight-basis read (FB-2026-06-30)", () => {
+  it("bands a number into low / adequate / ample on the body-weight basis", () => {
+    expect(eaLevel(18)).toBe("low");
+    expect(eaLevel(24)).toBe("low"); // just under the 25 floor
+    expect(eaLevel(25)).toBe("adequate"); // boundary is adequate, not low
+    expect(eaLevel(32)).toBe("adequate");
+    expect(eaLevel(39)).toBe("adequate");
+    expect(eaLevel(40)).toBe("ample"); // boundary is ample
+    expect(eaLevel(55)).toBe("ample");
   });
 });

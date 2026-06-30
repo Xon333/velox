@@ -13,7 +13,7 @@ import { DEFAULT_ATHLETE_STATE_WEIGHTS, type AthleteStateWeights } from "./calib
 import { round2 } from "./stats";
 import { utcToday } from "./date";
 import { AEROBIC_BASELINE_DAYS, AEROBIC_MIN_BASELINE, qualifyingPwHr } from "./aerobic";
-import type { AcwrResult, ActivitySummary, AthleteModel, AthleteState, SignalContribution, SyncData } from "./types";
+import type { AcwrResult, AthleteModel, AthleteState, SignalContribution, SyncData } from "./types";
 
 export interface AthleteStateInputs {
   tsb: number | null;
@@ -23,8 +23,8 @@ export interface AthleteStateInputs {
   execSampleSize: number; // planned-ride sample behind the EWMA
   aerobicEffLatest: number | null; // latest ride's Z2 Pw:HR (icu_power_hr_z2), if recent + enough Z2; else null
   aerobicEffBaseline: number | null; // mean Z2 Pw:HR over qualifying rides (90d); null if too few
-  rpeRecent: number | null; // mean session RPE, recent window
-  rpeBaseline: number | null; // mean session RPE, longer baseline window
+  // RPE intentionally not an input (FB-2026-06-30): it swung the state too hard against a near-zero
+  // historical baseline. The calibration `rpe` weights stay dormant so re-enabling = re-adding evalRpe.
   offPlanPct: number | null; // 0–100
 }
 
@@ -80,18 +80,6 @@ function evalAerobicEff(i: AthleteStateInputs, C: AthleteStateWeights): SignalCo
   return { key: "aerobicEff", label: "Aerobic efficiency", dir, effect, note };
 }
 
-function evalRpe(i: AthleteStateInputs, C: AthleteStateWeights): SignalContribution | null {
-  if (i.rpeRecent === null || i.rpeBaseline === null) return null;
-  const delta = i.rpeRecent - i.rpeBaseline; // + = higher perceived cost = worse
-  if (Math.abs(delta) < C.rpe.deadband) {
-    return { key: "rpe", label: "Perceived effort (RPE)", dir: "flat", effect: 0, note: `RPE near baseline` };
-  }
-  const effect = round(clamp(-delta * C.rpe.perPoint, -C.rpe.cap, C.rpe.cap));
-  const dir = delta > 0 ? "up" : "down"; // "up" = RPE rising = worse
-  const note = dir === "up" ? `RPE ${delta.toFixed(1)} above baseline` : `RPE ${(-delta).toFixed(1)} below baseline`;
-  return { key: "rpe", label: "Perceived effort (RPE)", dir, effect, note };
-}
-
 function evalBehaviour(i: AthleteStateInputs, C: AthleteStateWeights): SignalContribution | null {
   if (i.offPlanPct === null || i.offPlanPct <= C.behaviour.highOffPlan) return null; // light input — fires only on high drift
   return { key: "behaviour", label: "Plan adherence", dir: "down", effect: C.behaviour.effect, note: `${round(i.offPlanPct)}% of rides off-plan` };
@@ -100,7 +88,7 @@ function evalBehaviour(i: AthleteStateInputs, C: AthleteStateWeights): SignalCon
 // The lived signals (what the body/sessions actually say, vs the load model). ≥2 corroborating
 // "worse" readings here cap the score even when TSB/ACWR look fresh — the reconciliation rule.
 function isLivedNegative(c: SignalContribution): boolean {
-  return (c.key === "execution" && c.dir === "down") || (c.key === "aerobicEff" && c.dir === "down") || (c.key === "rpe" && c.dir === "up");
+  return (c.key === "execution" && c.dir === "down") || (c.key === "aerobicEff" && c.dir === "down");
 }
 
 function bandFor(score: number): { band: AthleteState["band"]; recommendation: AthleteState["recommendation"] } {
@@ -111,13 +99,13 @@ function bandFor(score: number): { band: AthleteState["band"]; recommendation: A
   return { band: "depleted", recommendation: "recover" };
 }
 
-const CORE_KEYS = new Set(["tsb", "acwr", "execution", "aerobicEff", "rpe"]);
+const CORE_KEYS = new Set(["tsb", "acwr", "execution", "aerobicEff"]);
 
 export function computeAthleteState(
   i: AthleteStateInputs,
   C: AthleteStateWeights = DEFAULT_ATHLETE_STATE_WEIGHTS
 ): AthleteState | null {
-  const evaluators = [evalTsb, evalAcwr, evalExecution, evalAerobicEff, evalRpe, evalBehaviour];
+  const evaluators = [evalTsb, evalAcwr, evalExecution, evalAerobicEff, evalBehaviour];
   const drivers = evaluators.map((fn) => fn(i, C)).filter((c): c is SignalContribution => c !== null);
   if (drivers.length === 0) return null; // nothing to say
 
@@ -130,10 +118,11 @@ export function computeAthleteState(
 
   const { band, recommendation } = bandFor(score);
 
-  // Confidence from how many *core* signals fired + the execution sample behind the EWMA.
+  // Confidence from how many *core* signals fired + the execution sample behind the EWMA. With RPE
+  // retired there are 4 core signals (was 5); "high" needs ≥3 so it stays reachable with one core absent.
   const corePresent = drivers.filter((c) => CORE_KEYS.has(c.key)).length;
   const confidence: AthleteState["confidence"] =
-    corePresent >= 4 && i.execSampleSize >= 8 ? "high" : corePresent <= 2 || i.execSampleSize < 3 ? "low" : "medium";
+    corePresent >= 3 && i.execSampleSize >= 8 ? "high" : corePresent <= 2 || i.execSampleSize < 3 ? "low" : "medium";
 
   // Drivers sorted by |effect|; headline = band + the 1–2 biggest movers (positives for a high band,
   // negatives for a low one). Deterministic — the AI may rephrase but not recompute.
@@ -149,22 +138,10 @@ export function computeAthleteState(
 // ---- adapter: resolve the scalar inputs from the app's stored signals (pure; the routes pass the
 // pieces they already have, so the fusion stays IO-free and testable). ----
 
-// Mean RPE over a date window [sinceIso, untilIso), with a minimum sample so a single noisy reading can't
-// stand in for a trend (RV2-5). `untilIso` lets the baseline EXCLUDE the recent window it's compared
-// against, instead of containing it (RV2-4).
-function meanRpe(activities: ActivitySummary[], sinceIso: string, minN: number, untilIso?: string): number | null {
-  const rpes = activities
-    .filter((a) => a.date >= sinceIso && (untilIso === undefined || a.date < untilIso) && a.rpe !== null)
-    .map((a) => a.rpe as number);
-  return rpes.length >= minN ? Math.round((rpes.reduce((s, v) => s + v, 0) / rpes.length) * 10) / 10 : null;
-}
-
 // Window/sample constants for the Z2 Pw:HR aerobic signal are shared with the off-plan execution score
 // (lib/aerobic.ts) so the "qualifying ride" definition can't drift between the two consumers. The recency
 // exclusion is athlete-state-specific (the "now" state grades the latest reading against its own history).
 const AEROBIC_RECENCY_DAYS = 14; // a reading older than this isn't "now" aerobic state
-const RPE_MIN_RECENT = 2; // a single recent ride is too noisy to call a trend (RV2-5)
-const RPE_MIN_BASELINE = 3;
 
 export function athleteStateInputsFrom(
   sync: SyncData | null,
@@ -202,8 +179,6 @@ export function athleteStateInputsFrom(
     execSampleSize: model.sampleSize,
     aerobicEffLatest,
     aerobicEffBaseline,
-    rpeRecent: meanRpe(acts, daysAgo(AEROBIC_RECENCY_DAYS), RPE_MIN_RECENT),
-    rpeBaseline: meanRpe(acts, daysAgo(AEROBIC_BASELINE_DAYS), RPE_MIN_BASELINE, daysAgo(AEROBIC_RECENCY_DAYS)),
     offPlanPct: model.behaviour.offPlanPct,
   };
 }

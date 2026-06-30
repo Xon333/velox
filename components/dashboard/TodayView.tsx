@@ -150,35 +150,43 @@ export default function TodayView() {
                 </div>
               )}
           </Zone>
-          {state.todayAnalysis?.activityDate === localToday() && state.todayAnalysis.coachNote ? (
+          {/* One stable coach-note shell across the analysing → loaded transition (FB-2026-06-30). The
+              frame used to remount/resize between branches (analysing/empty used `fill`, the loaded note
+              didn't), so the pink cyber-brackets snapped inward when the note landed mid-sync. Now a single
+              Zone (no `fill`, content-height) renders whenever there's a synced ride; only its inner content
+              swaps, so the frame grows with the text instead of glitching. */}
+          {state.todayAnalysis?.activityDate === localToday() &&
+          (state.todayAnalysis.coachNote || analyzing || state.anthropicConfigured) ? (
             <Zone title="Coach note" hero accent="pink">
-              <p className="text-xs leading-5 text-zinc-600 dark:text-zinc-300">{state.todayAnalysis.coachNote}</p>
-              {state.anthropicConfigured && (
-                <button
-                  onClick={reAnalyse}
-                  disabled={analyzing}
-                  title="Regenerate today's coach note"
-                  className="mt-2 rounded border border-zinc-200 px-2 py-1 text-[10px] font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-                >
-                  {analyzing ? "Re-analysing…" : "↻ Re-analyse"}
-                </button>
+              {state.todayAnalysis.coachNote ? (
+                <>
+                  <p className="text-xs leading-5 text-zinc-600 dark:text-zinc-300">{state.todayAnalysis.coachNote}</p>
+                  {state.anthropicConfigured && (
+                    <button
+                      onClick={reAnalyse}
+                      disabled={analyzing}
+                      title="Regenerate today's coach note"
+                      className="mt-2 rounded border border-zinc-200 px-2 py-1 text-[10px] font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+                    >
+                      {analyzing ? "Re-analysing…" : "↻ Re-analyse"}
+                    </button>
+                  )}
+                </>
+              ) : analyzing ? (
+                <p className="text-xs italic leading-5 text-zinc-500 dark:text-zinc-400">Analysing today&apos;s ride…</p>
+              ) : (
+                // Ride synced but the note is missing (e.g. the auto-run hit an Anthropic hiccup) —
+                // offer a manual retry instead of waiting for the next full sync.
+                <>
+                  <p className="text-xs leading-5 text-zinc-500 dark:text-zinc-400">No coach note yet.</p>
+                  <button
+                    onClick={reAnalyse}
+                    className="mt-2 rounded border border-zinc-200 px-2 py-1 text-[10px] font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+                  >
+                    ↻ Generate coach note
+                  </button>
+                </>
               )}
-            </Zone>
-          ) : state.todayAnalysis?.activityDate === localToday() && analyzing ? (
-            <Zone title="Coach note" hero accent="pink" fill>
-              <p className="text-xs italic leading-5 text-zinc-500 dark:text-zinc-400">Analysing today&apos;s ride…</p>
-            </Zone>
-          ) : state.todayAnalysis?.activityDate === localToday() && state.anthropicConfigured ? (
-            // Ride synced but the note is missing (e.g. the auto-run hit an Anthropic hiccup) —
-            // offer a manual retry instead of waiting for the next full sync.
-            <Zone title="Coach note" hero accent="pink" fill>
-              <p className="text-xs leading-5 text-zinc-500 dark:text-zinc-400">No coach note yet.</p>
-              <button
-                onClick={reAnalyse}
-                className="mt-2 rounded border border-zinc-200 px-2 py-1 text-[10px] font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-              >
-                ↻ Generate coach note
-              </button>
             </Zone>
           ) : null}
           {state.anthropicConfigured && <AskCoach />}

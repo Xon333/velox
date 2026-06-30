@@ -183,6 +183,109 @@ export default function AthleteProfileForm() {
 
   const { athleteMd, autoSync, bufferStatus, syncedPowerCurve, powerProfile, latestWeightKg } = data;
 
+  // Rider profile + Power PRs as standalone sections, composed below into a side-by-side row when both
+  // are available (FB-2026-06-30): curve + PR grid in one half, the rider read in the other.
+  const riderProfileSection =
+    powerProfile && powerProfile.confident ? (
+      <Section title="Rider profile" synced>
+        <p className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">
+          auto-derived from your power-curve shape · a hint the coach plans around, not a fixed label
+        </p>
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="rounded-full bg-cyan-50 px-2.5 py-0.5 text-sm font-semibold capitalize text-cyan-700 dark:bg-[#00d4ff]/10 dark:text-[#00d4ff]">
+            {powerProfile.riderType}
+          </span>
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">{RIDER_TYPE_BLURB[powerProfile.riderType]}</span>
+        </div>
+        {powerProfile.easyWin && (
+          <p className="mt-3 rounded border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
+            <span className="font-semibold">Easy win:</span> your {SYSTEM_LABELS[powerProfile.easyWin.system].toLowerCase()} power
+            is the most depressed relative to your own engine — a worthwhile micro-target.
+          </p>
+        )}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {powerProfile.systems.map((s) => {
+            const pct = Math.round((s.relativeStrength - 1) * 100);
+            const strong = pct >= 6;
+            const weak = pct <= -6;
+            return (
+              <div key={s.system} className="rounded bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{SYSTEM_LABELS[s.system]}</p>
+                <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-[#00d4ff]">{s.watts}W</p>
+                {s.wattsPerKg !== null && (
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{s.wattsPerKg} W/kg</p>
+                )}
+                <p
+                  className={
+                    strong
+                      ? "mt-0.5 text-[11px] font-medium text-cyan-700 dark:text-[#00d4ff]"
+                      : weak
+                        ? "mt-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400"
+                        : "mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400"
+                  }
+                >
+                  {pct > 0 ? "+" : ""}{pct}% vs expected
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </Section>
+    ) : null;
+
+  const powerPRsSection =
+    syncedPowerCurve.length > 0 || athleteMd.powerProfile.length > 0 ? (
+      <Section title="Power PRs" synced={syncedPowerCurve.length > 0} editHref={syncedPowerCurve.length > 0 ? undefined : "/knowledge"}>
+        {syncedPowerCurve.length > 0 ? (
+          <>
+            <p className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">
+              all-time best efforts · from Intervals.icu · {timeAgo(autoSync.syncedAt)} · drag the curve to read any duration
+            </p>
+            <div className="mb-3">
+              <PowerCurveChart points={syncedPowerCurve} weightKg={latestWeightKg} />
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {syncedPowerCurve.map((pt) => {
+                const label = POWER_CURVE_LABELS[pt.durationSec] ?? `${pt.durationSec}s`;
+                const wkg = latestWeightKg ? (pt.watts / latestWeightKg).toFixed(1) : null;
+                return (
+                  <div
+                    key={pt.durationSec}
+                    title={wkg ? `${wkg} W/kg` : undefined}
+                    className={`rounded bg-zinc-50 px-3 py-1.5 dark:bg-zinc-900 ${wkg ? "cursor-help" : ""}`}
+                  >
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{label}</p>
+                    <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-[#00d4ff]">{pt.watts}W</p>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-zinc-500 dark:text-zinc-400">
+                  <th className="pb-1 pr-4 font-medium">Duration</th>
+                  <th className="pb-1 pr-4 font-medium">Watts</th>
+                  <th className="pb-1 font-medium">W/kg</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700">
+                {athleteMd.powerProfile.map((p) => (
+                  <tr key={p.duration}>
+                    <td className="py-1 pr-4 text-zinc-500 dark:text-zinc-400">{p.duration}</td>
+                    <td className="py-1 pr-4 font-semibold text-zinc-800 dark:text-zinc-200">{p.watts}</td>
+                    <td className="py-1 text-zinc-500 dark:text-zinc-400">{p.wkg}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
+    ) : null;
+
   return (
     <div className="space-y-5">
       <div className="flex items-baseline justify-between gap-3">
@@ -221,107 +324,19 @@ export default function AthleteProfileForm() {
         </div>
       )}
 
-      {/* Rider profile — auto-derived from the curve shape (Track A). Leads above the raw PR grid: the
-          "what am I / what to target" read is the decision-critical content, the PR numbers are reference. */}
-      {powerProfile && powerProfile.confident && (
-        <Section title="Rider profile" synced>
-          <p className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">
-            auto-derived from your power-curve shape · a hint the coach plans around, not a fixed label
-          </p>
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="rounded-full bg-cyan-50 px-2.5 py-0.5 text-sm font-semibold capitalize text-cyan-700 dark:bg-[#00d4ff]/10 dark:text-[#00d4ff]">
-              {powerProfile.riderType}
-            </span>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">{RIDER_TYPE_BLURB[powerProfile.riderType]}</span>
-          </div>
-          {powerProfile.easyWin && (
-            <p className="mt-3 rounded border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
-              <span className="font-semibold">Easy win:</span> your {SYSTEM_LABELS[powerProfile.easyWin.system].toLowerCase()} power
-              is the most depressed relative to your own engine — a worthwhile micro-target.
-            </p>
-          )}
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {powerProfile.systems.map((s) => {
-              const pct = Math.round((s.relativeStrength - 1) * 100);
-              const strong = pct >= 6;
-              const weak = pct <= -6;
-              return (
-                <div key={s.system} className="rounded bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{SYSTEM_LABELS[s.system]}</p>
-                  <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-[#00d4ff]">{s.watts}W</p>
-                  {s.wattsPerKg !== null && (
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{s.wattsPerKg} W/kg</p>
-                  )}
-                  <p
-                    className={
-                      strong
-                        ? "mt-0.5 text-[11px] font-medium text-cyan-700 dark:text-[#00d4ff]"
-                        : weak
-                          ? "mt-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400"
-                          : "mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400"
-                    }
-                  >
-                    {pct > 0 ? "+" : ""}{pct}% vs expected
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </Section>
-      )}
-
-      {/* Power PRs — reference grid below the rider read; W/kg demoted to a hover (title + cursor-help)
-          so each of the 9 tiles is two lines, not three. */}
-      {(syncedPowerCurve.length > 0 || athleteMd.powerProfile.length > 0) && (
-        <Section title="Power PRs" synced={syncedPowerCurve.length > 0} editHref={syncedPowerCurve.length > 0 ? undefined : "/knowledge"}>
-          {syncedPowerCurve.length > 0 ? (
-            <>
-              <p className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">
-                all-time best efforts · from Intervals.icu · {timeAgo(autoSync.syncedAt)}
-              </p>
-              <div className="mb-3">
-                <PowerCurveChart points={syncedPowerCurve} />
-              </div>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                {syncedPowerCurve.map((pt) => {
-                  const label = POWER_CURVE_LABELS[pt.durationSec] ?? `${pt.durationSec}s`;
-                  const wkg = latestWeightKg ? (pt.watts / latestWeightKg).toFixed(1) : null;
-                  return (
-                    <div
-                      key={pt.durationSec}
-                      title={wkg ? `${wkg} W/kg` : undefined}
-                      className={`rounded bg-zinc-50 px-3 py-1.5 dark:bg-zinc-900 ${wkg ? "cursor-help" : ""}`}
-                    >
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{label}</p>
-                      <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-[#00d4ff]">{pt.watts}W</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-zinc-500 dark:text-zinc-400">
-                    <th className="pb-1 pr-4 font-medium">Duration</th>
-                    <th className="pb-1 pr-4 font-medium">Watts</th>
-                    <th className="pb-1 font-medium">W/kg</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700">
-                  {athleteMd.powerProfile.map((p) => (
-                    <tr key={p.duration}>
-                      <td className="py-1 pr-4 text-zinc-500 dark:text-zinc-400">{p.duration}</td>
-                      <td className="py-1 pr-4 font-semibold text-zinc-800 dark:text-zinc-200">{p.watts}</td>
-                      <td className="py-1 text-zinc-500 dark:text-zinc-400">{p.wkg}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Section>
+      {/* Power curve + PR grid beside the rider read (FB-2026-06-30): each takes half the row when both
+          exist (synced). Falls back to a single stacked column when one is absent (e.g. no synced curve,
+          so no confident rider profile) so a lone section never sits in a half-empty grid. */}
+      {riderProfileSection && powerPRsSection && syncedPowerCurve.length > 0 ? (
+        <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          {powerPRsSection}
+          {riderProfileSection}
+        </div>
+      ) : (
+        <>
+          {riderProfileSection}
+          {powerPRsSection}
+        </>
       )}
 
       {/* 3. Goals & Weakpoints */}

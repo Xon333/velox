@@ -9,8 +9,12 @@
 
 import type { PowerCurvePoint, PowerPR } from "./types";
 
-// Standard PR durations (seconds): 5s/15s/30s neuromuscular-anaerobic, 1m, 5m VO2, 20m threshold.
-export const PR_DURATIONS = [5, 15, 30, 60, 300, 1200];
+// PR durations (seconds) — every duration the synced power curve carries
+// (POWER_CURVE_DURATIONS_SEC in lib/intervals-api.ts), so a new best at ANY charted point is
+// celebrated, not just the six it used to be: 5s/15s/30s neuromuscular-anaerobic, 1m, 2m, 5m VO2,
+// 20m/30m/60m threshold-aerobic. Kept as its own literal (pr.ts is client-pure; it must not import
+// the server-side intervals-api) — keep the two lists in lockstep when adding durations.
+export const PR_DURATIONS = [5, 15, 30, 60, 120, 300, 1200, 1800, 3600];
 
 // PRs the latest sync established: a duration whose freshly-synced curve value beats the previous
 // sync's. Empty when either curve is missing (first sync — no baseline to beat).

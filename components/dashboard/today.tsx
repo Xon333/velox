@@ -14,7 +14,7 @@ import { executionScoreLabel } from "@/lib/execution-score";
 import { ifBandLabel } from "@/lib/zones";
 import { TYPE_STYLES } from "@/lib/workout-types";
 import { prDurationLabel } from "@/lib/pr";
-import { computeEnergyAvailability } from "@/lib/nutrition";
+import { computeEnergyAvailability, eaLevel } from "@/lib/nutrition";
 import { isoDaysAgo, localToday as todayIso } from "@/lib/date";
 import RideTrace from "../RideTrace";
 import SessionDisposition from "../SessionDisposition";
@@ -132,8 +132,8 @@ export function TodayRideCard({
   // Avg speed removed from the glance (C): terrain/wind-dependent, rarely a training decision; it lives
   // in Intervals.icu if needed. Decoupling moved to the Power-execution drill-down below (C): it's no
   // longer a scored signal (ACC-2026-06-25), so it shouldn't sit in the strip implying it counts.
-  if (analysis.activityRpe != null)
-    metrics.push({ label: "RPE", value: `${analysis.activityRpe}/10` });
+  // RPE tile removed (FB-2026-06-30) alongside dropping RPE as an athlete-state driver — revisit once a
+  // real RPE-logging baseline exists.
 
   const body = (
     <>
@@ -496,18 +496,27 @@ export function EnergyAvailabilityTile({ sync }: { sync: SyncData | null }) {
   if (!sync) return null;
   const ea = computeEnergyAvailability(sync.wellness, sync.activities, todayIso());
   if (!ea) return null; // withheld until ≥3 complete logged days — no flaky single-day number
-  // Trend is vs the prior week; higher EA (more spare energy) is "up". No band — a body-weight proxy off
-  // self-logged intake can't honestly claim the clinical 30/45 kcal/kg cutoff; that's Track C calibration.
+  // Trend is vs the prior week; higher EA (more spare energy) is "up".
   const arrow = ea.trend != null && ea.trend !== 0 ? trendArrow(ea.eaKcalPerKg, ea.eaKcalPerKg - ea.trend, true) : null;
+  // A soft, non-clinical read so the number means something at a glance (FB-2026-06-30) — bands are on a
+  // body-weight basis, not the clinical FFM cutoffs (see eaLevel), so the tip frames it as a rough reference.
+  const level = eaLevel(ea.eaKcalPerKg);
+  const levelTone =
+    level === "low"
+      ? "text-amber-600 dark:text-amber-400"
+      : level === "ample"
+        ? "text-cyan-700 dark:text-[#00d4ff]"
+        : "text-zinc-500 dark:text-zinc-400";
   return (
     <div className="group relative mt-2 flex items-center justify-between gap-2 rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
       <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
         <span className="underline decoration-dotted underline-offset-2">Energy availability</span>
-        <MetricTip text={`Energy left for recovery after exercise — your logged intake minus exercise burn (all activities with power/energy data, kJ≈kcal), per kg body weight, averaged over the last ${ea.daysUsed} complete days (today is excluded — it's still being logged). A proxy, not a clinical figure: it's on body weight (not fat-free mass) and reads low if you under-log intake. The arrow is vs the prior week; a personalised "adequate" line comes once enough data accrues.`} />
+        <MetricTip text={`Energy left for recovery after exercise — your logged intake minus exercise burn (all activities with power/energy data, kJ≈kcal), per kg body weight, averaged over the last ${ea.daysUsed} complete days (today is excluded — it's still being logged). A proxy, not a clinical figure: it's on body weight (not fat-free mass) and reads low if you under-log intake. The low / adequate / ample read is a rough reference on a body-weight basis (the clinical 30/45 kcal/kg cutoffs are defined on fat-free mass), not a diagnosis. The arrow is vs the prior week.`} />
       </p>
       <p className="shrink-0 font-mono text-sm font-semibold text-zinc-700 dark:text-zinc-200">
         {ea.eaKcalPerKg}
         <span className="ml-0.5 text-[10px] font-normal text-zinc-500 dark:text-zinc-400"> kcal/kg</span>
+        <span className={`ml-1.5 font-sans text-[10px] font-medium ${levelTone}`}>{level}</span>
         {arrow && <span className="ml-1 text-[10px] font-normal text-cyan-600 dark:text-[#00d4ff]">{arrow}</span>}
         <span className="ml-1.5 text-[10px] font-normal text-zinc-400 dark:text-zinc-500">{ea.daysUsed}d</span>
       </p>
