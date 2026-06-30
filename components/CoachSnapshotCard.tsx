@@ -12,6 +12,7 @@ export default function CoachSnapshotCard({ snapshot }: { snapshot: CoachSnapsho
     fuel.todayTargetKcal !== null ? `${fuel.todayTargetKcal} kcal target` : null,
     fuel.rideBurnKj !== null ? `${fuel.rideBurnKj} kJ ride` : null,
     fuel.weightTrend7dKg !== null ? `${fuel.weightTrend7dKg > 0 ? "+" : ""}${fuel.weightTrend7dKg} kg/7d` : null,
+    fuel.fuelingState !== null ? `energy avail. ${fuel.fuelingState}` : null,
   ].filter((b): b is string => b !== null);
 
   if (!form.tsbModifier && fuelBits.length === 0) return null;

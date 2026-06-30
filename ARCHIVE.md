@@ -12,6 +12,27 @@ exact commits.
 
 ---
 
+## Fueling-aware coach + Today/Profile feedback sweep (FB-2026-06-30)
+
+- **#1 — energy availability now feeds the coach.** EA is a first-class `CoachSignal` (computed once in
+  `resolveCoachSignals`, anchored to the resolved local day): it fills the previously-reserved
+  `fuel.fuelingState` (low/adequate/ample band) + `fuel.intakeVsNeed` (kcal/kg) slots, renders on both LLM
+  paths (`formatCoachSnapshot` + `formatFormFuelLine`, framed as a body-weight proxy) and the athlete-facing
+  `CoachSnapshotCard`. Null until ≥3 complete logged days. The coach can finally reason about under-fueling.
+  _[coach-snapshot.ts](lib/coach-snapshot.ts) · [nutrition.ts](lib/nutrition.ts) · [CoachSnapshotCard.tsx](components/CoachSnapshotCard.tsx)._
+- **EA reads low/adequate/ample.** New pure `eaLevel()` — soft, non-clinical bands shifted to a body-weight
+  basis (the FFM 30/45 cutoffs don't map), framed as a rough reference. _[nutrition.ts](lib/nutrition.ts) · [dashboard/today.tsx](components/dashboard/today.tsx)._
+- **RPE dropped as an athlete-state driver (revisit later).** Over-swung the state against a ~0 baseline (no
+  historical RPE logged). Removed `evalRpe` from the fusion + the ride-card tile; high-confidence gate relaxed
+  ≥4→≥3 (5→4 core signals); calibration `rpe` weights left dormant. _[athlete-state.ts](lib/athlete-state.ts)._
+- **Coach-note frame glitch fixed.** Unified the analysing/loaded/empty branches into one content-height Zone
+  (the `fill` divergence had snapped the cyber-bracket frame mid-sync). _[dashboard/TodayView.tsx](components/dashboard/TodayView.tsx)._
+- **Power curve: drag-scrub + half-size + side-by-side.** Interactive client chart (drag/hover to read off
+  any duration's watts + W/kg); laid beside the rider profile in a two-column row. PR recognition now covers
+  all 9 synced durations (adds 2m/30m/60m). _[PowerCurveChart.tsx](components/PowerCurveChart.tsx) · [AthleteProfileForm.tsx](components/AthleteProfileForm.tsx) · [pr.ts](lib/pr.ts)._
+
+---
+
 ## Calibrated-honesty UX pass — Today / Trends / Profile
 
 The UI now grades its own certainty the way the engine already does: provenance stamped, thin reads

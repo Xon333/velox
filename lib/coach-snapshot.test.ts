@@ -56,6 +56,7 @@ function baseInput(overrides: Partial<CoachSnapshotInput> = {}): CoachSnapshotIn
     athleteState,
     todayAnalysis,
     weightTrend7dKg: -0.4,
+    energyAvailability: null,
     directives: "Prioritise threshold durability; under-delivering on VO2max.",
     disposition: null,
     morningCheck: null,
@@ -141,11 +142,22 @@ describe("buildCoachSnapshot", () => {
     expect(s.block).toMatchObject({ weekOfBlock: 1, totalWeeks: 4 });
   });
 
-  it("populates available fuel and leaves the WIP slots null", () => {
+  it("populates available fuel and leaves the EA slots null when no EA is resolved", () => {
     const s = buildCoachSnapshot(baseInput());
     expect(s.fuel).toMatchObject({ todayTargetKcal: 2800, rideBurnKj: 950, weightTrend7dKg: -0.4 });
     expect(s.fuel.intakeVsNeed).toBeNull();
     expect(s.fuel.fuelingState).toBeNull();
+  });
+
+  it("maps the energy-availability read into the fuel slots (Track C / #1)", () => {
+    const s = buildCoachSnapshot(baseInput({ energyAvailability: { eaKcalPerKg: 32, daysUsed: 7, trend: -3 } }));
+    expect(s.fuel.intakeVsNeed).toBe(32); // the kcal/kg figure
+    expect(s.fuel.fuelingState).toBe("adequate"); // its band (25–39)
+  });
+
+  it("bands a low EA as 'low' and a high one as 'ample'", () => {
+    expect(buildCoachSnapshot(baseInput({ energyAvailability: { eaKcalPerKg: 18, daysUsed: 5, trend: null } })).fuel.fuelingState).toBe("low");
+    expect(buildCoachSnapshot(baseInput({ energyAvailability: { eaKcalPerKg: 46, daysUsed: 9, trend: 2 } })).fuel.fuelingState).toBe("ample");
   });
 
   it("carries today's morning flag into the snapshot", () => {
@@ -209,6 +221,18 @@ describe("buildCoachSnapshotFromSources", () => {
   it("treats a rest day (durationMin 0) as no session type", () => {
     expect(buildCoachSnapshotFromSources(sources({ block: blockWith(0) })).today.sessionType).toBeNull();
   });
+
+  it("threads energy availability from the synced wellness into the fuel slots (Track C / #1)", () => {
+    const wellness = [
+      { date: "2026-06-17", weightKg: 70, kcalConsumed: 2240 },
+      { date: "2026-06-18", weightKg: 70, kcalConsumed: 2240 },
+      { date: "2026-06-19", weightKg: 70, kcalConsumed: 2240 },
+    ];
+    const syncWithEA = { ...sync, wellness } as unknown as SyncData;
+    const s = buildCoachSnapshotFromSources(sources({ sync: syncWithEA }));
+    expect(s.fuel.intakeVsNeed).toBe(32); // (2240 intake − 0 burn) / 70 kg
+    expect(s.fuel.fuelingState).toBe("adequate");
+  });
 });
 
 describe("formatCoachSnapshot", () => {
@@ -229,10 +253,15 @@ describe("formatCoachSnapshot", () => {
     expect(out).toContain("downgraded today's quality session");
   });
 
-  it("never renders the reserved (WIP) fuel slots", () => {
-    const out = formatCoachSnapshot(buildCoachSnapshot(baseInput()));
+  it("never leaks the raw fuel slot field names", () => {
+    const out = formatCoachSnapshot(buildCoachSnapshot(baseInput({ energyAvailability: { eaKcalPerKg: 32, daysUsed: 7, trend: -3 } })));
     expect(out).not.toContain("fuelingState");
     expect(out).not.toContain("intakeVsNeed");
+  });
+
+  it("renders the energy-availability read on the fuel line when resolved", () => {
+    const out = formatCoachSnapshot(buildCoachSnapshot(baseInput({ energyAvailability: { eaKcalPerKg: 32, daysUsed: 7, trend: -3 } })));
+    expect(out).toContain("energy availability adequate (~32 kcal/kg, body-weight proxy)");
   });
 
   it("emits the strong compromised-disposition guard last", () => {

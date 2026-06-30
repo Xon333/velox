@@ -14,35 +14,7 @@ P2 high-value UX/feature · P3 polish/education · Type: `bug` `ux` `feat` `audi
 
 ## Open
 
-**FB-2026-06-30 — Today + Profile feedback sweep.** Five items off direct use; Today fixes first
-(daily-glance surface), then the Profile power-curve rework.
-
-### Today page
-
-- ☑ FB-1 `feat` **Dropped RPE as an athlete-state driver (revisit later).** RPE swung the state too hard and
-  read against a ~0 baseline (no historical RPE logged → any recent value is a huge delta; confirmed
-  `activityRpe: null` in today-analysis). Removed `evalRpe` from the fusion (driver, lived-negative,
-  CORE_KEYS, inputs, `meanRpe`) + the RPE metric tile on the ride card; relaxed the high-confidence gate
-  from ≥4→≥3 core (5→4 core signals now). Calibration `rpe` weights left dormant so re-enabling = re-adding
-  the evaluator. +tests updated. _[athlete-state.ts](lib/athlete-state.ts) · [dashboard/today.tsx](components/dashboard/today.tsx)._
-- ☑ FB-2 `ux` **Energy-availability now reads low / adequate / ample.** New pure `eaLevel()` maps the number
-  to a soft, non-clinical word on a body-weight basis (bands shifted down from the FFM 30/45 cutoffs, kept
-  coarse), toned amber/neutral/cyan beside the trend arrow; tip reframed as a rough reference, not a
-  diagnosis. +test. _[nutrition.ts](lib/nutrition.ts) · [dashboard/today.tsx](components/dashboard/today.tsx)._
-- ☑ FB-3 `bug` **Coach-note frame glitch fixed.** Unified the analysing/loaded/empty branches into one
-  content-height Zone (dropped the `fill` divergence that snapped the pink cyber-bracket frame mid-sync);
-  only the inner content swaps now. _[dashboard/TodayView.tsx](components/dashboard/TodayView.tsx)._
-
-### Profile page
-
-- ☑ FB-4 `feat` **Power-curve: drag-scrub + half-size + side-by-side with rider profile.** Chart is now an
-  interactive client component — drag (or hover) a crosshair to read off any duration's watts + W/kg;
-  shortened the viewBox; laid curve + Power-PR grid in one half of a `lg:grid-cols-2` row with the rider
-  profile in the other (stacked fallback when one is absent). _[PowerCurveChart.tsx](components/PowerCurveChart.tsx) · [AthleteProfileForm.tsx](components/AthleteProfileForm.tsx)._
-- ☑ FB-5 `feat` **More PR-recognition durations.** `PR_DURATIONS` now covers all 9 synced curve durations
-  (added 2m/30m/60m) so a new best at those triggers the 🏆 PR. +tests. _[pr.ts](lib/pr.ts)._
-
----
+_FB-2026-06-30 (Today + Profile sweep) + the EA→CoachSnapshot wire-up shipped → [ARCHIVE.md](ARCHIVE.md)._
 
 **EC-2026-06-27 — edge-case sweep (EA/baseline tiles + a read-audit of the off-plan-aerobic & durability
 scoring diffs).** None ship yet; ordered by blast radius. The fixed trust-consistency cases (EA fasted-0,
@@ -83,9 +55,6 @@ EA exercise-burn label, w/kg stale-FTP flag) shipped → ARCHIVE.
 - ☐ P3 `cleanup` **EC-8 — `avgCadence90d` computed-but-unused.** Dropped from the Recent-Baselines card
   (curation), still computed + stored. Retire from the type/default/compute/store, or leave as a cheap spare.
   _[readiness.ts](lib/readiness.ts) · [types.ts](lib/types.ts) · [data-store.ts](lib/data-store.ts)._
-
-_Also a background task: wire energy availability into `CoachSnapshot.fuel` (`intakeVsNeed`/`fuelingState`) —
-the reserved slots + the stale "no intake logging yet" comment (ROADMAP #1 / Track C)._
 
 ---
 

@@ -65,7 +65,10 @@ planned-vs-actual per session type and, on a consistent gap, **flag an FTP re-te
 (never write FTP locally — `physiology.json` stays the synced SoT). Ties Track B template-scoring + #2.
 
 ### #1 · CoachSnapshot — fill the reserved slots
-`fuel.intakeVsNeed` + `fuel.fuelingState` are reserved `null` `← Track C / §6`.
+✅ The energy-availability read now fills both slots (`fuelingState` = low/adequate/ample band,
+`intakeVsNeed` = its kcal/kg figure) — computed once in `resolveCoachSignals`, surfaced in both LLM paths
+and the athlete card → ARCHIVE. Left: the *precise* weekly intake-vs-need ratio (kJ-out vs intake) is still
+`§6` energy-balance; a *personalised* adequate line is `← Track C`. #1 stays as the cross-ref handle.
 
 ### #3 · Proactive reschedule — slivers
 Decision thresholds → per-athlete `← #2`; let the **reactive** `RescheduleBanner` adopt the shared
@@ -128,8 +131,8 @@ could fire. What's left:
 ## UI refinements
 
 - **Energy-availability tile — open slivers** — the deterministic EA proxy shipped (Today, trailing-window
-  `(intake − ride burn)/kg`, no clinical band → ARCHIVE). Left: feed it into `CoachSnapshot.fuel`'s reserved
-  `intakeVsNeed`/`fuelingState` slots (`← #1`), and a *personalised* "adequate" line `← Track C` calibration.
+  `(intake − ride burn)/kg`; now reads low/adequate/ample on a body-weight basis, and feeds
+  `CoachSnapshot.fuel` `← #1` → ARCHIVE). Left: a *personalised* "adequate" line `← Track C` calibration.
 - **Pw:HR × fuel Trends overlay** — carb-intake g/h on the existing `efSeries` chart (build w/ Track C).
 - **Page density** — **Trends** (~1.6/2.2 folds) and **Today on mobile** still run over the fold (the EA tile
   added one more row to the readiness glance) — tighten card rhythm / collapse there next.

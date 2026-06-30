@@ -25,7 +25,8 @@ import type {
 import { computeAcwr, computeLoadRamp, computeReadiness } from "./readiness";
 import { timeAboveZ2Fraction } from "./execution-score";
 import { athleteStateInputsFrom, computeAthleteState } from "./athlete-state";
-import { weightTrendFromWellness } from "./nutrition";
+import { computeEnergyAvailability, eaLevel, weightTrendFromWellness, type EnergyAvailability } from "./nutrition";
+import { utcToday } from "./date";
 import { DEFAULT_TSB_MODIFIER_EDGES, resolveAcwrBands, resolveAthleteStateWeights, resolveTsbEdgesOverride, resolveTsbModifierEdges, type AcwrBands, type AthleteStateWeights, type DeepPartial, type TsbModifierEdges } from "./calibration";
 import { buildAthleteModel, deriveInsights } from "./athlete-model";
 import { synthesizeCoachingDirectives } from "./synthesis";
@@ -70,8 +71,10 @@ export interface CoachSnapshot {
     todayTargetKcal: number | null; // advised daily intake (same formula as generation)
     rideBurnKj: number | null; // today's ride energy (kJ ≈ kcal of work)
     weightTrend7dKg: number | null;
-    // WIP — no intake logging yet; these populate when Track C / §6 (fueling engine +
-    // energy-availability evaluator) land. Kept here so they wire in without reshaping the type.
+    // Energy-availability read (Track C / #1): `fuelingState` = the low/adequate/ample band, `intakeVsNeed`
+    // = its kcal/kg figure (energy left after exercise per kg body weight — a body-weight proxy for whether
+    // intake meets need, NOT the clinical FFM cutoff). Both null until ≥3 complete logged days exist. The
+    // precise weekly intake-vs-need ratio is still §6 energy-balance.
     intakeVsNeed: number | null;
     fuelingState: string | null;
   };
@@ -90,6 +93,7 @@ export interface CoachSignals {
   loadRamp: LoadRampAlert | null;
   athleteState: AthleteState | null;
   weightTrend7dKg: number | null;
+  energyAvailability: EnergyAvailability | null;
 }
 
 // The non-signal half (the IO/context the route owns); the form/fuel/state signals are inherited from
@@ -123,7 +127,7 @@ export function resolveCoachSignals(
   // the server's UTC date (they match activities on local date). Absent → the function's UTC default.
   today?: string
 ): CoachSignals {
-  if (!sync) return { fitness: null, readiness: null, acwr: null, loadRamp: null, athleteState: null, weightTrend7dKg: null };
+  if (!sync) return { fitness: null, readiness: null, acwr: null, loadRamp: null, athleteState: null, weightTrend7dKg: null, energyAvailability: null };
   void baselines; // see note above — kept in the signature, not used
   const acwr = computeAcwr(sync.activities, resolveAcwrBands(acwrBandsOverride), today);
   return {
@@ -136,6 +140,9 @@ export function resolveCoachSignals(
       resolveAthleteStateWeights(athleteStateWeightsOverride)
     ),
     weightTrend7dKg: weightTrendFromWellness(sync.wellness),
+    // Same proxy the Today EA tile shows — anchored to the resolved local day so today's still-logging
+    // intake is excluded. Null until ≥3 complete logged days; then it fills the fuel slots below.
+    energyAvailability: computeEnergyAvailability(sync.wellness, sync.activities, today ?? utcToday()),
   };
 }
 
@@ -246,8 +253,8 @@ export function buildCoachSnapshot(input: CoachSnapshotInput): CoachSnapshot {
       todayTargetKcal: ride?.advisedIntakeKcal ?? null,
       rideBurnKj: ride?.activityKj ?? null,
       weightTrend7dKg: input.weightTrend7dKg,
-      intakeVsNeed: null, // WIP — no intake logging (Track C / §6)
-      fuelingState: null, // WIP — energy-availability evaluator (Track C / §6)
+      intakeVsNeed: input.energyAvailability?.eaKcalPerKg ?? null, // EA kcal/kg (Track C / #1)
+      fuelingState: input.energyAvailability ? eaLevel(input.energyAvailability.eaKcalPerKg) : null, // low/adequate/ample band
     },
     state: input.athleteState
       ? {
@@ -374,6 +381,11 @@ export function formatCoachSnapshot(s: CoachSnapshot): string {
     const t = s.fuel.weightTrend7dKg;
     fuelParts.push(`weight trend 7d ${t > 0 ? "+" : ""}${t.toFixed(1)} kg`);
   }
+  if (s.fuel.fuelingState != null) {
+    fuelParts.push(
+      `energy availability ${s.fuel.fuelingState}${s.fuel.intakeVsNeed != null ? ` (~${s.fuel.intakeVsNeed} kcal/kg, body-weight proxy)` : ""}`
+    );
+  }
   if (fuelParts.length > 0) lines.push(`- Fuel: ${fuelParts.join(" · ")}.`);
 
   if (s.state) lines.push(`- Fused state: ${s.state.headline} (${s.state.score}/100, ${s.state.recommendation}).`);
@@ -401,6 +413,7 @@ export function formatFormFuelLine(s: CoachSnapshot): string | null {
     const t = s.fuel.weightTrend7dKg;
     parts.push(`weight trend 7d ${t > 0 ? "+" : ""}${t.toFixed(1)} kg`);
   }
+  if (s.fuel.fuelingState != null) parts.push(`energy availability ${s.fuel.fuelingState}`);
   if (parts.length === 0) return null;
   return `CURRENT FORM & FUEL (resolved — do not invent): ${parts.join(" · ")}.`;
 }
