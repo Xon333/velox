@@ -120,4 +120,15 @@ describe("event-anchored mode (dormant until an A-event exists)", () => {
     const arc = draftSeasonArc(baseInput({ events: [{ name: "X", date: "2026-10-01", priority: "A" }] }), "2026-07-01");
     expect(arc.some((p) => p.phase === "taper")).toBe(true);
   });
+  it("never applies deload cadence to the event-anchored tail — peak/taper are exempt", () => {
+    // 13-week runway: build 3wk → build 4wk → peak 5wk → taper 1wk — this is the exact shape that
+    // previously crossed the 3:1 deload boundary on the peak block (Task 5 review finding).
+    const ev = { name: "Gran Fondo", date: "2026-10-01", priority: "A" as const };
+    const direct = backwardScheduleFromEvent(ev, baseInput(), "2026-07-01");
+    expect(direct.some((p) => p.deloadWeek)).toBe(false);
+    expect(direct.every((p) => p.deloadWeek === false)).toBe(true);
+    // Also verify via draftSeasonArc's routing into event mode with the same runway.
+    const routed = draftSeasonArc(baseInput({ events: [{ name: "Gran Fondo", date: "2026-10-01", priority: "A" }] }), "2026-07-01");
+    expect(routed.some((p) => p.deloadWeek)).toBe(false);
+  });
 });

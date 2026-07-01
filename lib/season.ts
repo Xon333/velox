@@ -134,6 +134,8 @@ function weeksBetween(fromIso: string, toIso: string): number {
 // taper-only (or taper+peak) schedule when the runway can't fit a real build (KB: don't fabricate a
 // nonsensical block out of a handful of days). Build-rotation periods are always phase "build" — "peak"
 // is reserved for the dedicated race-specific sharpen period the KB defines right before taper.
+// Deload cadence does NOT apply to this path: the peak→taper runway is a distinct structural unit from
+// the rolling build cycle deload cadence was designed for, so it's exempt (peak must hold near-race load).
 export function backwardScheduleFromEvent(event: SeasonEvent, input: SeasonDraftInput, today: string): FocusPeriod[] {
   const runway = weeksBetween(today, event.date);
   const conf = input.limiter.confidence;
@@ -167,7 +169,7 @@ export function backwardScheduleFromEvent(event: SeasonEvent, input: SeasonDraft
     dated.push({ ...t, startDate: cursor });
     cursor = addWeeks(cursor, t.plannedWeeks);
   }
-  return applyDeloadCadence(dated, input.heavyFatigue);
+  return dated;
 }
 
 // Mark the period that crosses each deload boundary (30–50% volume cut lands in its trailing week).
