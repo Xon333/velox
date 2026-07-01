@@ -107,36 +107,38 @@ lightweight branch discipline for the shared trunk checkout.
 
 ---
 
-## Macro periodization & season scope ⭐ (audit P4 · brainstorm)
+## Macro periodization & season scope ⭐ (audit P4 · MACRO-1/2/3 shipped 2026-07-01)
 
-Today the planning unit is a single 2–4 wk block generated in isolation. Week-theming exists (loading vs
-deload/taper, LLM-written) and RaceSim is treated as a peaking session; the carry-forward channels exist
-(`next_block_seeds`, `blockHistory[].structuredReflections`) — but they're empty (no completed block yet)
-and there is **no layer above the block**: no event/date, no weeks-to-event, no base→build→peak→taper
-sequence, no cross-block load progression, no taper-by-countdown. A coach's core value-add over a workout
-generator *is* that arc. Deterministic core, generative shell — same as everything else. Depends on `SUB-1`.
+✅ **MACRO-1/2/3 shipped.** The engine (`lib/season.ts`), `/api/season`, generate-flow integration
+(`seasonContext` + `validateSeasonFit`, `lengthWeeks` 2|4|6|8), and the `SeasonRoadmap` stepper UI on `/plan`
+are all live — see [2026-07-01-macro-periodization-design.md](docs/superpowers/specs/2026-07-01-macro-periodization-design.md)
++ [plan](docs/superpowers/plans/2026-07-01-macro-periodization.md) for the full design/build record. Mode-C
+(no-event, rolling base→build→realize cycle with deload cadence + ACWR-capped load ramp) is the live default;
+event-anchored mode (backward taper→peak→build schedule) is built and tested but **dormant** — nothing writes
+a `SeasonEvent` yet.
 
-### MACRO-1 · Season / Plan object (owned intent)
-One+ target events (date, priority A/B/C) + a phase plan, authored by the athlete (pillar 3 — owned intent,
-like goals). Minimal viable = a single A-event + date; everything else derives from it.
+### Open — Season event-entry UI (spec approved, plan next)
+Closes the MACRO-1 gap: `SeasonPlan.objective`/`events` are athlete-owned intent, already persisted by
+`PUT /api/season`, but there's no form to set them — so event mode can never activate for a real athlete.
+Design: a new "Season" section on `/profile` (objective field + add/edit/delete event list), reusing the
+existing route + `validateSeasonPlanInput`, no new backend. See
+[2026-07-01-season-event-entry-ui-design.md](docs/superpowers/specs/2026-07-01-season-event-entry-ui-design.md).
+**Explicitly deferred (from that spec's out-of-scope):**
+- No re-plan trigger from the form itself — the next `POST /api/generate` already re-plans and activates
+  event mode the moment a future A-event exists (Task 9's wiring covers it).
+- No UI warning about multiple A-events or the engine's array-order tie-break (accepted debt from Task 5).
+- No dedicated `/settings`-style page for events — Profile houses it.
 
-### MACRO-2 · Deterministic progression + taper engine
-From the season anchor + `block-history` achieved load, compute the NEXT block's envelope: phase
-(base/build/peak/taper), weekly TSS ramp (e.g. +5–8 %, ACWR-capped), forced deload cadence (every 3rd–4th
-wk), and the taper (volume −40–60 %, intensity held) inside the countdown window. No LLM arithmetic — these
-are codifiable rules; the ramp-rate / deload-cadence constants are calibration hooks `← #2`.
+### Known debt (accept-as-tracked, from the final whole-branch review)
+- Event-mode peak vs. taper share one `focus: "sharpen"` value → same roadmap color/label, only the phase
+  caption distinguishes them. Cosmetic; only visible once event mode activates.
+- `CurrentBlock.seasonFocus`/`seasonPhase` are stamped using "today" rather than the block's actual start
+  date — harmless today (no readers yet); worth a conscious choice once `#4`-style validation reads them back.
+- `anaerobic` is a valid build focus but unreachable via the default rotation fallback (only via a confident
+  limiter) — intentional per KB, but the two lists (`BUILD_FOCI` vs `defaultBuildOrder()`) silently diverge.
 
-### MACRO-3 · Phase-aware generation + validation
-Inject *"phase: build · wk 9/16 · 5 wk to A-race · target CTL 95 · loading week"* into the prompt AND
-enforce the volume/intensity envelope as hard guards — mirror `workout-validate.ts` (guard on both ends).
-The LLM phrases the rationale; the engine owns the numbers.
-
-**Ties:** `6a` event-aware race planning is the surfacing of this; `§7` calendar; `#4` validates whether a
-phase sequence worked; `#2` calibrates the ramp/deload constants.
-🧠 **Brainstorm:** how prescriptive vs flexible should the arc be? single A-race vs a full multi-event
-season? default behaviour with NO event set (rolling base/build + deload cadence)? how much does the engine
-dictate vs the LLM shape? do blocks stay 2/4 wk or become phase-sized? how does a mid-season disruption
-(illness, life, a missed week) re-plan the arc?
+**Ties:** `6a` event-aware race planning is the surfacing of event mode; `§7` calendar; `#4` validates whether
+a phase sequence worked; `#2` calibrates the ramp/deload constants (currently KB-grounded population defaults).
 
 ---
 
