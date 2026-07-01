@@ -59,9 +59,11 @@ describe("deload cadence", () => {
     const out = applyDeloadCadence([p(2), p(2), p(2)], false); // cumulative 2,4,6 wk
     expect(out[0].deloadWeek).toBe(false); // 2 wk in
     expect(out[1].deloadWeek).toBe(true); // crosses the 4-week (3:1) boundary
+    expect(out[2].deloadWeek).toBe(false); // counter reset after the deload — next period is only 2 wk in
   });
   it("tightens to 2:1 under heavy fatigue", () => {
     const out = applyDeloadCadence([p(2), p(2)], true); // boundary at 3 wk
     expect(out[0].deloadWeek).toBe(true);
+    expect(out[1].deloadWeek).toBe(true); // after reset, the next 2-wk period hits the 2:1 boundary again
   });
 });
