@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, replanSeasonArc, currentPeriod, formatSeasonContext, validateSeasonFit, validateSeasonPlanInput, roadmapView, type SeasonDraftInput } from "./season";
-import type { SeasonPlan, PlannedDay } from "./types";
+import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, replanSeasonArc, currentPeriod, formatSeasonContext, validateSeasonFit, validateSeasonPlanInput, roadmapView, suggestedBlockWeeks, filterGoalsByFocus, type SeasonDraftInput } from "./season";
+import type { SeasonPlan, PlannedDay, FocusPeriod } from "./types";
 
 describe("season constants + helpers", () => {
   it("encodes the KB deload cadence (3:1 default, 2:1 tight)", () => {
@@ -196,6 +196,16 @@ describe("season context + fit validation", () => {
     expect(line).toContain("vo2max");
     expect(line).toContain("450");
   });
+  it("prepends the season objective when set", () => {
+    const line = formatSeasonContext(planWith([cur]), "2026-07-01")!;
+    expect(line.startsWith("SEASON CONTEXT: get faster — phase build")).toBe(true);
+  });
+  it("omits the objective prefix entirely when it's empty", () => {
+    const plan = { ...planWith([cur]), objective: "" };
+    const line = formatSeasonContext(plan, "2026-07-01")!;
+    expect(line.startsWith("SEASON CONTEXT: phase build")).toBe(true);
+    expect(line).not.toContain(" — phase"); // no stray separator with nothing before it
+  });
   it("returns null when the plan has no current period", () => {
     expect(formatSeasonContext(planWith([]), "2026-07-01")).toBeNull();
   });
@@ -229,5 +239,38 @@ describe("validateSeasonPlanInput", () => {
   it("rejects a bad event date / priority", () => {
     expect(typeof validateSeasonPlanInput({ objective: "x", events: [{ name: "GF", date: "nope", priority: "A" }] })).toBe("string");
     expect(typeof validateSeasonPlanInput({ objective: "x", events: [{ name: "GF", date: "2026-10-01", priority: "Z" }] })).toBe("string");
+  });
+});
+
+describe("suggestedBlockWeeks", () => {
+  const period = (startDate: string, plannedWeeks: number): FocusPeriod => ({
+    focus: "threshold", phase: "build", startDate, plannedWeeks, intensitySplit: "80/20",
+    targetWeeklyTss: null, deloadWeek: false, rationale: "", source: "derived", confidence: "medium",
+  });
+  it("ceilings to the smallest allowed value >= remaining weeks", () => {
+    expect(suggestedBlockWeeks(period("2026-07-01", 4), "2026-07-01")).toBe(4); // 4 remaining -> 4
+    expect(suggestedBlockWeeks(period("2026-07-01", 4), "2026-07-15")).toBe(2); // 2 remaining -> 2
+    expect(suggestedBlockWeeks(period("2026-07-01", 8), "2026-07-08")).toBe(8); // 7 remaining -> 8
+  });
+  it("floors at 2 even with 1 or 0 weeks remaining", () => {
+    expect(suggestedBlockWeeks(period("2026-07-01", 3), "2026-07-15")).toBe(2); // 1 wk left (or less) -> 2
+    expect(suggestedBlockWeeks(period("2026-07-01", 2), "2026-07-15")).toBe(2); // period already over -> floor 2
+  });
+  it("caps at 8 for a long remaining runway", () => {
+    expect(suggestedBlockWeeks(period("2026-07-01", 12), "2026-07-01")).toBe(8);
+  });
+});
+
+describe("filterGoalsByFocus", () => {
+  const g = (goal: string, focus: import("./types").SeasonFocus | "general") => ({ goal, target: "", focus });
+  const goals = [g("A", "threshold"), g("B", "vo2max"), g("C", "general"), g("D", "durability")];
+  it("includes focus-matching goals plus every general-tagged goal", () => {
+    expect(filterGoalsByFocus(goals, "threshold").map((x) => x.goal)).toEqual(["A", "C"]);
+  });
+  it("returns every goal unfiltered when seasonFocus is null", () => {
+    expect(filterGoalsByFocus(goals, null)).toEqual(goals);
+  });
+  it("returns only general-tagged goals when no goal matches the given focus", () => {
+    expect(filterGoalsByFocus(goals, "anaerobic").map((x) => x.goal)).toEqual(["C"]);
   });
 });

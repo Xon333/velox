@@ -240,6 +240,32 @@ export function currentPeriod(plan: SeasonPlan, today: string): FocusPeriod | nu
   return plan.periods.find((p) => p.startDate <= today && periodEnd(p) > today) ?? null;
 }
 
+const ALLOWED_BLOCK_WEEKS = [2, 4, 6, 8] as const;
+
+// Suggested (not locked) block length for the generator's pre-fill: ceiling-rounds the period's remaining
+// weeks to the smallest allowed value >= it, floored at 2, capped at 8. Ceiling (not nearest/floor) is
+// deliberate — the suggested block always covers AT LEAST the rest of the current period rather than
+// leaving a stray week neither covered by the block nor a full next period; a block running slightly past
+// the period boundary is the already-accepted case (replanSeasonArc's three-bucket re-plan handles it).
+export function suggestedBlockWeeks(period: FocusPeriod, today: string): 2 | 4 | 6 | 8 {
+  const remaining = period.plannedWeeks - weeksBetween(period.startDate, today);
+  for (const w of ALLOWED_BLOCK_WEEKS) {
+    if (w >= remaining) return w;
+  }
+  return 8;
+}
+
+// Goals relevant to the season's current focus, for the block-goal pre-fill: a focus match, plus every
+// "general"-tagged goal (not tied to one physiological system — always shown). Returns every goal
+// unfiltered when there's no current period (seasonFocus null) — identical to today's un-narrowed pre-fill.
+export function filterGoalsByFocus<T extends { focus: SeasonFocus | "general" }>(
+  goals: T[],
+  seasonFocus: SeasonFocus | null
+): T[] {
+  if (seasonFocus === null) return goals;
+  return goals.filter((g) => g.focus === seasonFocus || g.focus === "general");
+}
+
 // One-line, prompt-injectable summary of where the athlete sits in the season arc right now. Null
 // when there's no current period (nothing to inject). Task 9 folds this into the generate prompt.
 export function formatSeasonContext(plan: SeasonPlan, today: string): string | null {
@@ -248,7 +274,8 @@ export function formatSeasonContext(plan: SeasonPlan, today: string): string | n
   const wk = Math.max(1, weeksBetween(p.startDate, today) + 1);
   const load = p.targetWeeklyTss != null ? ` · target ~${p.targetWeeklyTss} TSS/wk` : "";
   const deload = p.deloadWeek ? " · deload week" : "";
-  return `SEASON CONTEXT: phase ${p.phase} · focus ${p.focus} · wk ${wk} of ${p.plannedWeeks}${load}${deload}. ${p.rationale}`;
+  const objective = plan.objective.trim() ? `${plan.objective.trim()} — ` : "";
+  return `SEASON CONTEXT: ${objective}phase ${p.phase} · focus ${p.focus} · wk ${wk} of ${p.plannedWeeks}${load}${deload}. ${p.rationale}`;
 }
 
 // Non-blocking warnings, mirroring validateSchedule/validateNutrition. A base period should skew easy;
