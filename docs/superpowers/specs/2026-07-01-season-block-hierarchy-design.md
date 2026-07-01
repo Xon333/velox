@@ -58,32 +58,14 @@ place they're already written.
 
 ## 4. Data model
 
-**Goals table gains an optional third column** in `knowledge-base/athlete_profile.md`:
-
-```markdown
-## GOALS
-
-| Goal | Target | Focus |
-|------|--------|-------|
-| FTP | 300W | threshold |
-| 1-minute power | 600W | anaerobic |
-| 5-second power | 1000W | anaerobic |
-| Durability | Sustain power on 3h+ rides | durability |
-| Local performance | Hill KOMs in Novo Mesto area, Slovenia | general |
-| Racing | Begin competing at amateur level | general |
-```
-
-Values: the six `SeasonFocus` strings, or `general` for goals not tied to one physiological system. **Fully
-backward compatible** — `parseRows()` (`lib/kb-loader.ts:50-56`) already filters rows by `row.length >= 2`, so
-existing two-column rows simply have `r[2]` undefined; no migration is required, and untagged goals behave as
-`general` (always shown, never hidden).
-
-`AthleteMdSnapshot`'s `goals` field (`lib/kb-loader.ts:17`) widens from `Array<{ goal: string; target: string }>`
-to `Array<{ goal: string; target: string; focus: SeasonFocus | "general" }>`. `parseAthleteMd()`'s goal-mapping
-(`lib/kb-loader.ts:96-99`) reads `r[2]`, validates it against the known `SeasonFocus` values ∪ `"general"`, and
-falls back to `"general"` for anything absent or unrecognized (a typo never throws or drops the goal — it just
-becomes untagged). This is purely additive to the type; the three existing consumers (`PlanView.tsx`,
-`AthleteProfileForm.tsx`, `dashboard/plan.tsx`) only read `.goal`/`.target` today and are unaffected.
+**Revision (2026-07-01):** this section originally proposed extending the `athlete_profile.md` Goals table
+with a Focus column; that's superseded — Goals/Weakpoints are moving off the markdown file entirely and into a
+JSON store instead. See the companion spec
+[2026-07-01-goals-weakpoints-centralization-design.md](2026-07-01-goals-weakpoints-centralization-design.md),
+which widens `AthleteProfile.goals` to `Array<{ goal: string; target: string; focus: SeasonFocus | "general" }>`.
+This section's Focus-tagging *intent* is unchanged (the `general` fallback, the six `SeasonFocus` values); only
+*where the field lives* changes — a plain field on the new structured type, not a markdown-table column. Every
+consumer described below (`filterGoalsByFocus`, the block-goal pre-fill) reads from that structured field.
 
 **`SeasonPlan.objective` becomes load-bearing.** `formatSeasonContext` (`lib/season.ts:245-252`) prepends
 `plan.objective` (when non-empty) to the string it already builds:
@@ -130,10 +112,11 @@ Returns goals whose `focus` matches `seasonFocus`, plus every `general`-tagged g
 not tied to any one period). When `seasonFocus` is `null` (no current period), returns every goal unfiltered —
 byte-identical to today's behavior.
 
-**Wiring:** `PlanView.tsx:73`'s goal-textarea seed (currently `md.goals.map(...).join("\n")` — every goal) changes
-to seed from `filterGoalsByFocus(md.goals, currentPeriod?.focus ?? null)`. The `"from profile; edit to override"`
-placeholder stays accurate — this only narrows what's pre-filled; nothing about override behavior changes.
-Weakpoints (`weakpointsText`) is untouched — unfiltered, exactly as today.
+**Wiring:** `PlanView.tsx:73`'s goal-textarea seed (currently `md.goals.map(...).join("\n")` — every goal, sourced
+from `athleteMd.goals`) changes to read the new structured `AthleteProfile.goals` field (per the companion
+centralization spec) and seed from `filterGoalsByFocus(profile.goals, currentPeriod?.focus ?? null)` instead.
+The `"from profile; edit to override"` placeholder stays accurate — this only narrows what's pre-filled; nothing
+about override behavior changes. Weakpoints (`weakpointsText`) is untouched — unfiltered, exactly as today.
 
 **The readout.** A small read-only line in `BlockGenerator.tsx`, above the length/goal/weakpoints fields, built
 from the same `formatSeasonContext` string (§4) fetched alongside the season plan:
@@ -162,9 +145,8 @@ New pure logic gets Vitest coverage (unlike the event-entry UI pass, which added
 - `suggestedBlockWeeks`: exact-match boundaries (2/4/6/8), snapping between allowed values, flooring below 2.
 - `filterGoalsByFocus`: focus match included; `general` always included; `null` season focus returns everything
   unfiltered; no match and no `general` returns empty.
-- `parseAthleteMd`'s extended Focus-column parsing (in its existing test file): a tagged goal parses correctly;
-  an untagged (2-column) goal defaults to `general`; an unrecognized value falls back to `general` rather than
-  throwing.
+- Focus-tag validation/fallback-to-`general` is covered by the companion centralization spec's own test plan
+  (it now lives on the `AthleteProfile.goals` field, not `parseAthleteMd` — see that spec's §8).
 
 No new component tests — matches this codebase's established convention (`SeasonRoadmap.tsx`, the event-entry UI,
 neither has one). The `BlockGenerator`/`PlanView` wiring is thin glue over already-tested pure functions;
