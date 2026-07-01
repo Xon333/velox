@@ -176,10 +176,13 @@ export function backwardScheduleFromEvent(event: SeasonEvent, input: SeasonDraft
 const periodEnd = (p: FocusPeriod): string => addWeeks(p.startDate, p.plannedWeeks);
 
 // Re-plan the rolling arc: periods that have already ended are frozen (stamped with achieved load, never
-// re-derived), any future athlete-edited override is preserved verbatim, and only the remaining derived
-// tail is re-drafted — starting after the last preserved/frozen period (or from `today` if none). Pure +
-// idempotent: unchanged inputs re-run produce the same periods (frozen achievedTss is filled once, not
-// re-stamped; the derived tail is a deterministic function of the unchanged seed state).
+// re-derived), the period straddling today is preserved verbatim (it's already in progress — regenerating
+// it mid-stream would change the roadmap's "current, wk N/M" card's identity on every re-plan), any future
+// athlete-edited override is preserved verbatim, and only the remaining derived tail is re-drafted —
+// starting after whichever of {the current period, the last override} ends latest (or from `today` if
+// neither exists). Pure + idempotent: unchanged inputs re-run produce the same periods (frozen achievedTss
+// is filled once, not re-stamped; the current period is never re-stamped either; the derived tail is a
+// deterministic function of the unchanged seed state).
 export function replanSeasonArc(
   plan: SeasonPlan,
   input: SeasonDraftInput,
@@ -190,13 +193,27 @@ export function replanSeasonArc(
   const frozen = plan.periods
     .filter((p) => periodEnd(p) <= today)
     .map((p) => ({ ...p, achievedTss: p.achievedTss ?? achievedTssFor(p) ?? undefined }));
-  // Future overrides the athlete edited → preserved verbatim.
-  const overrides = plan.periods.filter((p) => periodEnd(p) > today && p.source === "override");
-  // Re-draft the derived tail from today, seeded by what actually happened.
-  const recentFocuses = frozen.slice(-4).map((p) => p.focus);
-  const draftStart = overrides.length ? periodEnd(overrides[overrides.length - 1]) : today;
+  // The period straddling today (started, not yet ended) is preserved verbatim — regenerating it
+  // mid-stream would make the roadmap's "current, wk N/M" card change identity on every re-plan.
+  // No achievedTss stamp: it isn't complete yet.
+  const current = plan.periods.filter((p) => p.startDate <= today && periodEnd(p) > today);
+  // Future overrides the athlete edited → preserved verbatim. Excludes anything already in `current`
+  // so a straddling override isn't duplicated between the two buckets.
+  const overrides = plan.periods.filter(
+    (p) => periodEnd(p) > today && p.source === "override" && !current.includes(p)
+  );
+  // Re-draft the derived tail seeded by what actually happened, starting after whichever of
+  // {the straddling current period, the last override} ends latest — never before either. The
+  // current period counts as "recent" too (it's real, in-progress context for base-gating/rotation) —
+  // omitting it would let the redraft immediately re-insert e.g. a duplicate aerobic-base period right
+  // after an in-progress aerobic-base period ends.
+  const recentFocuses = [...frozen, ...current].slice(-4).map((p) => p.focus);
+  const anchors = [...current, ...overrides];
+  const draftStart = anchors.length
+    ? anchors.map((p) => periodEnd(p)).sort().reverse()[0]
+    : today;
   const derived = draftSeasonArc({ ...input, recentFocuses }, draftStart);
-  const periods = [...frozen, ...overrides, ...derived].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const periods = [...frozen, ...current, ...overrides, ...derived].sort((a, b) => a.startDate.localeCompare(b.startDate));
   return { ...plan, periods, updatedAt: plan.updatedAt };
 }
 

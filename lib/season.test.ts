@@ -145,13 +145,45 @@ describe("replanSeasonArc", () => {
     expect(frozen.achievedTss).toBe(400);
   });
   it("preserves a future override period", () => {
+    // Starts 2026-07-15 (after today, 2026-07-01) — a pure future override, does not straddle today,
+    // so it must land in the `overrides` bucket, not the new `current` bucket.
     const ovr = { focus: "durability" as const, phase: "build" as const, startDate: "2026-07-15", plannedWeeks: 3, intensitySplit: "80/20", targetWeeklyTss: null, deloadWeek: false, rationale: "mine", source: "override" as const, confidence: "high" as const };
     const out = replanSeasonArc(planWith([ovr]), baseInput(), achieved, "2026-07-01");
     expect(out.periods.some((p) => p.source === "override" && p.rationale === "mine")).toBe(true);
   });
   it("is idempotent on unchanged inputs", () => {
+    // `a` is a fresh draft from an empty plan: its first period (aerobic-base) starts exactly at
+    // "2026-07-01", so it straddles that same `today` and gets swept into the new `current` bucket on
+    // the NEXT call — that transition (nothing preserved → something preserved) legitimately changes
+    // the horizon-relative redraft, so a → b is not required to be a no-op. The real idempotency
+    // contract is a fixed point: once a plan HAS been through a re-plan (so the straddling period is
+    // already sitting in it), replanning again with the same `today` must reproduce exactly the same
+    // periods. So compare b → c, not a → b.
     const a = replanSeasonArc(planWith([]), baseInput({ recentFocuses: [] }), achieved, "2026-07-01");
     const b = replanSeasonArc(a, baseInput({ recentFocuses: [] }), achieved, "2026-07-01");
-    expect(b.periods.map((p) => p.focus + p.startDate)).toEqual(a.periods.map((p) => p.focus + p.startDate));
+    const c = replanSeasonArc(b, baseInput({ recentFocuses: [] }), achieved, "2026-07-01");
+    expect(c.periods.map((p) => p.focus + p.startDate)).toEqual(b.periods.map((p) => p.focus + p.startDate));
+  });
+  it("preserves the period straddling today verbatim, without stamping achievedTss", () => {
+    // Starts before today, plannedWeeks pushes its end past today → straddles "today" (2026-07-01).
+    const current = { focus: "threshold" as const, phase: "build" as const, startDate: "2026-06-22", plannedWeeks: 3, intensitySplit: "80/20", targetWeeklyTss: 420, deloadWeek: false, rationale: "in progress", source: "derived" as const, confidence: "medium" as const };
+    const out = replanSeasonArc(planWith([current]), baseInput(), achieved, "2026-07-01");
+    const preserved = out.periods.find((p) => p.startDate === "2026-06-22")!;
+    expect(preserved).toEqual(current); // unchanged: same focus/startDate/plannedWeeks/everything
+    expect(preserved.achievedTss).toBeUndefined(); // not complete yet — must not be stamped
+  });
+  it("starts the redrafted tail strictly after the straddling period ends, not at today", () => {
+    const current = { focus: "threshold" as const, phase: "build" as const, startDate: "2026-06-22", plannedWeeks: 3, intensitySplit: "80/20", targetWeeklyTss: 420, deloadWeek: false, rationale: "in progress", source: "derived" as const, confidence: "medium" as const };
+    const out = replanSeasonArc(planWith([current]), baseInput(), achieved, "2026-07-01");
+    const currentEnd = addWeeks(current.startDate, current.plannedWeeks); // 2026-07-13
+    const firstDerived = out.periods.filter((p) => p.startDate > current.startDate).sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+    expect(firstDerived.startDate).toBe(currentEnd);
+  });
+  it("is idempotent for the current-period bucket specifically: re-running with the same today reproduces it unchanged", () => {
+    const current = { focus: "threshold" as const, phase: "build" as const, startDate: "2026-06-22", plannedWeeks: 3, intensitySplit: "80/20", targetWeeklyTss: 420, deloadWeek: false, rationale: "in progress", source: "derived" as const, confidence: "medium" as const };
+    const first = replanSeasonArc(planWith([current]), baseInput(), achieved, "2026-07-01");
+    const second = replanSeasonArc(first, baseInput(), achieved, "2026-07-01");
+    const preserved = second.periods.find((p) => p.startDate === "2026-06-22")!;
+    expect(preserved).toEqual(current);
   });
 });
