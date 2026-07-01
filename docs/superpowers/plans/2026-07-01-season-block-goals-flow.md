@@ -18,14 +18,13 @@ empty-state UI branch — no new component.
 
 ## Global Constraints
 
-- **Concurrent trunk checkout:** `lib/kb-loader.ts` and `lib/kb-loader.test.ts` currently have UNCOMMITTED
-  changes from a concurrent session (adds `stripObsidianSyntax()`, wires it into `loadKnowledgeBaseContext`,
-  adds a "Related notes" footer to the now-deleted `athleteProfileToMarkdown`). **Decision (confirmed with the
-  project owner):** delete the dead functions anyway — they are genuinely unreachable regardless of that
-  edit — and COMPOSE with `stripObsidianSyntax` rather than reverting it (call both, don't remove either).
-  Before starting Task 1, re-run `git status --short lib/kb-loader.ts lib/kb-loader.test.ts` — if either shows
-  further uncommitted changes beyond what's described here, STOP and report to the user rather than guessing
-  at what changed.
+- **`stripObsidianSyntax()` is already shipped** (commit `3b7b3f6`, on `main`): it strips the KB's
+  `## Related notes` footers + flattens `[[wikilinks]]` before `loadKnowledgeBaseContext` inlines a file, and
+  it also added a (cosmetic, still-unreachable) "Related notes" footer inside the dead
+  `athleteProfileToMarkdown` template. Task 1 deletes `athleteProfileToMarkdown`/`writeAthleteProfileMd`
+  anyway (confirmed still zero callers) — that removes the cosmetic footer along with the rest of the dead
+  function, which is fine; it never composes with or reverts `stripObsidianSyntax` itself (a separate,
+  already-settled function) — see Task 1 Step 6 and Task 2 Step 3 for exactly where the two interact.
 - Stage only the exact files each task touches (`git add <path>...`, never `git add -A`/`git add .`); commit
   on `main` (this project is trunk-based, no per-session branches).
 - Pure `lib/*.ts` logic gets Vitest coverage (TDD: failing test → implement → pass). React components are
@@ -33,8 +32,8 @@ empty-state UI branch — no new component.
   `today.tsx` all have zero component tests today) — UI-wiring tasks verify via `npx tsc --noEmit` plus a
   manual dev-server/preview check.
 - Verification before every commit: `npx tsc --noEmit && npm test` both clean. Current baseline: 592 tests
-  passing (confirm this count before Task 1's first commit, in case the concurrent session has since added
-  its own tests to `lib/kb-loader.test.ts`).
+  passing, all on `main` as of commit `3b7b3f6` (includes `stripObsidianSyntax`'s 6) — confirm this count
+  before Task 1's first commit.
 - Never invent validation rules beyond what's specified in a task — an unrecognized `focus` value always
   falls back to `"general"`, never throws.
 
@@ -50,7 +49,7 @@ empty-state UI branch — no new component.
 - Modify: `lib/kb-loader.ts` (new `parseGoalsWeakpointsForMigration`; remove `goals`/`weakpoints` from
   `AthleteMdSnapshot`/`parseAthleteMd`; delete `athleteProfileToMarkdown`/`writeAthleteProfileMd`)
 - Create: `lib/data-store.test.ts` (does not exist yet)
-- Test: `lib/kb-loader.test.ts` (append; do not touch the concurrent session's existing additions)
+- Test: `lib/kb-loader.test.ts` (append; do not touch the existing `stripObsidianSyntax` tests, already on `main`)
 
 **Interfaces:**
 - Produces: `AthleteProfile.goals: Array<{ goal: string; target: string; focus: SeasonFocus | "general" }>`,
@@ -59,14 +58,7 @@ empty-state UI branch — no new component.
   (exported from `lib/data-store.ts`). `parseGoalsWeakpointsForMigration(): Promise<{ goals: AthleteProfile["goals"]; weakpoints: AthleteProfile["weakpoints"] }>`
   (exported from `lib/kb-loader.ts`).
 
-- [ ] **Step 1: Re-verify the concurrent-session file state**
-
-Run: `git status --short lib/kb-loader.ts lib/kb-loader.test.ts`
-Expected: exactly `M lib/kb-loader.ts` and `M lib/kb-loader.test.ts`. If anything else appears (a third file,
-or these two are now clean/committed), STOP and report to the user before continuing — the ground-truth this
-plan was written against may have changed.
-
-- [ ] **Step 2: Widen `AthleteProfile` in `lib/types.ts`**
+- [ ] **Step 1: Widen `AthleteProfile` in `lib/types.ts`**
 
 Find (currently at `lib/types.ts:42-48`):
 ```ts
@@ -92,7 +84,7 @@ export interface AthleteProfile {
 `SeasonFocus` is already defined later in this same file (`lib/types.ts:303`) — no new import needed since
 this is a same-file reference; TypeScript resolves forward references within a module.
 
-- [ ] **Step 3: Update `DEFAULT_PROFILE` in `lib/data-store.ts`**
+- [ ] **Step 2: Update `DEFAULT_PROFILE` in `lib/data-store.ts`**
 
 Find (currently at `lib/data-store.ts:11-29`, the `goals`/`weakpoints` lines):
 ```ts
@@ -116,7 +108,7 @@ field. Find the object's closing `nutrition`/`updatedAt` lines and add `goalsMig
 (Match whatever the exact surrounding lines are — the `nutrition` object and `updatedAt` line already exist;
 only the new `goalsMigratedAt: null,` line is an addition, placed between them.)
 
-- [ ] **Step 4: Add `parseGoalsWeakpointsForMigration` to `lib/kb-loader.ts`**
+- [ ] **Step 3: Add `parseGoalsWeakpointsForMigration` to `lib/kb-loader.ts`**
 
 This reuses the existing private `extractSectionText`/`parseRows` primitives (`lib/kb-loader.ts:20`, `:50`) —
 do not export them; add one new exported function that calls them internally, right after `parseAthleteMd`'s
@@ -147,7 +139,7 @@ export async function parseGoalsWeakpointsForMigration(): Promise<{
 }
 ```
 
-- [ ] **Step 5: Remove `goals`/`weakpoints` from `AthleteMdSnapshot` and `parseAthleteMd`**
+- [ ] **Step 4: Remove `goals`/`weakpoints` from `AthleteMdSnapshot` and `parseAthleteMd`**
 
 Find (currently at `lib/kb-loader.ts:11-18`):
 ```ts
@@ -207,24 +199,23 @@ export async function parseAthleteMd(): Promise<AthleteMdSnapshot> {
 }
 ```
 
-- [ ] **Step 6: Delete the two confirmed-dead functions**
+- [ ] **Step 5: Delete the two confirmed-dead functions**
 
-Delete `athleteProfileToMarkdown` and `writeAthleteProfileMd` entirely (currently `lib/kb-loader.ts:343-395`
-before the concurrent session's diff — locate them by their exact current content: `athleteProfileToMarkdown`
-starts `export function athleteProfileToMarkdown(profile: AthleteProfile): string {` and ends at the closing
-`` ` `` `;` `}` that terminates its template literal; `writeAthleteProfileMd` immediately follows and ends
-`}`). **Before deleting, note**: the concurrent session added a "Related notes" footer INSIDE
-`athleteProfileToMarkdown`'s template string — that addition is deleted along with the rest of the dead
-function, which is the agreed outcome (the function was unreachable either way; re-verify with
-`grep -rn "writeAthleteProfileMd\|athleteProfileToMarkdown" --include="*.ts" --include="*.tsx" .` before
-deleting that there are still zero callers anywhere — if a caller has appeared since this plan was written,
-STOP and report to the user rather than deleting a now-reachable function).
+Delete `athleteProfileToMarkdown` and `writeAthleteProfileMd` entirely — locate them by their exact current
+content: `athleteProfileToMarkdown` starts `export function athleteProfileToMarkdown(profile: AthleteProfile): string {`
+and ends at the closing `` ` `` `;` `}` that terminates its template literal (this template includes a
+"Related notes" footer with wikilinks, added in commit `3b7b3f6` alongside `stripObsidianSyntax` — that
+footer is deleted along with the rest of this dead function, which is fine; the function was unreachable
+either way); `writeAthleteProfileMd` immediately follows and ends `}`. Before deleting, re-verify with
+`grep -rn "writeAthleteProfileMd\|athleteProfileToMarkdown" --include="*.ts" --include="*.tsx" .` that there
+are still zero callers anywhere — if a caller has appeared since this plan was written, STOP and report to
+the user rather than deleting a now-reachable function.
 
 Also remove the `list` helper local to `athleteProfileToMarkdown` if it has no other caller in the file
 (check with `grep -n "list(" lib/kb-loader.ts` after deletion — if `list` is now unused, remove it too; if
 still referenced elsewhere, leave it).
 
-- [ ] **Step 7: Add `applyGoalsMigration` + wire it into `readAthleteProfile` in `lib/data-store.ts`**
+- [ ] **Step 6: Add `applyGoalsMigration` + wire it into `readAthleteProfile` in `lib/data-store.ts`**
 
 Add the import (top of `lib/data-store.ts`, alongside the existing `kb-loader` import):
 ```ts
@@ -277,7 +268,7 @@ export async function readAthleteProfile(): Promise<AthleteProfile> {
 }
 ```
 
-- [ ] **Step 8: Write the failing tests for `applyGoalsMigration`**
+- [ ] **Step 7: Write the failing tests for `applyGoalsMigration`**
 
 Create `lib/data-store.test.ts`:
 ```ts
@@ -332,16 +323,16 @@ describe("applyGoalsMigration", () => {
 });
 ```
 
-- [ ] **Step 9: Run the test to verify it fails, then implement, then pass**
+- [ ] **Step 8: Run the test to verify it fails, then implement, then pass**
 
 Run: `npx vitest run lib/data-store.test.ts`
-Expected (before Step 7's implementation, if not yet done): FAIL — `applyGoalsMigration is not exported`.
-After Step 7 is in place: run again — Expected: PASS (4/4).
+Expected (before Step 6's implementation, if not yet done): FAIL — `applyGoalsMigration is not exported`.
+After Step 6 is in place: run again — Expected: PASS (4/4).
 
-- [ ] **Step 10: Write the failing test for `parseGoalsWeakpointsForMigration`**
+- [ ] **Step 9: Write the failing test for `parseGoalsWeakpointsForMigration`**
 
-Append to `lib/kb-loader.test.ts` — **do not touch the concurrent session's existing `describe` blocks**
-(`"kb-loader resilience (CR-4)"`, `"stripObsidianSyntax"`); add a new one after them:
+Append to `lib/kb-loader.test.ts` — **do not touch the existing `describe` blocks**
+(`"kb-loader resilience (CR-4)"`, `"stripObsidianSyntax"`, already on `main`); add a new one after them:
 ```ts
 import { parseGoalsWeakpointsForMigration } from "./kb-loader";
 ```
@@ -359,16 +350,16 @@ describe("parseGoalsWeakpointsForMigration", () => {
 });
 ```
 
-- [ ] **Step 11: Run to verify pass, run the full suite**
+- [ ] **Step 10: Run to verify pass, run the full suite**
 
 Run: `npx vitest run lib/kb-loader.test.ts lib/data-store.test.ts`
-Expected: all passing, 0 regressions in the concurrent session's own added tests.
+Expected: all passing, 0 regressions in the existing `stripObsidianSyntax` tests.
 Run: `npx tsc --noEmit`
 Expected: clean (this will surface every consumer of the old `AthleteMdSnapshot.goals`/`weakpoints` shape
 that still needs updating — Task 2/3 handle those; if `tsc` fails on a file this task doesn't own, note it
 but do not fix it here, since Tasks 2–3 own those specific consumers).
 
-- [ ] **Step 12: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add lib/types.ts lib/data-store.ts lib/data-store.test.ts lib/kb-loader.ts lib/kb-loader.test.ts
@@ -436,7 +427,7 @@ export function stripGoalsWeakpointsSections(content: string): string {
 }
 ```
 
-Modify `loadKnowledgeBaseContext` (currently, after the concurrent session's edit):
+Modify `loadKnowledgeBaseContext` (currently, after the already-shipped `stripObsidianSyntax` change):
 ```ts
 export async function loadKnowledgeBaseContext(): Promise<string> {
   const files = await listKnowledgeFiles();
@@ -454,13 +445,13 @@ export async function loadKnowledgeBaseContext(): Promise<string> {
   return sections.join("\n\n");
 }
 ```
-(This composes with the concurrent session's `stripObsidianSyntax` call rather than removing it — both
-strips apply, in this order: GOALS/WEAKPOINTS removed first, then Obsidian syntax flattened on what remains.)
+(This composes with the already-shipped `stripObsidianSyntax` call rather than removing it — both strips
+apply, in this order: GOALS/WEAKPOINTS removed first, then Obsidian syntax flattened on what remains.)
 
 - [ ] **Step 4: Run to verify pass**
 
 Run: `npx vitest run lib/kb-loader.test.ts`
-Expected: all passing (including the concurrent session's own tests, untouched).
+Expected: all passing (including the existing `stripObsidianSyntax` tests, untouched).
 
 - [ ] **Step 5: Inject `goalsContext`/`weakpointsContext` into the generation prompt**
 
