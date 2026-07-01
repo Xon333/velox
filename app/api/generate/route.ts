@@ -196,6 +196,15 @@ export async function POST(req: Request) {
       ? `\nCARRY-FORWARD (quality the athlete had to drop last block with no make-up slot — re-prioritise): ${currentBlock.deferredQuality.join("; ")}.`
       : "";
 
+    // Goals/Weakpoints centralization: the athlete's live, JSON-sourced goals/weakpoints — replaces the
+    // now-stripped raw markdown copy (see stripGoalsWeakpointsSections) so generation never sees stale data.
+    const goalsContext = profile.goals.length > 0
+      ? `\nGOALS\n${profile.goals.map((g) => `- ${g.goal}${g.target ? ` → ${g.target}` : ""}`).join("\n")}`
+      : "";
+    const weakpointsContext = profile.weakpoints.length > 0
+      ? `\nWEAKPOINTS TO ADDRESS\n${profile.weakpoints.map((w) => `- ${w.weakpoint}${w.detail ? `: ${w.detail}` : ""}`).join("\n")}`
+      : "";
+
     // Macro periodization (MACRO-3): re-plan the arc from current fitness, then hand the generator the
     // current focus period as context. Best-effort — a failure here must never block generation.
     let seasonContext = "";
@@ -241,7 +250,7 @@ export async function POST(req: Request) {
     // don't invalidate the cached prefix.
     const { cached, dynamic } = buildSystemPrompt(
       kbContext,
-      seedsContext + reflectionsContext + stateContext + directivesContext + quirkContext + powerProfileContext + formFuelContext + sessionReqContext + durabilityContext + deferredContext + seasonContext,
+      seedsContext + reflectionsContext + stateContext + directivesContext + quirkContext + powerProfileContext + formFuelContext + sessionReqContext + durabilityContext + deferredContext + goalsContext + weakpointsContext + seasonContext,
       buildAthleteDataSection(profile, sync, zonesText),
       blockParams
     );

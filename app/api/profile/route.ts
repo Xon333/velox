@@ -67,6 +67,9 @@ export async function GET() {
 
   return NextResponse.json({
     nutrition: profile.nutrition,
+    goals: profile.goals,
+    weakpoints: profile.weakpoints,
+    goalsMigratedAt: profile.goalsMigratedAt,
     ftpStaleDays: Number.isFinite(ftpStaleDays) ? ftpStaleDays : null,
     physiologyChange,
     physiologySource: physStore?.current.source ?? null,
@@ -105,8 +108,8 @@ export async function GET() {
   });
 }
 
-// PUT only saves nutrition settings — performance/goals/weakpoints live in athlete_profile.md
-// and are edited there via the Knowledge Base manager.
+// PUT saves nutrition and/or goals/weakpoints (Goals/Weakpoints centralization) — any of the three
+// top-level keys may be present; each is validated and applied independently.
 export async function PUT(req: Request) {
   let body: unknown;
   try {
@@ -114,31 +117,62 @@ export async function PUT(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
-  const input = body && typeof body === "object"
-    ? (body as Record<string, unknown>).nutrition as Record<string, unknown> | undefined
-    : undefined;
-  if (!input) return NextResponse.json({ error: "Missing nutrition." }, { status: 400 });
+  const b = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const current = await readAthleteProfile();
+  let updated = { ...current, updatedAt: new Date().toISOString() };
 
-  const { baseCalories, restDayTarget, buffer, targetWeightKg } = input;
-  const pos = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v > 0;
-  if (!pos(baseCalories)) return NextResponse.json({ error: "baseCalories must be a positive number." }, { status: 400 });
-  if (!pos(restDayTarget)) return NextResponse.json({ error: "restDayTarget must be a positive number." }, { status: 400 });
-  if (!pos(targetWeightKg)) return NextResponse.json({ error: "targetWeightKg must be a positive number." }, { status: 400 });
-  if (typeof buffer !== "number" || !Number.isFinite(buffer) || buffer < 0 || buffer > 600) {
-    return NextResponse.json({ error: "buffer must be between 0 and 600 kcal." }, { status: 400 });
+  if (b.nutrition !== undefined) {
+    const input = b.nutrition as Record<string, unknown>;
+    const { baseCalories, restDayTarget, buffer, targetWeightKg } = input;
+    const pos = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v > 0;
+    if (!pos(baseCalories)) return NextResponse.json({ error: "baseCalories must be a positive number." }, { status: 400 });
+    if (!pos(restDayTarget)) return NextResponse.json({ error: "restDayTarget must be a positive number." }, { status: 400 });
+    if (!pos(targetWeightKg)) return NextResponse.json({ error: "targetWeightKg must be a positive number." }, { status: 400 });
+    if (typeof buffer !== "number" || !Number.isFinite(buffer) || buffer < 0 || buffer > 600) {
+      return NextResponse.json({ error: "buffer must be between 0 and 600 kcal." }, { status: 400 });
+    }
+    updated = {
+      ...updated,
+      nutrition: {
+        baseCalories: baseCalories as number,
+        restDayTarget: restDayTarget as number,
+        buffer: buffer as number,
+        targetWeightKg: targetWeightKg as number,
+      },
+    };
   }
 
-  const current = await readAthleteProfile();
-  const updated = {
-    ...current,
-    nutrition: {
-      baseCalories: baseCalories as number,
-      restDayTarget: restDayTarget as number,
-      buffer: buffer as number,
-      targetWeightKg: targetWeightKg as number,
-    },
-    updatedAt: new Date().toISOString(),
-  };
+  const VALID_FOCUS = new Set(["aerobic-base", "threshold", "vo2max", "anaerobic", "durability", "sharpen", "general"]);
+
+  if (b.goals !== undefined) {
+    if (!Array.isArray(b.goals)) return NextResponse.json({ error: "goals must be an array." }, { status: 400 });
+    const goals: typeof updated.goals = [];
+    for (const g of b.goals) {
+      if (!g || typeof g !== "object") return NextResponse.json({ error: "Each goal must be an object." }, { status: 400 });
+      const rec = g as Record<string, unknown>;
+      const goal = typeof rec.goal === "string" ? rec.goal.trim() : "";
+      const target = typeof rec.target === "string" ? rec.target.trim() : "";
+      const focus = typeof rec.focus === "string" && VALID_FOCUS.has(rec.focus) ? (rec.focus as typeof goals[number]["focus"]) : "general";
+      if (!goal) return NextResponse.json({ error: "Goal text is required." }, { status: 400 });
+      goals.push({ goal, target, focus });
+    }
+    updated = { ...updated, goals };
+  }
+
+  if (b.weakpoints !== undefined) {
+    if (!Array.isArray(b.weakpoints)) return NextResponse.json({ error: "weakpoints must be an array." }, { status: 400 });
+    const weakpoints: typeof updated.weakpoints = [];
+    for (const w of b.weakpoints) {
+      if (!w || typeof w !== "object") return NextResponse.json({ error: "Each weakpoint must be an object." }, { status: 400 });
+      const rec = w as Record<string, unknown>;
+      const weakpoint = typeof rec.weakpoint === "string" ? rec.weakpoint.trim() : "";
+      const detail = typeof rec.detail === "string" ? rec.detail.trim() : "";
+      if (!weakpoint) return NextResponse.json({ error: "Weakpoint text is required." }, { status: 400 });
+      weakpoints.push({ weakpoint, detail });
+    }
+    updated = { ...updated, weakpoints };
+  }
+
   await writeAthleteProfile(updated);
-  return NextResponse.json({ nutrition: updated.nutrition });
+  return NextResponse.json({ nutrition: updated.nutrition, goals: updated.goals, weakpoints: updated.weakpoints });
 }

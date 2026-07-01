@@ -248,6 +248,19 @@ export async function writeKnowledgeFile(name: string, content: string): Promise
   await fs.writeFile(path.join(KB_DIR, name), content, "utf-8");
 }
 
+// Strip the GOALS/WEAKPOINTS sections from athlete_profile.md's raw text before it's inlined into the
+// generation prompt (Goals/Weakpoints centralization): those sections are now stale/historical — the
+// athlete's live data lives in AthleteProfile.goals/weakpoints and is injected separately as
+// goalsContext/weakpointsContext (app/api/generate/route.ts) — so the raw markdown copy must never leak
+// a frozen snapshot into generation. Same "next top-level heading or EOF" boundary as the Related-notes
+// footer stripping.
+export function stripGoalsWeakpointsSections(content: string): string {
+  return content
+    .replace(/\n+## +GOALS\b[\s\S]*?(?=\n## |$)/, "")
+    .replace(/\n+## +WEAKPOINTS\b[\s\S]*?(?=\n## |$)/, "")
+    .trim();
+}
+
 // Strip Obsidian-only navigation syntax before the KB goes into the generation
 // prompt: the `## Related notes` footers and `[[wikilinks]]` exist for the human
 // browsing the vault in Obsidian and carry no signal for the LLM, so we drop the
@@ -279,7 +292,10 @@ export async function loadKnowledgeBaseContext(): Promise<string> {
   const sections: string[] = [];
   for (const file of ordered) {
     const content = await readKbWithFallback(file);
-    if (content !== null) sections.push(`===== FILE: ${file} =====\n\n${stripObsidianSyntax(content)}`);
+    if (content !== null) {
+      const stripped = file === "athlete_profile.md" ? stripGoalsWeakpointsSections(content) : content;
+      sections.push(`===== FILE: ${file} =====\n\n${stripObsidianSyntax(stripped)}`);
+    }
   }
   return sections.join("\n\n");
 }
