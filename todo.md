@@ -14,6 +14,16 @@ P2 high-value UX/feature · P3 polish/education · Type: `bug` `ux` `feat` `audi
 
 ## Open
 
+- ☐ P2 `feat` **Season/block goals-flow — ready to execute.** Approved 3-spec design (Goals/Weakpoints off
+  markdown into a JSON form, Season→Block hierarchy, block-completion prompt) with a full 6-task plan
+  written and reviewed — no build started yet. To resume in a fresh session: *"Use subagent-driven-development
+  to execute [2026-07-01-season-block-goals-flow.md](docs/superpowers/plans/2026-07-01-season-block-goals-flow.md)."*
+  Specs: [goals-weakpoints-centralization](docs/superpowers/specs/2026-07-01-goals-weakpoints-centralization-design.md) ·
+  [season-block-hierarchy](docs/superpowers/specs/2026-07-01-season-block-hierarchy-design.md) ·
+  [block-completion-prompt](docs/superpowers/specs/2026-07-01-block-completion-prompt-design.md).
+  Note: Task 1 touches `lib/kb-loader.ts` — re-check `git status --short` first, a concurrent session was
+  mid-edit there when this was written (2026-07-01); the plan's Global Constraints section has the resolution.
+
 _FB-2026-06-30 (Today + Profile sweep) + the EA→CoachSnapshot wire-up shipped → [ARCHIVE.md](ARCHIVE.md)._
 
 **EC-2026-06-27 — edge-case sweep (EA/baseline tiles + a read-audit of the off-plan-aerobic & durability
