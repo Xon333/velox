@@ -266,6 +266,32 @@ export function validateSeasonFit(days: PlannedDay[], period: FocusPeriod, ftp: 
   return warnings;
 }
 
+const FOCUS_LABEL: Record<SeasonFocus, string> = {
+  "aerobic-base": "Aerobic", threshold: "Threshold", vo2max: "VO2max", anaerobic: "Anaerobic", durability: "Durability", sharpen: "Sharpen",
+};
+
+// Pure view-model for the /plan roadmap stepper. Status mirrors currentPeriod's straddling
+// definition (periodEnd(p) <= today → done; p.startDate <= today → current; else upcoming).
+export function roadmapView(plan: SeasonPlan, today: string): {
+  focus: SeasonFocus;
+  phase: SeasonPhase;
+  label: string;
+  weeks: number;
+  status: "done" | "current" | "upcoming";
+  deloadWeek: boolean;
+  targetWeeklyTss: number | null;
+}[] {
+  return plan.periods.map((p) => ({
+    focus: p.focus,
+    phase: p.phase,
+    label: FOCUS_LABEL[p.focus],
+    weeks: p.plannedWeeks,
+    deloadWeek: p.deloadWeek,
+    targetWeeklyTss: p.targetWeeklyTss,
+    status: (periodEnd(p) <= today ? "done" : p.startDate <= today ? "current" : "upcoming") as "done" | "current" | "upcoming",
+  }));
+}
+
 // Pure input validator for PUT /api/season (athlete-owned fields only — periods stay engine-drafted).
 // Mirrors parseBlockParams' style: returns the parsed object, or a string error message on invalid input.
 export function validateSeasonPlanInput(body: unknown): { objective: string; events: SeasonEvent[] } | string {

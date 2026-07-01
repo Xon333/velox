@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, replanSeasonArc, currentPeriod, formatSeasonContext, validateSeasonFit, validateSeasonPlanInput, type SeasonDraftInput } from "./season";
+import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, replanSeasonArc, currentPeriod, formatSeasonContext, validateSeasonFit, validateSeasonPlanInput, roadmapView, type SeasonDraftInput } from "./season";
 import type { SeasonPlan, PlannedDay } from "./types";
 
 describe("season constants + helpers", () => {
@@ -206,6 +206,18 @@ describe("season context + fit validation", () => {
       { date: "2026-07-02", weekNumber: 1, weekTheme: "", name: "Z2", type: "Z2", durationMin: 60, workoutText: "", description: "" },
     ];
     expect(validateSeasonFit(days, base, 280).length).toBeGreaterThan(0);
+  });
+});
+
+describe("roadmapView", () => {
+  it("marks done / current / upcoming by date", () => {
+    const periods = [
+      { focus: "aerobic-base" as const, phase: "base" as const, startDate: "2026-06-01", plannedWeeks: 3, intensitySplit: "90/10", targetWeeklyTss: 380, deloadWeek: false, rationale: "", source: "derived" as const, confidence: "medium" as const },
+      { focus: "vo2max" as const, phase: "build" as const, startDate: "2026-06-29", plannedWeeks: 4, intensitySplit: "80/20", targetWeeklyTss: 450, deloadWeek: false, rationale: "", source: "derived" as const, confidence: "high" as const },
+      { focus: "durability" as const, phase: "build" as const, startDate: "2026-07-27", plannedWeeks: 3, intensitySplit: "80/20", targetWeeklyTss: 470, deloadWeek: false, rationale: "", source: "derived" as const, confidence: "high" as const },
+    ];
+    const v = roadmapView(planWith(periods), "2026-07-01");
+    expect(v.map((x) => x.status)).toEqual(["done", "current", "upcoming"]);
   });
 });
 

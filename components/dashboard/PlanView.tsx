@@ -8,6 +8,7 @@ import type { BlockHistoryEntry, CurrentBlock, GeneratedPlan, WriteResult } from
 import { useSync } from "../SyncProvider";
 import PlanPreview from "../PlanPreview";
 import RescheduleBanner from "../RescheduleBanner";
+import SeasonRoadmap from "../SeasonRoadmap";
 import BlockGenerator from "./BlockGenerator";
 import {
   BlockHistory,
@@ -180,6 +181,7 @@ export default function PlanView() {
 
   return (
     <div className="space-y-3">
+      <SeasonRoadmap />
       <RescheduleBanner />
       <RetroSection
         block={state.currentBlock}

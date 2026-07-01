@@ -1,0 +1,62 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { api } from "@/lib/client-api";
+import { localToday } from "@/lib/date";
+import { roadmapView } from "@/lib/season";
+import type { SeasonPlan } from "@/lib/types";
+
+const FOCUS_COLOR: Record<string, string> = {
+  Aerobic: "#00d4ff", Threshold: "#f5a623", VO2max: "#ff49c8", Anaerobic: "#a06bff", Durability: "#38d39f", Sharpen: "#7fd8ea",
+};
+
+// Season roadmap stepper for /plan (MACRO-UI, Task 10): a compact strip of done/current/upcoming
+// focus-period cards plus a flag for the next upcoming event. Withholds entirely (no error UI) when
+// there's no season plan yet or it has zero periods — mirrors this codebase's other best-effort tiles.
+export default function SeasonRoadmap() {
+  const [plan, setPlan] = useState<SeasonPlan | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { plan } = await api<{ plan: SeasonPlan }>("/api/season");
+        if (!cancelled) setPlan(plan);
+      } catch { /* season is optional context */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!plan || plan.periods.length === 0) return null;
+  const today = localToday();
+  const view = roadmapView(plan, today);
+  const nextEvent = plan.events.filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0] ?? null;
+
+  return (
+    <section className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Season</h2>
+        <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{plan.objective || "get faster"}</span>
+      </div>
+      <div className="flex gap-2 overflow-x-auto">
+        {view.map((p, i) => (
+          <div key={i} className={`min-w-0 flex-1 rounded-md border px-2.5 py-2 ${p.status === "current" ? "border-[#ff49c8] shadow-[0_0_0_1px_#ff49c8]" : "border-zinc-200 dark:border-zinc-700"} ${p.status === "done" ? "opacity-55" : ""}`}>
+            <p className="text-[8px] font-bold uppercase tracking-wide" style={{ color: FOCUS_COLOR[p.label] }}>
+              {p.status === "done" ? "✓ " : p.status === "current" ? "● " : "○ "}{p.phase}
+            </p>
+            <p className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-100">{p.label}</p>
+            <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+              {p.deloadWeek ? "deload · " : ""}{p.weeks} wk{p.targetWeeklyTss != null ? ` · ${p.targetWeeklyTss} TSS/wk` : ""}
+            </p>
+          </div>
+        ))}
+        {nextEvent && (
+          <div className="flex min-w-[64px] flex-col items-center justify-center rounded-md border border-[#ffcf4d] bg-[#ffcf4d]/10 px-2 py-2 text-center">
+            <span className="text-base leading-none">🏁</span>
+            <span className="mt-1 text-[9px] font-bold text-[#b8952f] dark:text-[#ffcf4d]">{nextEvent.name}</span>
+            <span className="text-[9px] text-zinc-500 dark:text-zinc-400">{nextEvent.date.slice(5)}</span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
