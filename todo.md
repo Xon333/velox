@@ -21,8 +21,6 @@ P2 high-value UX/feature · P3 polish/education · Type: `bug` `ux` `feat` `audi
   Specs: [goals-weakpoints-centralization](docs/superpowers/specs/2026-07-01-goals-weakpoints-centralization-design.md) ·
   [season-block-hierarchy](docs/superpowers/specs/2026-07-01-season-block-hierarchy-design.md) ·
   [block-completion-prompt](docs/superpowers/specs/2026-07-01-block-completion-prompt-design.md).
-  Note: Task 1 touches `lib/kb-loader.ts` — re-check `git status --short` first, a concurrent session was
-  mid-edit there when this was written (2026-07-01); the plan's Global Constraints section has the resolution.
 
 _FB-2026-06-30 (Today + Profile sweep) + the EA→CoachSnapshot wire-up shipped → [ARCHIVE.md](ARCHIVE.md)._
 
