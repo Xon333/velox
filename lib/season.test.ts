@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, replanSeasonArc, type SeasonDraftInput } from "./season";
-import type { SeasonPlan } from "./types";
+import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, replanSeasonArc, currentPeriod, formatSeasonContext, validateSeasonFit, type SeasonDraftInput } from "./season";
+import type { SeasonPlan, PlannedDay } from "./types";
 
 describe("season constants + helpers", () => {
   it("encodes the KB deload cadence (3:1 default, 2:1 tight)", () => {
@@ -185,5 +185,26 @@ describe("replanSeasonArc", () => {
     const second = replanSeasonArc(first, baseInput(), achieved, "2026-07-01");
     const preserved = second.periods.find((p) => p.startDate === "2026-06-22")!;
     expect(preserved).toEqual(current);
+  });
+});
+
+describe("season context + fit validation", () => {
+  const cur = { focus: "vo2max" as const, phase: "build" as const, startDate: "2026-06-29", plannedWeeks: 4, intensitySplit: "80/20", targetWeeklyTss: 450, deloadWeek: false, rationale: "", source: "derived" as const, confidence: "high" as const };
+  it("formats a one-line season context for the prompt", () => {
+    const line = formatSeasonContext(planWith([cur]), "2026-07-01")!;
+    expect(line).toContain("SEASON CONTEXT");
+    expect(line).toContain("vo2max");
+    expect(line).toContain("450");
+  });
+  it("returns null when the plan has no current period", () => {
+    expect(formatSeasonContext(planWith([]), "2026-07-01")).toBeNull();
+  });
+  it("warns when a base period's block is too hard", () => {
+    const base = { ...cur, focus: "aerobic-base" as const, phase: "base" as const, intensitySplit: "90/10" };
+    const days: PlannedDay[] = [
+      { date: "2026-07-01", weekNumber: 1, weekTheme: "", name: "VO2", type: "VO2max", durationMin: 60, workoutText: "", description: "" },
+      { date: "2026-07-02", weekNumber: 1, weekTheme: "", name: "Z2", type: "Z2", durationMin: 60, workoutText: "", description: "" },
+    ];
+    expect(validateSeasonFit(days, base, 280).length).toBeGreaterThan(0);
   });
 });

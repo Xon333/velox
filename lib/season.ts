@@ -1,6 +1,6 @@
 // Macro periodization engine (MACRO-1..3). Pure + deterministic: drafts a rough, rolling season arc of
 // limiter-focus periods, grounded in the knowledge base. The LLM only phrases FocusPeriod.rationale.
-import type { FocusPeriod, SeasonEvent, SeasonFocus, SeasonPhase, SeasonPlan } from "./types";
+import type { FocusPeriod, PlannedDay, SeasonEvent, SeasonFocus, SeasonPhase, SeasonPlan } from "./types";
 import { DEFAULT_ACWR_BANDS } from "./calibration";
 
 // KB-grounded (cycling_database.md Annual Periodisation Framework + training_knowledge.md). Mode-C focus
@@ -232,4 +232,36 @@ export function applyDeloadCadence(periods: FocusPeriod[], tight: boolean): Focu
     }
     return { ...p, deloadWeek: false };
   });
+}
+
+// The period straddling `today` (started, not yet ended) — same definition replanSeasonArc uses for
+// its "current" bucket. Null when the plan has no period covering today (e.g. an empty/stale plan).
+export function currentPeriod(plan: SeasonPlan, today: string): FocusPeriod | null {
+  return plan.periods.find((p) => p.startDate <= today && periodEnd(p) > today) ?? null;
+}
+
+// One-line, prompt-injectable summary of where the athlete sits in the season arc right now. Null
+// when there's no current period (nothing to inject). Task 9 folds this into the generate prompt.
+export function formatSeasonContext(plan: SeasonPlan, today: string): string | null {
+  const p = currentPeriod(plan, today);
+  if (!p) return null;
+  const wk = Math.max(1, weeksBetween(p.startDate, today) + 1);
+  const load = p.targetWeeklyTss != null ? ` · target ~${p.targetWeeklyTss} TSS/wk` : "";
+  const deload = p.deloadWeek ? " · deload week" : "";
+  return `SEASON CONTEXT: phase ${p.phase} · focus ${p.focus} · wk ${wk} of ${p.plannedWeeks}${load}${deload}. ${p.rationale}`;
+}
+
+// Non-blocking warnings, mirroring validateSchedule/validateNutrition. A base period should skew easy;
+// flag a block whose hard-session share contradicts the period's intensity intent.
+export function validateSeasonFit(days: PlannedDay[], period: FocusPeriod, ftp: number): string[] {
+  void ftp;
+  const warnings: string[] = [];
+  const rides = days.filter((d) => d.type !== "Rest" && d.type !== "Strength");
+  if (rides.length === 0) return warnings;
+  const HARD = new Set(["Threshold", "VO2max", "SIT", "RaceSim"]);
+  const hardShare = rides.filter((d) => HARD.has(d.type)).length / rides.length;
+  if (period.phase === "base" && hardShare > 0.2) {
+    warnings.push(`Season fit: this is a base/aerobic period (${period.intensitySplit}), but ${Math.round(hardShare * 100)}% of sessions are hard — expected mostly Z2.`);
+  }
+  return warnings;
 }
