@@ -238,6 +238,27 @@ export async function writeKnowledgeFile(name: string, content: string): Promise
   await fs.writeFile(path.join(KB_DIR, name), content, "utf-8");
 }
 
+// Strip Obsidian-only navigation syntax before the KB goes into the generation
+// prompt: the `## Related notes` footers and `[[wikilinks]]` exist for the human
+// browsing the vault in Obsidian and carry no signal for the LLM, so we drop the
+// footers entirely and flatten any inline wikilink to its readable display text
+// (alias if present, else the section name, else the target). Saves prompt tokens
+// and keeps the wikilinks from leaking into generated copy.
+export function stripObsidianSyntax(content: string): string {
+  return content
+    // Drop the Related-notes footer (and the `---` rule preceding it) through the
+    // next top-level heading or end of file.
+    .replace(/\n+(?:---\s*\n+)?## +Related notes\b[\s\S]*?(?=\n## |$)/g, "")
+    // Flatten remaining inline wikilinks to plain text.
+    .replace(/\[\[([^\]]+)\]\]/g, (_match, inner: string) => {
+      const [link, alias] = inner.split("|");
+      if (alias) return alias.trim();
+      const hashIdx = link.indexOf("#");
+      return (hashIdx >= 0 ? link.slice(hashIdx + 1) : link).trim();
+    })
+    .trim();
+}
+
 // Full knowledge base as one string for prompt injection, each file prefixed
 // with its filename as a section header.
 export async function loadKnowledgeBaseContext(): Promise<string> {
@@ -248,7 +269,7 @@ export async function loadKnowledgeBaseContext(): Promise<string> {
   const sections: string[] = [];
   for (const file of ordered) {
     const content = await readKbWithFallback(file);
-    if (content !== null) sections.push(`===== FILE: ${file} =====\n\n${content.trim()}`);
+    if (content !== null) sections.push(`===== FILE: ${file} =====\n\n${stripObsidianSyntax(content)}`);
   }
   return sections.join("\n\n");
 }
@@ -351,6 +372,16 @@ ${list(profile.weakpoints)}
 - Rest day target: ${n.restDayTarget} kcal
 - Training day buffer: ${n.buffer} kcal (auto-adjusts ±150 kcal on 7-day weight trend, capped 0–600)
 - Daily targets are computed by the app's deterministic formula: base + activity kJ + buffer on training days, flat target on rest days. Use the pre-computed values supplied with each generation request — never recalculate them.
+
+---
+
+## Related notes
+
+This profile is the athlete-specific anchor; the knowledge files supply the general principles calibrated against it (stripped from the generation prompt — for navigating the Obsidian vault):
+
+- [[cycling_database]] — foundational zones, FTP, periodisation, weekly structure, recovery, strength.
+- [[training_knowledge]] — advanced training that targets the weakpoints above ([[training_knowledge#5. FTP PLATEAU DIAGNOSIS|FTP plateau]], [[training_knowledge#4. SPRINT INTERVAL TRAINING (SIT)|sprint]], [[training_knowledge#12. DURABILITY TEMPLATES|durability]]).
+- [[nutrition_knowledge]] — advanced fuelling ([[nutrition_knowledge#1. FUEL FOR THE WORK REQUIRED (FFTWR)|fuel for the work required]], protein distribution).
 `;
 }
 
