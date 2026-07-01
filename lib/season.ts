@@ -280,6 +280,7 @@ export function roadmapView(plan: SeasonPlan, today: string): {
   status: "done" | "current" | "upcoming";
   deloadWeek: boolean;
   targetWeeklyTss: number | null;
+  startDate: string;
 }[] {
   return plan.periods.map((p) => ({
     focus: p.focus,
@@ -289,6 +290,7 @@ export function roadmapView(plan: SeasonPlan, today: string): {
     deloadWeek: p.deloadWeek,
     targetWeeklyTss: p.targetWeeklyTss,
     status: (periodEnd(p) <= today ? "done" : p.startDate <= today ? "current" : "upcoming") as "done" | "current" | "upcoming",
+    startDate: p.startDate,
   }));
 }
 

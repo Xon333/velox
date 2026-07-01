@@ -208,7 +208,8 @@ export async function POST(req: Request) {
       // Preserve the athlete's owned objective/events (Task 8 PUT); the engine only re-drafts `periods`.
       const replanned = replanSeasonArc(
         existingSeason,
-        { objective: existingSeason.objective, events: existingSeason.events, ctl: sync?.fitness.ctl ?? null, ftp: profile.performance.ftp, recentWeeklyTss: baselines.avgTss90d != null ? Math.round(baselines.avgTss90d * 7) : null, limiter, recentFocuses: [], heavyFatigue: !!(signals.loadRamp?.triggered) },
+        { objective: existingSeason.objective, events: existingSeason.events, ctl: sync?.fitness.ctl ?? null, ftp: profile.performance.ftp, recentWeeklyTss: baselines.avgTss90d != null ? Math.round(baselines.avgTss90d * 7) : null, limiter, recentFocuses: [], // ignored — replanSeasonArc derives this itself from the plan's frozen+current periods
+          heavyFatigue: !!(signals.loadRamp?.triggered) },
         () => null,
         today
       );

@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import { localToday } from "@/lib/date";
 import { roadmapView } from "@/lib/season";
-import type { SeasonPlan } from "@/lib/types";
+import type { SeasonFocus, SeasonPlan } from "@/lib/types";
 
-const FOCUS_COLOR: Record<string, string> = {
-  Aerobic: "#00d4ff", Threshold: "#f5a623", VO2max: "#ff49c8", Anaerobic: "#a06bff", Durability: "#38d39f", Sharpen: "#7fd8ea",
+const FOCUS_COLOR: Record<SeasonFocus, string> = {
+  "aerobic-base": "#00d4ff", threshold: "#f5a623", vo2max: "#ff49c8", anaerobic: "#a06bff", durability: "#38d39f", sharpen: "#7fd8ea",
 };
 
 // Season roadmap stepper for /plan (MACRO-UI, Task 10): a compact strip of done/current/upcoming
@@ -38,9 +38,9 @@ export default function SeasonRoadmap() {
         <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{plan.objective || "get faster"}</span>
       </div>
       <div className="flex gap-2 overflow-x-auto">
-        {view.map((p, i) => (
-          <div key={i} className={`min-w-0 flex-1 rounded-md border px-2.5 py-2 ${p.status === "current" ? "border-[#ff49c8] shadow-[0_0_0_1px_#ff49c8]" : "border-zinc-200 dark:border-zinc-700"} ${p.status === "done" ? "opacity-55" : ""}`}>
-            <p className="text-[8px] font-bold uppercase tracking-wide" style={{ color: FOCUS_COLOR[p.label] }}>
+        {view.map((p) => (
+          <div key={`${p.focus}-${p.startDate}`} className={`min-w-0 flex-1 rounded-md border px-2.5 py-2 ${p.status === "current" ? "border-[#ff49c8] shadow-[0_0_0_1px_#ff49c8]" : "border-zinc-200 dark:border-zinc-700"} ${p.status === "done" ? "opacity-55" : ""}`}>
+            <p className="text-[8px] font-bold uppercase tracking-wide" style={{ color: FOCUS_COLOR[p.focus] }}>
               {p.status === "done" ? "✓ " : p.status === "current" ? "● " : "○ "}{p.phase}
             </p>
             <p className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-100">{p.label}</p>
