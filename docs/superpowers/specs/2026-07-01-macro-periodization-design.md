@@ -1,7 +1,7 @@
 # Macro Periodization & Season Scope — Design
 
 **Date:** 2026-07-01
-**Status:** Approved design (pre-implementation)
+**Status:** ✅ Shipped 2026-07-01 (MACRO-1/2/3) — see [ARCHIVE.md](../../../ARCHIVE.md)
 **ROADMAP:** audit P4 · `MACRO-1/2/3` · ties `6a` `§7` `#4` `#2`; synergy with `SUB-1` (not a blocker)
 
 ---

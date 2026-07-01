@@ -130,7 +130,8 @@ store). Each file has one responsibility:
 
 | File | Owner module | Contents |
 |---|---|---|
-| `athlete.json` | data-store | Nutrition settings + non-synced profile defaults |
+| `athlete.json` | data-store | Nutrition settings + non-synced profile defaults + `goals`/`weakpoints` (structured, editable on `/profile`) |
+| `season-plan.json` | data-store | `SeasonPlan`: athlete's objective + target events + the macro-periodization engine's derived focus periods (see "Season & macro-periodization" below) |
 | `physiology.json` | physiology | **Source of truth** for FTP, zones, threshold/max HR — effective-dated |
 | `last-sync.json` | data-store | Cached raw Intervals.icu pull (~6-month / 182-day window) |
 | `current-block.json` | data-store | The active training block (frozen prescriptions) |
@@ -161,11 +162,19 @@ The core principle is a strict split between **two kinds of memory**, treated op
 
 | | **Durable intent** (manual) | **Synced physiology** (computed) |
 |---|---|---|
-| Examples | goals, weakpoints, personal data, all-time PRs, coaching notes | FTP, power/HR zones, weight, CTL/ATL/TSB |
+| Examples | goals, weakpoints, season objective/events, personal data, all-time PRs, coaching notes | FTP, power/HR zones, weight, CTL/ATL/TSB |
 | Owner | the athlete | Intervals.icu (one-way pull) |
-| Home | `knowledge-base/athlete_profile.md` | `data/physiology.json` |
+| Home | `data/athlete.json` (goals/weakpoints) · `data/season-plan.json` (objective/events) · `knowledge-base/athlete_profile.md` (PRs, notes) | `data/physiology.json` |
+| Edited via | `/profile` forms (add/edit/delete) | never hand-edited; always reconciled to source |
 | Nature | slow-changing, non-computable | time-varying, must be effective-dated |
 | Rule | the **only** thing typed by hand | never hand-edited; always reconciled to source |
+
+Goals/weakpoints used to live only in hand-edited `athlete_profile.md` tables — that's gone. They're
+now structured `AthleteProfile.goals`/`weakpoints` (`{goal, target, focus}` / `{weakpoint, detail}`),
+edited through a real add/edit/delete form on `/profile`, with a one-time migration that seeded them
+from whatever was in the markdown file the first time this shipped. `focus` (a `SeasonFocus` tag or
+`"general"`) is what lets the block generator narrow the goal pre-fill to the season's current focus
+(see "Season & macro-periodization" below).
 
 ### Knowledge base (`knowledge-base/*.md`)
 
@@ -174,19 +183,23 @@ the very next block. `lib/kb-loader.ts` concatenates them into the prompt contex
 
 - `cycling_database.md`, `training_knowledge.md`, `nutrition_knowledge.md` — reference
   knowledge (training science, fueling), injected verbatim into generation.
-- `athlete_profile.md` — **manual input only.** Personal data, all-time power PRs, weakpoints,
-  goals, and coaching notes. FTP, zones, weight and the rolling power curve are *not* stored
-  here — the file header and the in-app Knowledge editor both flag this explicitly so a new
-  editor never confuses what is synced from where.
+- `athlete_profile.md` — **manual input only.** Personal data, all-time power PRs, and coaching
+  notes. Goals and weakpoints used to live here too but are now edited on `/profile` (above) —
+  this file's GOALS/WEAKPOINTS tables are stripped before the prompt sees them
+  (`stripGoalsWeakpointsSections`) so a stale markdown copy can never leak alongside the live
+  JSON data. FTP, zones, weight and the rolling power curve are *not* stored here — the file
+  header flags this explicitly so a new editor never confuses what is synced from where.
 - `block-retrospectives/` — one markdown file per completed block. Not injected wholesale; only
   the latest file's `next_block_seeds:` list flows into the next generation.
 
 ### Ingesting non-computable data
 
-`parseAthleteMd()` extracts the structured tables (goals, weakpoints, PRs) from
-`athlete_profile.md`. These feed two places: the prompt's `BLOCK PARAMETERS` /
-knowledge-base context, and the Profile UI. Because they are intent (not measurements), they
-are never reconciled or recomputed — they change only when the athlete edits the file.
+`parseAthleteMd()` extracts the remaining structured tables (all-time PRs) from
+`athlete_profile.md`. Goals/weakpoints are no longer parsed from markdown at read time — they live
+in `athlete.json`, injected into generation as `goalsContext`/`weakpointsContext`
+(`app/api/generate/route.ts`) and read straight from `/api/profile` by the Profile form. Because
+they are intent (not measurements), none of this is ever reconciled or recomputed — it changes only
+when the athlete edits it.
 
 ---
 
@@ -349,7 +362,49 @@ in-progress week's running totals are always misleadingly low, so it's dropped u
 
 ---
 
-## 5. Streamlined block-creation workflow
+## 5. Season & macro-periodization
+
+Below the block sits one more layer: **Season** is the general "why" (the objective, target events,
+and a rolling macrocycle of focus periods); **Block** is the specific "what" (2–8 weeks of prescribed
+sessions), now generated *informed by* the season rather than in isolation.
+
+```ts
+SeasonPlan { objective: string; events: SeasonEvent[]; periods: FocusPeriod[]; updatedAt }
+FocusPeriod {
+  focus: SeasonFocus;        // aerobic-base | threshold | vo2max | anaerobic | durability | sharpen
+  phase: "base" | "build" | "peak" | "taper";
+  startDate: string; plannedWeeks: number; deloadWeek: boolean;
+  intensitySplit: string; targetWeeklyTss: number | null; rationale: string;
+  source: "derived" | "override"; confidence: "low" | "medium" | "high";
+}
+```
+
+`lib/season.ts` runs two macro-periodization modes, chosen by whether the athlete has a future
+A/B/C-priority event on their season:
+
+- **Mode C — rolling cycle (the live default).** No event on the calendar → a repeating
+  base→build→realize cycle (`replanSeasonArc`), with deload cadence and an ACWR-capped load ramp
+  between periods. This is what runs today for every athlete without a race entered.
+- **Event-anchored mode (built, dormant).** A future event schedules *backward* from its date —
+  taper → peak → build. Fully built and tested, but nothing writes a `SeasonEvent` until the
+  athlete adds one on `/profile`'s Season section (objective field + add/edit/delete event list,
+  `PUT /api/season`) — it activates automatically the moment a future A-event exists.
+
+**Feeding the block generator.** `POST /api/generate` re-plans the arc (`replanSeasonArc` +
+`validateSeasonFit`) and folds a one-line `SEASON CONTEXT` (objective + phase + focus + week-of +
+rationale, `formatSeasonContext`) into the prompt. On `/plan`, `suggestedBlockWeeks` pre-fills the
+generator's length selector (now **2/4/6/8** weeks, not just 2/4) by ceiling-rounding the current
+period's remaining weeks; `filterGoalsByFocus` narrows the goal textarea pre-fill to goals tagged
+with the period's current focus plus every `"general"`-tagged goal — both are pre-fills the athlete
+can still freely override before generating, never locked.
+
+**Block-completion prompt.** Once a block's `endDate` has passed, `/today`'s planned-session card
+proactively nudges the athlete to generate the next one (`isBlockFinished`, a pure date check) —
+instead of silently sitting on stale "no session planned" copy until they happen to notice.
+
+---
+
+## 6. Streamlined block-creation workflow
 
 The legacy workflow required hand-editing FTP and zone tables in `athlete_profile.md` before
 generating. That is gone: physiology is synced and injected automatically, so block creation is
@@ -357,7 +412,8 @@ a minimal, utilitarian loop with no manual markdown step.
 
 ```
 1. Sync        POST /api/sync → fresh activities + reconciled physiology + re-scored ledger
-2. Configure   /plan → length (2/4 wk), start date, goal, weakpoints (pre-filled from profile)
+2. Configure   /plan → length (2/4/6/8 wk, pre-filled from the season's current period), start date,
+                 goal (focus-filtered from profile), weakpoints — all pre-filled but freely overridable
 3. Generate    POST /api/generate → assembles: knowledge base + live physiology zones + athlete-model
                  insights + retrospective seeds + CoachSnapshot form/fuel + Track-B session
                  requirements & durability template + deterministic nutrition table
@@ -389,10 +445,10 @@ deliberate cornering practice.
 
 | Page | Purpose |
 |---|---|
-| `/today` (default) | Fused athlete-state + readiness tiles (CTL/ATL/TSB, ACWR, polarization), proactive morning check-in, today's session & fuel, smoothed power trace, PR trophy banner, trend pulse, coach note, ask-coach spot-check |
-| `/plan` | Active block calendar, collapsible block generator + preview, goals vs. this week, history |
+| `/today` (default) | Fused athlete-state + readiness tiles (CTL/ATL/TSB, ACWR, polarization), proactive morning check-in, today's session & fuel, smoothed power trace, PR trophy banner, trend pulse, coach note, ask-coach spot-check, a block-completion nudge once the active block's dates have passed |
+| `/plan` | Active block calendar, collapsible block generator (season-aware length/goal pre-fill + a season-context readout) + preview, goals vs. this week, history |
 | `/trends` | Last-7-day snapshot, learned insights, paired graphs (Pw:HR ‖ CTL, execution ‖ compliance), fueling & weight, block history |
-| `/profile` | Synced performance (FTP, threshold/max HR), all-time PRs, goals, weakpoints, nutrition settings |
+| `/profile` | Synced performance (FTP, threshold/max HR), all-time PRs, an add/edit/delete goals & weakpoints form, season objective + target events, nutrition settings |
 | `/knowledge` | In-place markdown editor for the knowledge base + retrospectives |
 | `/settings` | Volume/structure knobs, training philosophy, platform toggles |
 
@@ -402,7 +458,7 @@ deliberate cornering practice.
 | `/api/generate` | POST | Assemble prompt → Claude → parsed plan (not yet written) |
 | `/api/write` | POST | Write a generated block to Intervals.icu, set as active block |
 | `/api/trends` | GET | Long-term derived analytics + learned insights |
-| `/api/profile` | GET / PUT | Profile snapshot (physiology projected) / save nutrition settings |
+| `/api/profile` | GET / PUT | Profile snapshot (physiology projected, goals/weakpoints) / save nutrition settings and/or goals/weakpoints |
 | `/api/knowledge` | GET / PUT | List & edit knowledge-base / retrospective files |
 | `/api/settings` | GET / PUT | Block-generation settings + platform toggles |
 | `/api/ask` | POST | Low-token "ask coach" spot-check — reads the resolved CoachSnapshot (block, today's execution, form + TSB modifier, fuel, directives, morning check, disposition) + the next planned session; not the full ledger |
@@ -445,6 +501,7 @@ deliberate cornering practice.
 | `morning-check.ts` | Proactive check-in decision — subjective strain + objective form → proceed/downgrade (#3) |
 | `session-requirements.ts` | Goal/weakpoint → required session types (terrain/race ⇒ RaceSim), injected + validated (Track B) |
 | `durability.ts` | Durability template taxonomy (A–E) + deterministic, limiter-driven/rotated selection (Track B) |
+| `season.ts` | Macro-periodization engine (see "Season & macro-periodization" above): `replanSeasonArc`, `currentPeriod`/`formatSeasonContext`, `suggestedBlockWeeks`, `filterGoalsByFocus` |
 | `zones.ts` | Re-bucket power/HR streams into the athlete's own zones |
 | `ride-analysis.ts` | Build today's analysis from a synced activity — metrics, IF, execution, trace (pure; route does IO) |
 | `sync-analysis.ts` | The single LLM step of a sync (coach note), split out so `/api/sync` returns the deterministic analysis fast |
@@ -467,7 +524,7 @@ and only phrases them in natural language — it never calculates nutrition.
 ## Development
 
 ```bash
-npm test       # vitest (556 tests across 55 suites: physiology, scoring, interval match, athlete model, interventions, nutrition, energy-availability, plan schema, trends, PR detection, trace, coach-snapshot, morning-check, durability, session-requirements, …)
+npm test       # vitest (611 tests across 57 suites: physiology, scoring, interval match, athlete model, interventions, nutrition, energy-availability, plan schema, trends, PR detection, trace, coach-snapshot, morning-check, durability, session-requirements, season, …)
 npm run lint
 npm run build
 ```

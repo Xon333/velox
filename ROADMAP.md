@@ -46,27 +46,31 @@ honesty" UX (provenance stamps, confidence tiers, withheld thin reads) is a real
 - ⚠️ **Test coverage lopsided** — ~all 49 suites are `lib/*`; the 494-line `sync` + 272-line `generate`
   routes (reconciliation, scoring orchestration, tool-use parsing) are the highest-stakes, least-tested
   code, and they guard the immutable ledger everything learns from.
-- 🔸 **No periodization above the block** — no season/macrocycle scope, no cross-block progression, no
-  taper/peak logic (`6a` deferred). The planner optimises 2–4 weeks in isolation; previous-block insight
-  only flows as retrospective `next_block_seeds`, and there are no completed blocks yet.
+- 🔸 **No periodization above the block** (as of this 2026-06-30 audit) — no season/macrocycle scope, no
+  cross-block progression, no taper/peak logic (`6a` deferred). The planner optimises 2–4 weeks in
+  isolation; previous-block insight only flows as retrospective `next_block_seeds`, and there are no
+  completed blocks yet. **Resolved 2026-07-01** — see "Macro periodization & season scope" below.
 - 🔸 **Local-first durability** rests on homegrown `.bak` files on one machine (no off-machine backup of
   `data/`); trunk-based with a concurrent agent is operationally fragile.
 - 🔸 **Observability + cost guard absent (P8)** — silent `catch`es, unbounded AI routes; generation
   blocks 1–2 min with no streaming (P9).
 - 🔸 **Fueling is per-session, not periodised**; strength is a stub (5 kcal/min); recovery is
   one-dimensional (HRV honestly gated off — no source).
-- 🔸 **Doc drift** — README claims the nutrition formula computes protein (carbs only); "556 tests" (now 564).
+- 🔸 **Doc drift** (as of this 2026-06-30 audit) — README claimed the nutrition formula computes protein
+  (carbs only) and cited a stale test count. Both fixed since in a full documentation sweep (2026-07-01);
+  a stale count is a recurring failure mode worth staying alert to as work continues.
 
 **Priorities (data > features):**
 1. **Turn the loop over.** Retain block prescriptions (`block-history`); close #4 (low hit-rate →
    *demote*, not just annotate); reduce friction so generate→ride→score→learn actually accrues.
 2. **Test the `sync` + `generate` routes** — protect the ledger from silent reconciliation/scoring bugs.
 3. **Off-machine backup of `data/`** + branch discipline for the shared checkout.
-4. **Periodization / season scope + event-aware planning** (`6a`) — high coaching value, but also needs
-   the loop turning, so it ranks behind 1–2.
+4. **Periodization / season scope** — ✅ done (see "Macro periodization & season scope" below); event-aware
+   *race* planning (`6a`, the surfacing layer once an athlete adds an event) remains open.
 
-_Expanded for brainstorming below: **Data substrate** (priorities 1–3) and **Macro periodization**
-(priority 4). Both are stubs — open questions flagged 🧠 — for the athlete to react to before we plan._
+_Expanded below: **Data substrate** (priorities 1–3, still brainstorm stubs — open questions flagged 🧠
+— for the athlete to react to before we plan) and **Macro periodization & season scope** (priority 4,
+since shipped — expanded section now records what's live + the tracked debt, not open questions)._
 
 ---
 
@@ -107,35 +111,43 @@ lightweight branch discipline for the shared trunk checkout.
 
 ---
 
-## Macro periodization & season scope ⭐ (audit P4 · MACRO-1/2/3 shipped 2026-07-01)
+## Macro periodization & season scope ⭐ (audit P4 · shipped 2026-07-01 → ARCHIVE)
 
-✅ **MACRO-1/2/3 shipped.** The engine (`lib/season.ts`), `/api/season`, generate-flow integration
-(`seasonContext` + `validateSeasonFit`, `lengthWeeks` 2|4|6|8), and the `SeasonRoadmap` stepper UI on `/plan`
-are all live — see [2026-07-01-macro-periodization-design.md](docs/superpowers/specs/2026-07-01-macro-periodization-design.md)
-+ [plan](docs/superpowers/plans/2026-07-01-macro-periodization.md) for the full design/build record. Mode-C
-(no-event, rolling base→build→realize cycle with deload cadence + ACWR-capped load ramp) is the live default;
-event-anchored mode (backward taper→peak→build schedule) is built and tested but **dormant** — nothing writes
-a `SeasonEvent` yet.
+✅ **Fully shipped.** The whole arc the P4 audit finding ("no periodization above the block") opened is
+now live end to end: the macro-periodization engine (`lib/season.ts`), `/api/season`, generate-flow
+integration (`seasonContext` + `validateSeasonFit`, `lengthWeeks` 2/4/6/8), the `SeasonRoadmap` stepper
+UI on `/plan`, the Season event-entry section on `/profile` (objective field + add/edit/delete event
+list), Goals/Weakpoints centralization (off hand-edited markdown into a real JSON form, one-time
+migrated), the season-aware block generator (suggested length + focus-filtered goal pre-fill + a
+readout), and a block-completion prompt on `/today`. Mode-C (no-event, rolling base→build→realize cycle
+with deload cadence + ACWR-capped load ramp) is the live default; event-anchored mode (backward
+taper→peak→build schedule) is built and tested and now **activatable** through the Season UI, but still
+**dormant** until an athlete actually adds a future A-priority event. Full design/build records:
+[macro-periodization](docs/superpowers/specs/2026-07-01-macro-periodization-design.md)
+([plan](docs/superpowers/plans/2026-07-01-macro-periodization.md)) ·
+[season-event-entry-ui](docs/superpowers/specs/2026-07-01-season-event-entry-ui-design.md) ·
+[goals-weakpoints-centralization](docs/superpowers/specs/2026-07-01-goals-weakpoints-centralization-design.md) ·
+[season-block-hierarchy](docs/superpowers/specs/2026-07-01-season-block-hierarchy-design.md)
+([plan](docs/superpowers/plans/2026-07-01-season-block-goals-flow.md)) ·
+[block-completion-prompt](docs/superpowers/specs/2026-07-01-block-completion-prompt-design.md). Shipped-work
+detail → [ARCHIVE.md](ARCHIVE.md).
 
-### Open — Season event-entry UI (spec approved, plan next)
-Closes the MACRO-1 gap: `SeasonPlan.objective`/`events` are athlete-owned intent, already persisted by
-`PUT /api/season`, but there's no form to set them — so event mode can never activate for a real athlete.
-Design: a new "Season" section on `/profile` (objective field + add/edit/delete event list), reusing the
-existing route + `validateSeasonPlanInput`, no new backend. See
-[2026-07-01-season-event-entry-ui-design.md](docs/superpowers/specs/2026-07-01-season-event-entry-ui-design.md).
-**Explicitly deferred (from that spec's out-of-scope):**
-- No re-plan trigger from the form itself — the next `POST /api/generate` already re-plans and activates
-  event mode the moment a future A-event exists (Task 9's wiring covers it).
-- No UI warning about multiple A-events or the engine's array-order tie-break (accepted debt from Task 5).
-- No dedicated `/settings`-style page for events — Profile houses it.
-
-### Known debt (accept-as-tracked, from the final whole-branch review)
+### Known debt (accept-as-tracked)
 - Event-mode peak vs. taper share one `focus: "sharpen"` value → same roadmap color/label, only the phase
   caption distinguishes them. Cosmetic; only visible once event mode activates.
 - `CurrentBlock.seasonFocus`/`seasonPhase` are stamped using "today" rather than the block's actual start
   date — harmless today (no readers yet); worth a conscious choice once `#4`-style validation reads them back.
 - `anaerobic` is a valid build focus but unreachable via the default rotation fallback (only via a confident
   limiter) — intentional per KB, but the two lists (`BUILD_FOCI` vs `defaultBuildOrder()`) silently diverge.
+- No re-plan trigger from the Season form itself — the next `POST /api/generate` already re-plans and
+  activates event mode the moment a future A-event exists. No UI warning about multiple A-events or the
+  engine's array-order tie-break. No dedicated `/settings`-style page for events — Profile houses it.
+- The Goals form's Focus dropdown omits `sharpen` (the race-taper focus) — the API/engine both accept it,
+  only the picker is short one option, so a `sharpen`-focused period can't have a goal directly authored
+  via the UI yet. One-line follow-up: add `<option value="sharpen">`.
+- `PlanView`'s season-context fetch can silently overwrite a manual in-progress edit to the goal textarea
+  if the athlete types between the two independent profile/season fetches resolving — a narrow,
+  single-user timing window, not observed in practice.
 
 **Ties:** `6a` event-aware race planning is the surfacing of event mode; `§7` calendar; `#4` validates whether
 a phase sequence worked; `#2` calibrates the ramp/deload constants (currently KB-grounded population defaults).

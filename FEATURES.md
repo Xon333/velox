@@ -16,10 +16,26 @@ AI — and the AI only ever phrases numbers the code already computed.
   effective today ("FTP changed 288 → 300 W on …; zones updated"). `reconcile()`
 - **History anchored to the right FTP** — each ride is scored against the physiology in effect *that day*.
 
+## Season & macro-periodization (Plan / Profile pages)
+- **Season objective + target events** — an athlete-owned objective string and A/B/C-priority event
+  list, edited on `/profile`'s Season section. `GET`/`PUT /api/season`, `lib/season.ts`
+- **Macro-periodization engine** — a rolling base→build→realize cycle (deload cadence + ACWR-capped
+  load ramp) is the live default with no event on the calendar; a fully-built event-anchored mode
+  (backward taper→peak→build scheduling) activates automatically the moment a future A-event exists.
+  `replanSeasonArc`, `validateSeasonFit` — `lib/season.ts`
+- **Season-aware block pre-fill** — the block generator's length selector (now **2/4/6/8** weeks)
+  pre-fills from the season's current period (`suggestedBlockWeeks`); the goal textarea pre-fills to
+  goals tagged with the period's focus + every general-tagged goal (`filterGoalsByFocus`); a
+  one-line season-context readout renders above the generator fields. All freely overridable, never
+  locked. `components/dashboard/{PlanView,BlockGenerator}.tsx`
+- **Block-completion prompt** — once the active block's `endDate` has passed, the Today planned-
+  session card proactively nudges the athlete to generate the next one instead of sitting on stale
+  "no session planned" copy. `isBlockFinished`, `lib/date.ts`, `components/dashboard/today.tsx`
+
 ## Block generation (Plan page)
 - **Goal-driven, KB-grounded generation** — knowledge base + live zones + athlete-model insights +
-  retrospective seeds + a deterministic nutrition table → `claude-sonnet-4-6` via **structured tool-use**
-  → validated `PlannedDay[]`. `app/api/generate`, `lib/anthropic-api.ts`, `lib/plan-schema.ts`
+  retrospective seeds + season context + a deterministic nutrition table → `claude-sonnet-4-6` via
+  **structured tool-use** → validated `PlannedDay[]`. `app/api/generate`, `lib/anthropic-api.ts`, `lib/plan-schema.ts`
 - **Deterministic session selection (Track B)** — a terrain/race goal *requires* a RaceSim quality
   session: the requirement is injected into the prompt and enforced post-generation (warning if missing).
   `lib/session-requirements.ts`
@@ -96,7 +112,9 @@ AI — and the AI only ever phrases numbers the code already computed.
   pre-computed table. `lib/nutrition.ts`
 
 ## Profile · Knowledge · Settings
-- **Profile** — synced performance (FTP, threshold/max HR), all-time PRs, goals, weakpoints, nutrition settings.
+- **Profile** — synced performance (FTP, threshold/max HR), all-time PRs, an add/edit/delete goals &
+  weakpoints form (each goal taggable by `SeasonFocus`), a Season section (objective + target
+  events), nutrition settings.
 - **Knowledge** — in-place markdown editor for the KB + retrospectives (read fresh on every generation).
 - **Settings** — volume/structure knobs, polarised vs sweet-spot, quality budget, platform toggles.
 

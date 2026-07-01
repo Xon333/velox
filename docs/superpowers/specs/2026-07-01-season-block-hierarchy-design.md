@@ -1,7 +1,7 @@
 # Season/Block Hierarchy — Design
 
 **Date:** 2026-07-01
-**Status:** Approved design (pre-implementation)
+**Status:** ✅ Shipped 2026-07-01 — see [ARCHIVE.md](../../../ARCHIVE.md)
 **Follows:** [2026-07-01-macro-periodization-design.md](2026-07-01-macro-periodization-design.md) (MACRO-1/2/3) and
 [2026-07-01-season-event-entry-ui-design.md](2026-07-01-season-event-entry-ui-design.md) — closes the gap surfaced
 right after those shipped: Season and Block generation are two independent "what am I training for" inputs with

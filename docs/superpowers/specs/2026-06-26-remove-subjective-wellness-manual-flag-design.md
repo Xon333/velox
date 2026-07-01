@@ -1,7 +1,7 @@
 # Remove subjective wellness sync → a manual "feeling ill / extreme fatigue" button
 
 **Date:** 2026-06-26
-**Status:** design approved, implementing directly (user waived the spec-review gate)
+**Status:** ✅ Shipped (see ROADMAP.md "Morning override" — shipped → ARCHIVE)
 **Supersedes:** `2026-06-26-wellness-inc3-sync-only-morning-decision-design.md` (Inc 3) and reverts Inc 1 + Inc 2.
 
 ## Why

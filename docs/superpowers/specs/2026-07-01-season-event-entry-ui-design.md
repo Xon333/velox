@@ -1,7 +1,7 @@
 # Season Event Entry UI — Design
 
 **Date:** 2026-07-01
-**Status:** Approved design (pre-implementation)
+**Status:** ✅ Shipped 2026-07-01 — see [ARCHIVE.md](../../../ARCHIVE.md)
 **Follows:** [2026-07-01-macro-periodization-design.md](2026-07-01-macro-periodization-design.md) (MACRO-1) — closes the gap it left: `SeasonPlan.objective`/`events` are athlete-owned intent, already persisted by `PUT /api/season`, but nothing in the UI lets the athlete set them.
 
 ---

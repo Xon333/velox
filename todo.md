@@ -14,15 +14,12 @@ P2 high-value UX/feature · P3 polish/education · Type: `bug` `ux` `feat` `audi
 
 ## Open
 
-- ☐ P2 `feat` **Season/block goals-flow — ready to execute.** Approved 3-spec design (Goals/Weakpoints off
-  markdown into a JSON form, Season→Block hierarchy, block-completion prompt) with a full 6-task plan
-  written and reviewed — no build started yet. To resume in a fresh session: *"Use subagent-driven-development
-  to execute [2026-07-01-season-block-goals-flow.md](docs/superpowers/plans/2026-07-01-season-block-goals-flow.md)."*
-  Specs: [goals-weakpoints-centralization](docs/superpowers/specs/2026-07-01-goals-weakpoints-centralization-design.md) ·
-  [season-block-hierarchy](docs/superpowers/specs/2026-07-01-season-block-hierarchy-design.md) ·
-  [block-completion-prompt](docs/superpowers/specs/2026-07-01-block-completion-prompt-design.md).
+- ☐ P3 `polish` **Goals form's Focus dropdown omits `sharpen`.** The API/engine both accept it; only the
+  `/profile` picker is short one option, so a `sharpen`-focused season period can't have a goal directly
+  authored via the UI yet. One-line fix: add `<option value="sharpen">`. _[AthleteProfileForm.tsx](components/AthleteProfileForm.tsx)._
 
-_FB-2026-06-30 (Today + Profile sweep) + the EA→CoachSnapshot wire-up shipped → [ARCHIVE.md](ARCHIVE.md)._
+_Season/block goals-flow (Goals/Weakpoints centralization + Season/Block hierarchy + block-completion
+prompt) + FB-2026-06-30 (Today + Profile sweep) + the EA→CoachSnapshot wire-up shipped → [ARCHIVE.md](ARCHIVE.md)._
 
 **EC-2026-06-27 — edge-case sweep (EA/baseline tiles + a read-audit of the off-plan-aerobic & durability
 scoring diffs).** None ship yet; ordered by blast radius. The fixed trust-consistency cases (EA fasted-0,

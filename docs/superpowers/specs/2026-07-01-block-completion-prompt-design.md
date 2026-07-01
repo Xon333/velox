@@ -1,7 +1,7 @@
 # Block-Completion Prompt — Design
 
 **Date:** 2026-07-01
-**Status:** Approved design (pre-implementation)
+**Status:** ✅ Shipped 2026-07-01 — see [ARCHIVE.md](../../../ARCHIVE.md)
 **Follows:** [2026-07-01-season-block-hierarchy-design.md](2026-07-01-season-block-hierarchy-design.md) —
 raised as part of "make the season/block flow easier to understand": once a block finishes, the athlete has
 no proactive nudge to generate the next one — `BlockGenerator` on `/plan` stays collapsed (`hasActiveBlock`

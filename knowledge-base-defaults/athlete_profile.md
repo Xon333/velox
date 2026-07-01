@@ -1,9 +1,12 @@
 # Athlete Profile · TEMPLATE
 
 > **Manual input only.** Committed empty template — your real profile lives in
-> `/knowledge-base/athlete_profile.md` (local, gitignored), edited via the Profile page. FTP, zones,
-> weight and the power curve are **synced from Intervals.icu** (not stored here). Fill the tables
-> below with durable, non-computable context the coach should know.
+> `/knowledge-base/athlete_profile.md` (local, gitignored), edited via the in-app Knowledge editor.
+> **Goals and weakpoints are no longer edited here** — use the add/edit/delete form on the **Profile
+> page** (`/profile`) instead; the GOALS/WEAKPOINTS tables below exist only as a one-time migration
+> source (read once, then stripped from the generation prompt either way) and should normally stay
+> empty. FTP, zones, weight and the power curve are **synced from Intervals.icu** (not stored here).
+> Fill the remaining tables below with durable, non-computable context the coach should know.
 
 ## Performance
 | Parameter | Value |
@@ -13,15 +16,15 @@
 | Threshold HR | (synced) |
 | Weight | (synced) |
 
-## Goals
+## GOALS
 | Goal | Target |
 |---|---|
-| (your season / block goals) | (measurable target) |
+| (edit on the Profile page instead) | |
 
-## Weakpoints to address
+## WEAKPOINTS
 | Weakpoint | Detail |
 |---|---|
-| (limiters to target) | (context) |
+| (edit on the Profile page instead) | |
 
 ## All-time power PRs
 | Duration | Watts | W/kg |

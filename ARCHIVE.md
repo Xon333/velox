@@ -12,6 +12,104 @@ exact commits.
 
 ---
 
+## Season/block goals-flow: Goals/Weakpoints centralization + Season/Block hierarchy + block-completion prompt (2026-07-01)
+
+Three approved specs, built together in dependency order (Task 1–3 foundational, 4–5 depend on the new
+goals shape, 6 independent) via subagent-driven development — 6 commits, each independently task-reviewed
+and passed a final whole-branch review clean on first pass. Suite grew 597 → 611. Design/build records:
+[goals-weakpoints-centralization](docs/superpowers/specs/2026-07-01-goals-weakpoints-centralization-design.md) ·
+[season-block-hierarchy](docs/superpowers/specs/2026-07-01-season-block-hierarchy-design.md) ·
+[block-completion-prompt](docs/superpowers/specs/2026-07-01-block-completion-prompt-design.md) ·
+[plan](docs/superpowers/plans/2026-07-01-season-block-goals-flow.md).
+
+- **Goals/Weakpoints off markdown, into a real form.** `AthleteProfile.goals`/`weakpoints` widened to
+  `{goal, target, focus}` / `{weakpoint, detail}` (`focus` a `SeasonFocus` tag or `"general"`), replacing
+  the old `string[]` shape read from hand-edited `athlete_profile.md` tables. A one-time migration
+  (`applyGoalsMigration`, gated on `goalsMigratedAt`) seeds them from whatever was in the markdown file
+  the first time this runs; never re-runs once set, never overwrites already-non-empty data. The
+  read-only Goals/Weakpoints list on `/profile` is now a real add/edit/delete form with its own
+  independent Save button/state (no cross-talk with Nutrition/Season saves). `athleteProfileToMarkdown`/
+  `writeAthleteProfileMd` (confirmed zero remaining callers) deleted. `lib/types.ts`, `lib/data-store.ts`,
+  `lib/kb-loader.ts`, `components/AthleteProfileForm.tsx`.
+- **Generation prompt freshness.** The markdown GOALS/WEAKPOINTS tables are now stripped
+  (`stripGoalsWeakpointsSections`) before `athlete_profile.md` is inlined into the generation prompt, so
+  a stale copy can never sit alongside the live `goalsContext`/`weakpointsContext` injected straight from
+  `AthleteProfile`. `/api/profile` GET/PUT extended to expose/accept `goals`/`weakpoints`.
+  `lib/kb-loader.ts`, `app/api/generate/route.ts`, `app/api/profile/route.ts`.
+- **Season informs Block.** Two pure helpers in `lib/season.ts` — `suggestedBlockWeeks` (ceiling-rounds
+  the current season period's remaining weeks to the nearest of `[2,4,6,8]`, floor 2 / cap 8) and
+  `filterGoalsByFocus` (keeps focus-matching + every `"general"`-tagged goal) — wired into the block
+  generator's pre-fills, plus `SeasonPlan.objective` folded into the existing `formatSeasonContext` line.
+  `components/dashboard/PlanView.tsx` fetches the season plan independently of the profile fetch (two
+  effects; the season effect re-derives the goal pre-fill once both resolve, in either order) and passes
+  a season-context readout + the widened 2/4/6/8 length buttons through to `BlockGenerator.tsx`. Nothing
+  is ever locked — every pre-fill stays freely overridable before generating.
+- **Block-completion prompt.** A pure `isBlockFinished(block, today)` predicate (`lib/date.ts`, strict
+  `today > block.endDate`) hooked into `PlannedToday`'s existing empty-state branch: once the active
+  block's dates have passed, `/today` proactively nudges the athlete to generate the next one instead of
+  silently showing stale "no session planned" copy.
+- **Post-ship bugfix (user-reported): real goals/weakpoints weren't migrating.** `readAthleteProfile`'s
+  and `applyGoalsMigration`'s migration guards checked `goalsMigratedAt === null` / `!== null` strictly —
+  a real, pre-existing `athlete.json` written before this field existed parses back with the key entirely
+  *absent* (`undefined`, not `null`), which the strict guard misread as "already migrated," permanently
+  skipping the athlete's real GOALS/WEAKPOINTS content. Fixed both guards to truthy checks; added a
+  regression test that simulates the missing key by destructuring it away rather than only ever setting
+  it explicitly (the gap every prior review layer missed, since in-memory fixtures always set the field).
+  Ran the real migration and verified end to end in-browser (8 goals + 9 weakpoints now render on
+  `/profile` and the `/plan` Goals card). `lib/data-store.ts`.
+- **Known debt (accept-as-tracked)** → [ROADMAP.md](ROADMAP.md) "Macro periodization & season scope":
+  Focus dropdown omits `sharpen`; a narrow goal-textarea race between the profile/season fetches;
+  `stripGoalsWeakpointsSections`'s case-sensitive regex doesn't match the *default* KB template's
+  differently-worded headings (real KB unaffected — it already uses the matching uppercase form).
+
+## Season event-entry UI (2026-07-01)
+
+Closed the MACRO-1 gap left by macro-periodization below: `SeasonPlan.objective`/`events` were
+athlete-owned intent already persisted by `PUT /api/season`, but nothing in the UI let the athlete set
+them, so event-anchored mode could never activate for a real athlete. Added a "Season" card to
+`/profile` (objective field + a controlled add/edit/delete event list — name/date/A-B-C priority),
+reusing the already-shipped `/api/season` GET/PUT and `validateSeasonPlanInput` (client-side
+pre-validation, zero new backend). `components/AthleteProfileForm.tsx`. Design:
+[season-event-entry-ui](docs/superpowers/specs/2026-07-01-season-event-entry-ui-design.md).
+
+## Macro periodization & season scope — MACRO-1/2/3 (2026-07-01)
+
+Closed the 2026-06-30 audit's "no periodization above the block" finding — the planner previously
+optimised each 2–4 wk block in isolation with no target event, no weeks-to-event, and no base→build→
+peak→taper sequence. 10 tasks via subagent-driven development, 15 commits, final whole-branch review
+clean. Design/build record:
+[macro-periodization](docs/superpowers/specs/2026-07-01-macro-periodization-design.md) ·
+[plan](docs/superpowers/plans/2026-07-01-macro-periodization.md).
+
+- **New store `data/season-plan.json`** — `SeasonPlan { objective, events: SeasonEvent[], periods:
+  FocusPeriod[], updatedAt }`. Each `FocusPeriod` picks one system to emphasise (`aerobic-base` /
+  `threshold` / `vo2max` / `anaerobic` / `durability` / `sharpen`) with a phase (`base`/`build`/`peak`/
+  `taper`), grounded in the KB's Annual Periodisation Framework constants (base 90/10 easy/mod, build
+  80/20, deload 30–50% volume every 3–4 weeks, cadence 3:1 default / 2:1 under heavy fatigue) — not
+  invented by the LLM. `lib/season.ts`, `lib/types.ts`.
+- **Two macro-periodization modes.** **Mode C (the live default, no event on the calendar)** —
+  `replanSeasonArc` runs a rolling base→build→realize cycle: limiter-driven focus rotation (reusing the
+  power-profile "easy win" + durability-template machinery rather than a parallel phase system), forced
+  deload cadence, and an ACWR-capped load ramp between periods. Re-planning preserves the in-progress
+  ("current") period verbatim as a 3rd bucket distinct from frozen history/manual overrides, so a
+  re-plan never yanks the rug from under a period the athlete is mid-way through. **Event-anchored mode
+  (built, tested, dormant)** — schedules backward from a future A-priority event (taper→peak→build);
+  activates automatically the moment `SeasonPlan.events` holds one (see "Season event-entry UI" above
+  for how an event gets there).
+- **Feeds generation.** `POST /api/generate` calls `replanSeasonArc` + `validateSeasonFit` and folds
+  `formatSeasonContext`'s one-line `SEASON CONTEXT` (phase/focus/week-of/rationale) into the prompt;
+  `lengthWeeks` widened to `2 | 4 | 6 | 8` end to end (type, route validator, UI). `app/api/generate/route.ts`.
+- **`SeasonRoadmap` stepper UI on `/plan`.** Done/current/upcoming period cards + an event flag,
+  visually verified end-to-end against a seeded season plan.
+- **`GET`/`PUT /api/season`** — read the plan / update `objective`+`events` (periods are engine-managed,
+  not directly editable); `validateSeasonPlanInput` guards the PUT.
+- **Known debt** → [ROADMAP.md](ROADMAP.md) "Macro periodization & season scope": event-mode peak/taper
+  share one `sharpen` focus value (cosmetic, same roadmap color); `CurrentBlock.seasonFocus`/
+  `seasonPhase` stamped from "today" not the block's actual start date (no readers yet); `anaerobic` is
+  a valid build focus but unreachable via the default rotation fallback (intentional per KB).
+
+---
+
 ## Fueling-aware coach + Today/Profile feedback sweep (FB-2026-06-30)
 
 - **#1 — energy availability now feeds the coach.** EA is a first-class `CoachSignal` (computed once in

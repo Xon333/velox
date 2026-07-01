@@ -1,7 +1,7 @@
 # Goals/Weakpoints Centralization + Form — Design
 
 **Date:** 2026-07-01
-**Status:** Approved design (pre-implementation)
+**Status:** ✅ Shipped 2026-07-01 — see [ARCHIVE.md](../../../ARCHIVE.md)
 **Follows:** [2026-07-01-season-block-hierarchy-design.md](2026-07-01-season-block-hierarchy-design.md) (§4
 depends on this spec's data model) — raised when discussing how Goals/Weakpoints, Season, and Block generation
 should relate; the athlete's own call was that hand-editing a markdown table was never the intended long-term
