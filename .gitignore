@@ -44,3 +44,6 @@ next-env.d.ts
 # local personal data (filesystem-only)
 /knowledge-base/
 /data/
+
+# Brainstorming visual-companion scratch
+.superpowers/
