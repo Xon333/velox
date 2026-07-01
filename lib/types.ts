@@ -163,7 +163,7 @@ export interface SyncData {
 // ---------- Generated plan ----------
 
 export interface BlockParams {
-  lengthWeeks: 2 | 4;
+  lengthWeeks: 2 | 4 | 6 | 8;
   goal: string;
   weakpoints: string[];
   startDate: string; // YYYY-MM-DD
@@ -294,6 +294,38 @@ export interface CurrentBlock {
   // Quality sessions dropped mid-block (a proactive downgrade with no make-up slot) — surfaced to the
   // next generation as a carry-forward priority so the stimulus isn't silently lost (CR-6).
   deferredQuality?: string[];
+}
+
+// ---------- Season plan (data/season-plan.json) — macro periodization (MACRO-1..3) ----------
+
+export type SeasonFocus = "aerobic-base" | "threshold" | "vo2max" | "anaerobic" | "durability" | "sharpen";
+export type SeasonPhase = "base" | "build" | "peak" | "taper" | "transition";
+
+export interface SeasonEvent {
+  name: string;
+  date: string; // ISO YYYY-MM-DD
+  priority: "A" | "B" | "C";
+}
+
+export interface FocusPeriod {
+  focus: SeasonFocus;
+  phase: SeasonPhase;
+  startDate: string; // ISO
+  plannedWeeks: number; // 1–8 (taper can be a single week)
+  intensitySplit: string; // KB, e.g. "80/20"
+  targetWeeklyTss: number | null; // null when FTP/CTL unavailable
+  deloadWeek: boolean; // trailing recovery week
+  rationale: string; // KB-grounded; the only LLM-phrased field
+  source: "derived" | "override";
+  confidence: "low" | "medium" | "high"; // limiter-pick confidence
+  achievedTss?: number; // stamped when the period rolls into the past (frozen)
+}
+
+export interface SeasonPlan {
+  objective: string;
+  events: SeasonEvent[];
+  periods: FocusPeriod[];
+  updatedAt: string;
 }
 
 // ---------- Block generation settings (data/block-settings.json) ----------
