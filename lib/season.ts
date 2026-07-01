@@ -73,6 +73,11 @@ function period(focus: SeasonFocus, phase: SeasonPhase, startDate: string, confi
 // Mode-C rolling cycle: base-gate → rotating limiter-focus build periods → a realize week. (Deload + load
 // targets + the event overlay are layered by later helpers.) Drafts SEASON_CONSTANTS.horizonPeriods ahead.
 export function draftSeasonArc(input: SeasonDraftInput, today: string): FocusPeriod[] {
+  // Event-anchored mode: a future A-priority event takes over the whole arc (dormant until one exists —
+  // see backwardScheduleFromEvent). Otherwise fall through to the Mode-C rolling cycle unchanged.
+  const aEvent = input.events.find((e) => e.priority === "A" && Date.parse(e.date) > Date.parse(today));
+  if (aEvent) return backwardScheduleFromEvent(aEvent, input, today);
+
   const periods: FocusPeriod[] = [];
   const recent = [...input.recentFocuses];
   let cursor = today;
@@ -117,6 +122,52 @@ export function assignLoadTargets(periods: FocusPeriod[], seedWeeklyTss: number 
     if (!p.deloadWeek) prev = target;
     return { ...p, targetWeeklyTss: target };
   });
+}
+
+// Whole weeks between two ISO dates, floored, clamped at 0 (never negative for a past "today").
+function weeksBetween(fromIso: string, toIso: string): number {
+  return Math.max(0, Math.floor((Date.parse(toIso) - Date.parse(fromIso)) / (7 * 86_400_000)));
+}
+
+// Backward schedule from an A-priority event: taper (1–2 wk) ends on/just-before the date, peak (4–6 wk)
+// before that, then build/base periods fill the remaining runway backward from the peak. Clamps to a
+// taper-only (or taper+peak) schedule when the runway can't fit a real build (KB: don't fabricate a
+// nonsensical block out of a handful of days). Build-rotation periods are always phase "build" — "peak"
+// is reserved for the dedicated race-specific sharpen period the KB defines right before taper.
+export function backwardScheduleFromEvent(event: SeasonEvent, input: SeasonDraftInput, today: string): FocusPeriod[] {
+  const runway = weeksBetween(today, event.date);
+  const conf = input.limiter.confidence;
+  const mk = (focus: SeasonFocus, phase: SeasonPhase, weeks: number, rationale: string): Omit<FocusPeriod, "startDate"> => ({
+    focus, phase, plannedWeeks: weeks, intensitySplit: SEASON_CONSTANTS.split[focus],
+    targetWeeklyTss: null, deloadWeek: false, rationale, source: "derived", confidence: conf,
+  });
+  const taper = mk("sharpen", "taper", SEASON_CONSTANTS.taperWeeks, `Taper into ${event.name} — cut volume, hold intensity (KB).`);
+  const tail: Omit<FocusPeriod, "startDate">[] = [];
+  if (runway <= SEASON_CONSTANTS.taperWeeks + 1) {
+    tail.push(taper); // too close — taper only, no room for a real peak or build
+  } else {
+    const peakWeeks = Math.min(SEASON_CONSTANTS.peakWeeks, runway - SEASON_CONSTANTS.taperWeeks - 1);
+    tail.push(mk("sharpen", "peak", Math.max(1, peakWeeks), `Peak/sharpen for ${event.name} — race-specific.`));
+    let filled = peakWeeks + SEASON_CONSTANTS.taperWeeks;
+    const order = [...defaultBuildOrder()];
+    let i = 0;
+    while (filled < runway) {
+      const focus = order[i % order.length];
+      const w = Math.min(SEASON_CONSTANTS.weeks[focus], runway - filled);
+      if (w <= 0) break;
+      tail.unshift(mk(focus, "build", w, `Build ${focus} toward ${event.name}.`));
+      filled += w; i += 1;
+    }
+    tail.push(taper);
+  }
+  // Date them forward from today.
+  let cursor = today;
+  const dated: FocusPeriod[] = [];
+  for (const t of tail) {
+    dated.push({ ...t, startDate: cursor });
+    cursor = addWeeks(cursor, t.plannedWeeks);
+  }
+  return applyDeloadCadence(dated, input.heavyFatigue);
 }
 
 // Mark the period that crosses each deload boundary (30–50% volume cut lands in its trailing week).

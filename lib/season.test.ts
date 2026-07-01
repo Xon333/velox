@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, type SeasonDraftInput } from "./season";
+import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, type SeasonDraftInput } from "./season";
 
 describe("season constants + helpers", () => {
   it("encodes the KB deload cadence (3:1 default, 2:1 tight)", () => {
@@ -97,5 +97,27 @@ describe("deload cadence", () => {
     const out = applyDeloadCadence([p(2), p(2)], true); // boundary at 3 wk
     expect(out[0].deloadWeek).toBe(true);
     expect(out[1].deloadWeek).toBe(true); // after reset, the next 2-wk period hits the 2:1 boundary again
+  });
+});
+
+describe("event-anchored mode (dormant until an A-event exists)", () => {
+  it("back-fills taper → peak ending on the A-date, build/base before", () => {
+    const ev = { name: "Gran Fondo", date: "2026-10-01", priority: "A" as const };
+    const arc = backwardScheduleFromEvent(ev, baseInput(), "2026-07-01");
+    const last = arc[arc.length - 1];
+    expect(last.phase).toBe("taper");
+    // taper ends on (or just before) the event date
+    expect(new Date(addWeeksExpected(last)).getTime()).toBeGreaterThanOrEqual(Date.parse("2026-09-29"));
+    expect(arc.some((p) => p.phase === "peak")).toBe(true);
+    expect(arc[0].startDate).toBe("2026-07-01");
+  });
+  it("clamps to a taper-only when the runway is too short", () => {
+    const ev = { name: "KOM", date: "2026-07-10", priority: "A" as const };
+    const arc = backwardScheduleFromEvent(ev, baseInput(), "2026-07-01");
+    expect(arc.every((p) => p.phase === "taper" || p.phase === "peak")).toBe(true);
+  });
+  it("draftSeasonArc routes to the event scheduler only for a future A-event", () => {
+    const arc = draftSeasonArc(baseInput({ events: [{ name: "X", date: "2026-10-01", priority: "A" }] }), "2026-07-01");
+    expect(arc.some((p) => p.phase === "taper")).toBe(true);
   });
 });
