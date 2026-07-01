@@ -1,6 +1,6 @@
 // Macro periodization engine (MACRO-1..3). Pure + deterministic: drafts a rough, rolling season arc of
 // limiter-focus periods, grounded in the knowledge base. The LLM only phrases FocusPeriod.rationale.
-import type { FocusPeriod, SeasonEvent, SeasonFocus, SeasonPhase } from "./types";
+import type { FocusPeriod, SeasonEvent, SeasonFocus, SeasonPhase, SeasonPlan } from "./types";
 import { DEFAULT_ACWR_BANDS } from "./calibration";
 
 // KB-grounded (cycling_database.md Annual Periodisation Framework + training_knowledge.md). Mode-C focus
@@ -170,6 +170,34 @@ export function backwardScheduleFromEvent(event: SeasonEvent, input: SeasonDraft
     cursor = addWeeks(cursor, t.plannedWeeks);
   }
   return dated;
+}
+
+// A period's computed end date (startDate + plannedWeeks).
+const periodEnd = (p: FocusPeriod): string => addWeeks(p.startDate, p.plannedWeeks);
+
+// Re-plan the rolling arc: periods that have already ended are frozen (stamped with achieved load, never
+// re-derived), any future athlete-edited override is preserved verbatim, and only the remaining derived
+// tail is re-drafted — starting after the last preserved/frozen period (or from `today` if none). Pure +
+// idempotent: unchanged inputs re-run produce the same periods (frozen achievedTss is filled once, not
+// re-stamped; the derived tail is a deterministic function of the unchanged seed state).
+export function replanSeasonArc(
+  plan: SeasonPlan,
+  input: SeasonDraftInput,
+  achievedTssFor: (period: FocusPeriod) => number | null,
+  today: string
+): SeasonPlan {
+  // Past = periods that have already ended → frozen with achieved load, never re-drafted.
+  const frozen = plan.periods
+    .filter((p) => periodEnd(p) <= today)
+    .map((p) => ({ ...p, achievedTss: p.achievedTss ?? achievedTssFor(p) ?? undefined }));
+  // Future overrides the athlete edited → preserved verbatim.
+  const overrides = plan.periods.filter((p) => periodEnd(p) > today && p.source === "override");
+  // Re-draft the derived tail from today, seeded by what actually happened.
+  const recentFocuses = frozen.slice(-4).map((p) => p.focus);
+  const draftStart = overrides.length ? periodEnd(overrides[overrides.length - 1]) : today;
+  const derived = draftSeasonArc({ ...input, recentFocuses }, draftStart);
+  const periods = [...frozen, ...overrides, ...derived].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  return { ...plan, periods, updatedAt: plan.updatedAt };
 }
 
 // Mark the period that crosses each deload boundary (30–50% volume cut lands in its trailing week).

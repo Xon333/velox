@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, type SeasonDraftInput } from "./season";
+import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, replanSeasonArc, type SeasonDraftInput } from "./season";
+import type { SeasonPlan } from "./types";
 
 describe("season constants + helpers", () => {
   it("encodes the KB deload cadence (3:1 default, 2:1 tight)", () => {
@@ -130,5 +131,27 @@ describe("event-anchored mode (dormant until an A-event exists)", () => {
     // Also verify via draftSeasonArc's routing into event mode with the same runway.
     const routed = draftSeasonArc(baseInput({ events: [{ name: "Gran Fondo", date: "2026-10-01", priority: "A" }] }), "2026-07-01");
     expect(routed.some((p) => p.deloadWeek)).toBe(false);
+  });
+});
+
+const planWith = (periods: SeasonPlan["periods"]): SeasonPlan => ({ objective: "get faster", events: [], periods, updatedAt: "" });
+
+describe("replanSeasonArc", () => {
+  const achieved = () => 400;
+  it("freezes elapsed periods with achievedTss and never re-drafts them", () => {
+    const past = { focus: "aerobic-base" as const, phase: "base" as const, startDate: "2026-06-01", plannedWeeks: 3, intensitySplit: "90/10", targetWeeklyTss: 380, deloadWeek: false, rationale: "", source: "derived" as const, confidence: "medium" as const };
+    const out = replanSeasonArc(planWith([past]), baseInput(), achieved, "2026-07-01");
+    const frozen = out.periods.find((p) => p.startDate === "2026-06-01")!;
+    expect(frozen.achievedTss).toBe(400);
+  });
+  it("preserves a future override period", () => {
+    const ovr = { focus: "durability" as const, phase: "build" as const, startDate: "2026-07-15", plannedWeeks: 3, intensitySplit: "80/20", targetWeeklyTss: null, deloadWeek: false, rationale: "mine", source: "override" as const, confidence: "high" as const };
+    const out = replanSeasonArc(planWith([ovr]), baseInput(), achieved, "2026-07-01");
+    expect(out.periods.some((p) => p.source === "override" && p.rationale === "mine")).toBe(true);
+  });
+  it("is idempotent on unchanged inputs", () => {
+    const a = replanSeasonArc(planWith([]), baseInput({ recentFocuses: [] }), achieved, "2026-07-01");
+    const b = replanSeasonArc(a, baseInput({ recentFocuses: [] }), achieved, "2026-07-01");
+    expect(b.periods.map((p) => p.focus + p.startDate)).toEqual(a.periods.map((p) => p.focus + p.startDate));
   });
 });
