@@ -15,7 +15,8 @@ import { ifBandLabel } from "@/lib/zones";
 import { TYPE_STYLES } from "@/lib/workout-types";
 import { prDurationLabel } from "@/lib/pr";
 import { computeEnergyAvailability, eaLevel } from "@/lib/nutrition";
-import { isoDaysAgo, localToday as todayIso } from "@/lib/date";
+import { isoDaysAgo, localToday as todayIso, isBlockFinished } from "@/lib/date";
+import Link from "next/link";
 import RideTrace from "../RideTrace";
 import SessionDisposition from "../SessionDisposition";
 import { Card, InfoDot, MetricTip } from "../ui";
@@ -528,6 +529,21 @@ export function EnergyAvailabilityTile({ sync }: { sync: SyncData | null }) {
 
 export function PlannedToday({ block }: { block: CurrentBlock | null }) {
   const today = todayIso();
+  if (isBlockFinished(block, today)) {
+    return (
+      <div>
+        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
+          Your block finished on {block!.endDate} — ready to plan the next one?
+        </p>
+        <Link
+          href="/plan"
+          className="mt-2 inline-block text-sm text-cyan-700 hover:underline dark:text-[#00d4ff]"
+        >
+          Generate the next block →
+        </Link>
+      </div>
+    );
+  }
   const day = block?.days.find((d) => d.date === today) ?? null;
   if (!day || day.type === "Rest") {
     return (

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { localToday, resolveToday, utcToday } from "./date";
+import { localToday, resolveToday, utcToday, isBlockFinished } from "./date";
+import type { CurrentBlock } from "./types";
 
 describe("localToday", () => {
   it("formats a date's LOCAL components as YYYY-MM-DD (no UTC shift)", () => {
@@ -22,5 +23,21 @@ describe("resolveToday", () => {
     expect(resolveToday("garbage")).toBe(utcToday());
     expect(resolveToday("2026-6-1")).toBe(utcToday()); // wrong format → fallback
     expect(resolveToday(20260618)).toBe(utcToday()); // not a string → fallback
+  });
+});
+
+describe("isBlockFinished", () => {
+  const block = (endDate: string): CurrentBlock => ({
+    goal: "g", lengthWeeks: 4, startDate: "2026-06-01", endDate, overview: "", createdAt: "", days: [],
+  });
+  it("is true once today is after the block's endDate", () => {
+    expect(isBlockFinished(block("2026-06-28"), "2026-06-29")).toBe(true);
+  });
+  it("is false when today is on or before the block's endDate", () => {
+    expect(isBlockFinished(block("2026-06-28"), "2026-06-28")).toBe(false);
+    expect(isBlockFinished(block("2026-06-28"), "2026-06-20")).toBe(false);
+  });
+  it("is false when there is no block", () => {
+    expect(isBlockFinished(null, "2026-06-29")).toBe(false);
   });
 });

@@ -3,6 +3,8 @@
 // boundary (the bug where an evening ride's local date ≠ the server's UTC date, dropping today's
 // analysis). Activities are matched on their local date, so "today" must be local too.
 
+import type { CurrentBlock } from "./types";
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Local calendar date as YYYY-MM-DD (browser-local on the client). Use this for anything the
@@ -30,4 +32,11 @@ export function isoDaysAgo(n: number, from: number = Date.now()): string {
 // Server-side: prefer a valid client-supplied local date, else fall back to UTC.
 export function resolveToday(clientToday: unknown): string {
   return typeof clientToday === "string" && ISO_DATE.test(clientToday) ? clientToday : utcToday();
+}
+
+// True once a block's endDate has passed — pure date comparison, deliberately NOT tied to whether every
+// session was logged/scored (that could get stuck behind a skipped rest day, a compromised session, or a
+// delayed sync). Drives the block-completion prompt in PlannedToday (components/dashboard/today.tsx).
+export function isBlockFinished(block: CurrentBlock | null, today: string): boolean {
+  return block !== null && today > block.endDate;
 }
