@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { api, nextMonday } from "@/lib/client-api";
 import { localToday } from "@/lib/date";
 import type { AthleteMdSnapshot } from "@/lib/kb-loader";
-import type { BlockHistoryEntry, CurrentBlock, GeneratedPlan, WriteResult } from "@/lib/types";
+import { currentPeriod, filterGoalsByFocus, formatSeasonContext, suggestedBlockWeeks } from "@/lib/season";
+import type { BlockHistoryEntry, CurrentBlock, GeneratedPlan, SeasonPlan, WriteResult } from "@/lib/types";
 import { useSync } from "../SyncProvider";
 import PlanPreview from "../PlanPreview";
 import RescheduleBanner from "../RescheduleBanner";
@@ -24,10 +25,12 @@ import {
 export default function PlanView() {
   const { state, setState } = useSync();
 
-  const [lengthWeeks, setLengthWeeks] = useState<2 | 4>(4);
+  const [lengthWeeks, setLengthWeeks] = useState<2 | 4 | 6 | 8>(4);
   const [goal, setGoal] = useState("");
+  const [rawGoals, setRawGoals] = useState<Array<{ goal: string; target: string; focus: string }>>([]);
   const [weakpointsText, setWeakpointsText] = useState("");
   const [startDate, setStartDate] = useState(nextMonday());
+  const [seasonReadout, setSeasonReadout] = useState<string | null>(null);
 
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -75,9 +78,7 @@ export default function PlanView() {
         if (!cancelled) {
           setAthleteMd(response.athleteMd);
           setGoalsForProgress(response.goals);
-          if (response.goals.length > 0) {
-            setGoal(response.goals.map((g) => g.goal + (g.target ? ` → ${g.target}` : "")).join("\n"));
-          }
+          setRawGoals(response.goals);
           if (response.weakpoints.length > 0) {
             setWeakpointsText(response.weakpoints.map((w) => w.weakpoint).join("\n"));
           }
@@ -91,6 +92,36 @@ export default function PlanView() {
       cancelled = true;
     };
   }, [loadBlockHistory]);
+
+  // Season context for the generator: pre-fills length + narrows the goal pre-fill to what's relevant
+  // this focus period, and surfaces a readout so the athlete can see why (Season/Block hierarchy).
+  // Independent fetch from the profile effect above — non-fatal on failure, same as SeasonRoadmap.tsx.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { plan } = await api<{ plan: SeasonPlan }>("/api/season");
+        if (cancelled) return;
+        const today = localToday();
+        const period = currentPeriod(plan, today);
+        if (period) {
+          setLengthWeeks(suggestedBlockWeeks(period, today));
+          setSeasonReadout(formatSeasonContext(plan, today));
+          if (rawGoals.length > 0) {
+            const filtered = filterGoalsByFocus(rawGoals as Array<{ goal: string; target: string; focus: import("@/lib/types").SeasonFocus | "general" }>, period.focus);
+            setGoal(filtered.map((g) => g.goal + (g.target ? ` → ${g.target}` : "")).join("\n"));
+          }
+        } else if (rawGoals.length > 0) {
+          setGoal(rawGoals.map((g) => g.goal + (g.target ? ` → ${g.target}` : "")).join("\n"));
+        }
+      } catch {
+        // season context is optional — the form just falls back to today's defaults
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rawGoals]);
 
   // Elapsed counter ticks while a generation is in flight. The reset to 0 lives in generate()
   // (where the run starts) rather than in this effect, so no setState fires synchronously here.
@@ -229,6 +260,7 @@ export default function PlanView() {
         elapsed={elapsed}
         anthropicConfigured={state.anthropicConfigured}
         showSyncTip={!state.lastSync && state.configured}
+        seasonReadout={seasonReadout}
       />
 
       {plan && (

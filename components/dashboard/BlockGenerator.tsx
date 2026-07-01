@@ -8,8 +8,8 @@ export interface BlockGeneratorProps {
   hasActiveBlock: boolean;
   genOpen: boolean;
   setGenOpen: (open: boolean) => void;
-  lengthWeeks: 2 | 4;
-  setLengthWeeks: (w: 2 | 4) => void;
+  lengthWeeks: 2 | 4 | 6 | 8;
+  setLengthWeeks: (w: 2 | 4 | 6 | 8) => void;
   startDate: string;
   setStartDate: (d: string) => void;
   goal: string;
@@ -22,6 +22,7 @@ export interface BlockGeneratorProps {
   elapsed: number;
   anthropicConfigured: boolean;
   showSyncTip: boolean; // no cached sync yet but Intervals is configured → nudge to sync first
+  seasonReadout: string | null;
 }
 
 export default function BlockGenerator({
@@ -42,6 +43,7 @@ export default function BlockGenerator({
   elapsed,
   anthropicConfigured,
   showSyncTip,
+  seasonReadout,
 }: BlockGeneratorProps) {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800">
@@ -94,11 +96,16 @@ export default function BlockGenerator({
             </p>
           )}
 
+          {seasonReadout && (
+            <p className="mt-3 rounded bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+              {seasonReadout}
+            </p>
+          )}
           <div className="mt-4 grid gap-4 border-t border-zinc-100 pt-4 sm:grid-cols-2 lg:grid-cols-4 dark:border-zinc-700">
             <div>
               <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Block length</label>
               <div className="mt-1.5 flex gap-2">
-                {([2, 4] as const).map((w) => (
+                {([2, 4, 6, 8] as const).map((w) => (
                   <button
                     key={w}
                     onClick={() => setLengthWeeks(w)}
