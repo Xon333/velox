@@ -6,7 +6,7 @@ import { api, timeAgo } from "@/lib/client-api";
 import { Card } from "./ui";
 import PowerCurveChart from "./PowerCurveChart";
 import type { AthleteMdSnapshot } from "@/lib/kb-loader";
-import type { PowerCurvePoint, PowerProfile, PowerSystem, SeasonEvent, SeasonPlan } from "@/lib/types";
+import type { PowerCurvePoint, PowerProfile, PowerSystem, SeasonEvent, SeasonFocus, SeasonPlan } from "@/lib/types";
 import { validateSeasonPlanInput } from "@/lib/season";
 
 interface NutritionSettings {
@@ -55,6 +55,8 @@ interface ProfileResponse {
   powerProfile: PowerProfile | null;
   latestWeightKg: number | null;
   weightHistory: WeightPoint[];
+  goals: Array<{ goal: string; target: string; focus: SeasonFocus | "general" }>;
+  weakpoints: Array<{ weakpoint: string; detail: string }>;
 }
 
 type SaveState = { state: "idle" | "saving" | "saved" } | { state: "error"; message: string };
@@ -128,6 +130,9 @@ export default function AthleteProfileForm() {
   const [objective, setObjective] = useState("");
   const [events, setEvents] = useState<SeasonEvent[]>([]);
   const [seasonSaveState, setSeasonSaveState] = useState<SaveState>({ state: "idle" });
+  const [goals, setGoals] = useState<ProfileResponse["goals"]>([]);
+  const [weakpoints, setWeakpoints] = useState<ProfileResponse["weakpoints"]>([]);
+  const [goalsSaveState, setGoalsSaveState] = useState<SaveState>({ state: "idle" });
 
   // Mount-load the profile + nutrition fields. Inline async IIFE (setState lands after the await,
   // guarded by a cancelled flag) so it reads as a fetch-on-mount, not a synchronous setState in
@@ -139,6 +144,8 @@ export default function AthleteProfileForm() {
         const response = await api<ProfileResponse>("/api/profile");
         if (cancelled) return;
         setData(response);
+        setGoals(response.goals);
+        setWeakpoints(response.weakpoints);
         const n = response.nutrition;
         setNut({
           baseCalories: String(n.baseCalories),
@@ -194,6 +201,49 @@ export default function AthleteProfileForm() {
       setData(fresh);
     } catch (err) {
       setSaveState({ state: "error", message: err instanceof Error ? err.message : "Save failed" });
+    }
+  };
+
+  const updateGoal = (index: number, patch: Partial<ProfileResponse["goals"][number]>) => {
+    setGoals((gs) => gs.map((g, i) => (i === index ? { ...g, ...patch } : g)));
+    if (goalsSaveState.state === "saved") setGoalsSaveState({ state: "idle" });
+  };
+  const addGoal = () => {
+    setGoals((gs) => [...gs, { goal: "", target: "", focus: "general" }]);
+  };
+  const removeGoal = (index: number) => {
+    setGoals((gs) => gs.filter((_, i) => i !== index));
+  };
+
+  const updateWeakpoint = (index: number, patch: Partial<ProfileResponse["weakpoints"][number]>) => {
+    setWeakpoints((ws) => ws.map((w, i) => (i === index ? { ...w, ...patch } : w)));
+    if (goalsSaveState.state === "saved") setGoalsSaveState({ state: "idle" });
+  };
+  const addWeakpoint = () => {
+    setWeakpoints((ws) => [...ws, { weakpoint: "", detail: "" }]);
+  };
+  const removeWeakpoint = (index: number) => {
+    setWeakpoints((ws) => ws.filter((_, i) => i !== index));
+  };
+
+  const saveGoals = async () => {
+    if (goals.some((g) => !g.goal.trim())) {
+      setGoalsSaveState({ state: "error", message: "Goal text is required." });
+      return;
+    }
+    if (weakpoints.some((w) => !w.weakpoint.trim())) {
+      setGoalsSaveState({ state: "error", message: "Weakpoint text is required." });
+      return;
+    }
+    setGoalsSaveState({ state: "saving" });
+    try {
+      await api("/api/profile", { method: "PUT", body: JSON.stringify({ goals, weakpoints }) });
+      setGoalsSaveState({ state: "saved" });
+      const fresh = await api<ProfileResponse>("/api/profile");
+      setGoals(fresh.goals);
+      setWeakpoints(fresh.weakpoints);
+    } catch (err) {
+      setGoalsSaveState({ state: "error", message: err instanceof Error ? err.message : "Save failed" });
     }
   };
 
@@ -395,41 +445,115 @@ export default function AthleteProfileForm() {
         </>
       )}
 
-      {/* 3. Goals & Weakpoints */}
-      {(athleteMd.goals.length > 0 || athleteMd.weakpoints.length > 0) && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {athleteMd.goals.length > 0 && (
-            <Section title="Goals" editHref="/knowledge">
-              <ul className="space-y-1.5">
-                {athleteMd.goals.map((g, i) => (
-                  <li key={i} className="flex items-start justify-between gap-2 rounded bg-zinc-50 px-2.5 py-2 dark:bg-zinc-900">
-                    <span className="min-w-0 text-sm text-zinc-800 dark:text-zinc-200">{g.goal}</span>
-                    {g.target && g.target !== g.goal && (
-                      <span className="min-w-0 break-words rounded-full bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-700 dark:bg-[#00d4ff]/10 dark:text-[#00d4ff]">
-                        {g.target}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )}
-          {athleteMd.weakpoints.length > 0 && (
-            <Section title="Weakpoints" editHref="/knowledge">
-              <ul className="space-y-1.5">
-                {athleteMd.weakpoints.map((w, i) => (
-                  <li key={i} className="rounded bg-zinc-50 px-2.5 py-2 dark:bg-zinc-900">
-                    <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{w.weakpoint}</p>
-                    {w.detail && w.detail !== w.weakpoint && (
-                      <p className="mt-0.5 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{w.detail}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )}
+      {/* Goals & Weakpoints — athlete-owned intent, now a real form (Goals/Weakpoints centralization)
+          instead of hand-edited markdown. Independent Save button/state from Nutrition and Season. */}
+      <Section title="Goals & Weakpoints">
+        <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+          What you're working toward, and where you're weak — the coach reads these every generation.
+        </p>
+        <div className="space-y-2">
+          {goals.map((g, i) => (
+            <div key={i} className="flex flex-wrap items-end gap-2 rounded bg-zinc-50 px-2.5 py-2 dark:bg-zinc-900">
+              <label className="min-w-[8rem] flex-1">
+                <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Goal</span>
+                <input
+                  type="text"
+                  value={g.goal}
+                  onChange={(e) => updateGoal(i, { goal: e.target.value })}
+                  className="mt-1 w-full rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400"
+                />
+              </label>
+              <label className="min-w-[8rem] flex-1">
+                <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Target</span>
+                <input
+                  type="text"
+                  value={g.target}
+                  onChange={(e) => updateGoal(i, { target: e.target.value })}
+                  className="mt-1 w-full rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400"
+                />
+              </label>
+              <label>
+                <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Focus</span>
+                <select
+                  value={g.focus}
+                  onChange={(e) => updateGoal(i, { focus: e.target.value as ProfileResponse["goals"][number]["focus"] })}
+                  className="mt-1 rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400"
+                >
+                  <option value="general">general</option>
+                  <option value="aerobic-base">aerobic-base</option>
+                  <option value="threshold">threshold</option>
+                  <option value="vo2max">vo2max</option>
+                  <option value="anaerobic">anaerobic</option>
+                  <option value="durability">durability</option>
+                </select>
+              </label>
+              <button
+                onClick={() => removeGoal(i)}
+                title="Remove this goal"
+                className="rounded-md border border-red-300 px-2 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950"
+              >
+                ×
+              </button>
+            </div>
+          ))}
         </div>
-      )}
+        <button
+          onClick={addGoal}
+          className="mt-3 rounded border border-zinc-200 px-2 py-1 text-[10px] font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+        >
+          + Add goal
+        </button>
+
+        <div className="mt-4 space-y-2">
+          {weakpoints.map((w, i) => (
+            <div key={i} className="flex flex-wrap items-end gap-2 rounded bg-zinc-50 px-2.5 py-2 dark:bg-zinc-900">
+              <label className="min-w-[8rem] flex-1">
+                <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Weakpoint</span>
+                <input
+                  type="text"
+                  value={w.weakpoint}
+                  onChange={(e) => updateWeakpoint(i, { weakpoint: e.target.value })}
+                  className="mt-1 w-full rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400"
+                />
+              </label>
+              <label className="min-w-[10rem] flex-1">
+                <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Detail</span>
+                <input
+                  type="text"
+                  value={w.detail}
+                  onChange={(e) => updateWeakpoint(i, { detail: e.target.value })}
+                  className="mt-1 w-full rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-400"
+                />
+              </label>
+              <button
+                onClick={() => removeWeakpoint(i)}
+                title="Remove this weakpoint"
+                className="rounded-md border border-red-300 px-2 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={addWeakpoint}
+          className="mt-3 rounded border border-zinc-200 px-2 py-1 text-[10px] font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+        >
+          + Add weakpoint
+        </button>
+
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            onClick={saveGoals}
+            disabled={goalsSaveState.state === "saving"}
+            className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:bg-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
+          >
+            {goalsSaveState.state === "saving" ? "Saving…" : "Save"}
+          </button>
+          {goalsSaveState.state === "saved" && <span className="text-xs text-green-700 dark:text-green-400">✓ Saved</span>}
+          {goalsSaveState.state === "error" && <span className="text-xs text-red-600">{goalsSaveState.message}</span>}
+        </div>
+      </Section>
 
       {/* Season — athlete-owned objective + target events; the macro-periodization engine reads
           these to decide when to activate event-anchored mode (taper/peak toward a race date). */}

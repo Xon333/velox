@@ -38,6 +38,7 @@ export default function PlanView() {
   const [writeResults, setWriteResults] = useState<WriteResult[] | null>(null);
 
   const [athleteMd, setAthleteMd] = useState<AthleteMdSnapshot | null>(null);
+  const [goalsForProgress, setGoalsForProgress] = useState<Array<{ goal: string; target: string }>>([]);
   const [blockHistory, setBlockHistory] = useState<BlockHistoryEntry[]>([]);
 
   const [retroGenerating, setRetroGenerating] = useState(false);
@@ -66,14 +67,19 @@ export default function PlanView() {
     let cancelled = false;
     (async () => {
       try {
-        const { athleteMd: md } = await api<{ athleteMd: AthleteMdSnapshot }>("/api/profile");
+        const response = await api<{
+          athleteMd: AthleteMdSnapshot;
+          goals: Array<{ goal: string; target: string; focus: string }>;
+          weakpoints: Array<{ weakpoint: string; detail: string }>;
+        }>("/api/profile");
         if (!cancelled) {
-          setAthleteMd(md);
-          if (md.goals.length > 0) {
-            setGoal(md.goals.map((g) => g.goal + (g.target ? ` → ${g.target}` : "")).join("\n"));
+          setAthleteMd(response.athleteMd);
+          setGoalsForProgress(response.goals);
+          if (response.goals.length > 0) {
+            setGoal(response.goals.map((g) => g.goal + (g.target ? ` → ${g.target}` : "")).join("\n"));
           }
-          if (md.weakpoints.length > 0) {
-            setWeakpointsText(md.weakpoints.map((w) => w.weakpoint).join("\n"));
+          if (response.weakpoints.length > 0) {
+            setWeakpointsText(response.weakpoints.map((w) => w.weakpoint).join("\n"));
           }
         }
       } catch {
@@ -196,7 +202,9 @@ export default function PlanView() {
       {/* Goals + this-week side by side, just under the active block */}
       {(athleteMd || state.lastSync) && (
         <div className="grid gap-3 sm:grid-cols-[1.7fr_1fr]">
-          {athleteMd && <GoalsProgress athleteMd={athleteMd} />}
+          {goalsForProgress.length > 0 && athleteMd && (
+            <GoalsProgress goals={goalsForProgress} performanceData={athleteMd.performanceData} />
+          )}
           {state.lastSync && <WeeklyDebrief sync={state.lastSync} />}
         </div>
       )}

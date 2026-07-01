@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { AthleteMdSnapshot } from "@/lib/kb-loader";
 import type { BlockHistoryEntry, CurrentBlock, RideScoreEntry, SyncData } from "@/lib/types";
 import { TYPE_STYLES } from "@/lib/workout-types";
 import { isoDaysAgo, localToday as todayIso } from "@/lib/date";
@@ -160,18 +159,19 @@ export function RetroSection({
 // ---------- Progress toward goals ----------
 
 interface ProfileGoals {
-  athleteMd: AthleteMdSnapshot;
+  goals: Array<{ goal: string; target: string }>;
+  performanceData: Record<string, string>;
 }
 
-export function GoalsProgress({ athleteMd }: ProfileGoals) {
-  if (!athleteMd.goals.length) return null;
+export function GoalsProgress({ goals, performanceData }: ProfileGoals) {
+  if (!goals.length) return null;
 
-  const powerGoals = athleteMd.performanceData;
+  const powerGoals = performanceData;
 
   return (
     <Card title="Goals">
       <div className="flex flex-col gap-2">
-        {athleteMd.goals.map((g) => (
+        {goals.map((g) => (
           <div key={g.goal} className="flex items-baseline justify-between gap-2">
             <span className="min-w-0 text-sm text-zinc-700 dark:text-zinc-300">{g.goal}</span>
             {g.target && (
