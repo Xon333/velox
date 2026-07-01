@@ -4,7 +4,7 @@
 import type { AthleteProfile, AthleteQuirkStore, BlockHistoryEntry, BlockSettings, CalibrationStore, CurrentBlock, DispositionLog, InterventionLog, LedgerRebuildMarker, MorningCheckLog, RollingBaselines, ScoreLog, SeasonPlan, SyncData, TodayAnalysis } from "./types";
 import { DEFAULT_BLOCK_SETTINGS } from "./types";
 import { emptyCalibration } from "./calibration";
-import { readMdPerformance } from "./kb-loader";
+import { parseGoalsWeakpointsForMigration, readMdPerformance } from "./kb-loader";
 import { readPhysiology } from "./physiology";
 import { readJsonFile as readJson, updateJsonFile as updateJson, writeJsonFile as writeJson } from "./json-store";
 
@@ -25,12 +25,32 @@ export const DEFAULT_PROFILE: AthleteProfile = {
     buffer: 300,
     targetWeightKg: 75,
   },
+  goalsMigratedAt: null,
   updatedAt: new Date(0).toISOString(),
 };
 
+// Pure migration decision, separated from readAthleteProfile's file IO so the flag-gating logic (the
+// trickiest part — never re-import after the flag is set, never overwrite already-non-empty data) is
+// testable without mocking the filesystem. `parseMd` is injected so the test can supply a fake.
+export async function applyGoalsMigration(
+  profile: AthleteProfile,
+  parseMd: () => Promise<{ goals: AthleteProfile["goals"]; weakpoints: AthleteProfile["weakpoints"] }>
+): Promise<AthleteProfile> {
+  if (profile.goalsMigratedAt !== null) return profile;
+  const now = new Date().toISOString();
+  if (profile.goals.length > 0 || profile.weakpoints.length > 0) {
+    return { ...profile, goalsMigratedAt: now };
+  }
+  const { goals, weakpoints } = await parseMd();
+  return { ...profile, goals, weakpoints, goalsMigratedAt: now };
+}
 
 export async function readAthleteProfile(): Promise<AthleteProfile> {
-  const profile = await readJson<AthleteProfile>("athlete.json", DEFAULT_PROFILE);
+  let profile = await readJson<AthleteProfile>("athlete.json", DEFAULT_PROFILE);
+  if (profile.goalsMigratedAt === null) {
+    profile = await applyGoalsMigration(profile, parseGoalsWeakpointsForMigration);
+    await writeAthleteProfile(profile);
+  }
   // Overlay FTP/HR so IF/execution scoring, trends and generation all agree on the same
   // numbers. Precedence: athlete.json defaults < athlete_profile.md (fallback) < the
   // physiology store (the source of truth, synced from Intervals.icu).

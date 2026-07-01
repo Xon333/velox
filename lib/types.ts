@@ -41,9 +41,10 @@ export interface NutritionSettings {
 
 export interface AthleteProfile {
   performance: PerformanceData;
-  goals: string[];
-  weakpoints: string[];
+  goals: Array<{ goal: string; target: string; focus: SeasonFocus | "general" }>;
+  weakpoints: Array<{ weakpoint: string; detail: string }>;
   nutrition: NutritionSettings;
+  goalsMigratedAt: string | null; // ISO timestamp once the one-time markdown migration has run
   updatedAt: string; // ISO timestamp
 }
 

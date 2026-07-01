@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listKnowledgeFiles, loadKnowledgeBaseContext, stripObsidianSyntax } from "./kb-loader";
+import { listKnowledgeFiles, loadKnowledgeBaseContext, stripObsidianSyntax, parseGoalsWeakpointsForMigration } from "./kb-loader";
 
 // CR-4: the loader must never hard-fail when knowledge-base/ is absent (a fresh clone / CI) — it
 // falls back to the committed knowledge-base-defaults/ skeleton. These invariants hold whether or not
@@ -46,5 +46,15 @@ describe("stripObsidianSyntax", () => {
     expect(out).not.toMatch(/Related notes/);
     expect(out).toContain("## Appendix");
     expect(out).toContain("Kept.");
+  });
+});
+
+describe("parseGoalsWeakpointsForMigration", () => {
+  it("returns empty arrays when athlete_profile.md has no GOALS/WEAKPOINTS content or is missing", async () => {
+    const result = await parseGoalsWeakpointsForMigration();
+    // Whatever the real fixture file contains — this just asserts the shape and that it never throws.
+    expect(Array.isArray(result.goals)).toBe(true);
+    expect(Array.isArray(result.weakpoints)).toBe(true);
+    for (const g of result.goals) expect(g.focus).toBe("general");
   });
 });

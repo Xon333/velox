@@ -13,8 +13,6 @@ export interface AthleteMdSnapshot {
   performanceData: Record<string, string>;
   powerProfile: Array<{ duration: string; watts: string; wkg: string }>;
   trainingZones: Array<{ zone: string; name: string; power: string; hr: string }>;
-  weakpoints: Array<{ weakpoint: string; detail: string }>;
-  goals: Array<{ goal: string; target: string }>;
 }
 
 function extractSectionText(content: string, heading: string): string {
@@ -60,20 +58,16 @@ export async function parseAthleteMd(): Promise<AthleteMdSnapshot> {
   try {
     content = await fs.readFile(path.join(KB_DIR, "athlete_profile.md"), "utf-8");
   } catch {
-    return { personalData: {}, performanceData: {}, powerProfile: [], trainingZones: [], weakpoints: [], goals: [] };
+    return { personalData: {}, performanceData: {}, powerProfile: [], trainingZones: [] };
   }
 
   const personalSection = extractSectionText(content, "PERSONAL DATA");
   const perfSection = extractSectionText(content, "PERFORMANCE DATA");
   const powerSection = extractSectionText(content, "POWER PROFILE");
   const zonesSection = extractSectionText(content, "TRAINING ZONES");
-  const weakpointsSection = extractSectionText(content, "WEAKPOINTS");
-  const goalsSection = extractSectionText(content, "GOALS");
 
   const powerRows = parseRows(powerSection).filter((r) => r[0] !== "Duration");
   const zoneRows = parseRows(zonesSection).filter((r) => r[0] !== "Zone");
-  const wpRows = parseRows(weakpointsSection).filter((r) => r[0] !== "Weakpoint");
-  const goalRows = parseRows(goalsSection).filter((r) => r[0] !== "Goal");
 
   return {
     personalData: parseKvTable(personalSection),
@@ -89,14 +83,30 @@ export async function parseAthleteMd(): Promise<AthleteMdSnapshot> {
       power: r[2] ?? "",
       hr: r[3] ?? "",
     })),
-    weakpoints: wpRows.map((r) => ({
-      weakpoint: r[0] ?? "",
-      detail: r[1] ?? "",
-    })),
-    goals: goalRows.map((r) => ({
-      goal: r[0] ?? "",
-      target: r[1] ?? "",
-    })),
+  };
+}
+
+// One-time migration source (Goals/Weakpoints centralization): re-parses whatever GOALS/WEAKPOINTS content
+// currently exists in athlete_profile.md, in the NEW structured shape. Migrated goals always get
+// focus: "general" — the markdown table never had a Focus column, so there's no tag to recover; the athlete
+// re-tags through the new form afterward if they want finer filtering. Never throws on a missing file.
+export async function parseGoalsWeakpointsForMigration(): Promise<{
+  goals: Array<{ goal: string; target: string; focus: "general" }>;
+  weakpoints: Array<{ weakpoint: string; detail: string }>;
+}> {
+  let content = "";
+  try {
+    content = await fs.readFile(path.join(KB_DIR, "athlete_profile.md"), "utf-8");
+  } catch {
+    return { goals: [], weakpoints: [] };
+  }
+  const goalsSection = extractSectionText(content, "GOALS");
+  const weakpointsSection = extractSectionText(content, "WEAKPOINTS");
+  const goalRows = parseRows(goalsSection).filter((r) => r[0] !== "Goal");
+  const wpRows = parseRows(weakpointsSection).filter((r) => r[0] !== "Weakpoint");
+  return {
+    goals: goalRows.map((r) => ({ goal: r[0] ?? "", target: r[1] ?? "", focus: "general" as const })),
+    weakpoints: wpRows.map((r) => ({ weakpoint: r[0] ?? "", detail: r[1] ?? "" })),
   };
 }
 
@@ -338,58 +348,3 @@ export async function latestRetrospectiveSeeds(): Promise<string[]> {
   return seeds;
 }
 
-// athlete.json is the source of truth; this regenerates athlete_profile.md so
-// the two stay in sync (non-negotiable #6).
-export function athleteProfileToMarkdown(profile: AthleteProfile): string {
-  const p = profile.performance;
-  const n = profile.nutrition;
-  const list = (items: string[]) =>
-    items.length > 0 ? items.map((g) => `- ${g}`).join("\n") : "- (none recorded)";
-  return `# Athlete Profile
-
-> Generated from athlete.json on ${new Date().toISOString().slice(0, 10)}.
-> Edit via the Profile page — manual edits to this file are overwritten on the next profile save.
-
-## Performance
-
-- FTP: ${p.ftp} W
-- Max HR: ${p.maxHr} bpm
-- Threshold HR: ${p.thresholdHr} bpm
-- Weight: ${p.weightKg} kg (target: ${n.targetWeightKg} kg)
-- Weekly training availability: ${p.weeklyHoursMin}–${p.weeklyHoursMax} hours
-
-## Goals
-
-${list(profile.goals)}
-
-## Weakpoints to address
-
-${list(profile.weakpoints)}
-
-## Nutrition formula settings
-
-- Base calories: ${n.baseCalories} kcal
-- Rest day target: ${n.restDayTarget} kcal
-- Training day buffer: ${n.buffer} kcal (auto-adjusts ±150 kcal on 7-day weight trend, capped 0–600)
-- Daily targets are computed by the app's deterministic formula: base + activity kJ + buffer on training days, flat target on rest days. Use the pre-computed values supplied with each generation request — never recalculate them.
-
----
-
-## Related notes
-
-This profile is the athlete-specific anchor; the knowledge files supply the general principles calibrated against it (stripped from the generation prompt — for navigating the Obsidian vault):
-
-- [[cycling_database]] — foundational zones, FTP, periodisation, weekly structure, recovery, strength.
-- [[training_knowledge]] — advanced training that targets the weakpoints above ([[training_knowledge#5. FTP PLATEAU DIAGNOSIS|FTP plateau]], [[training_knowledge#4. SPRINT INTERVAL TRAINING (SIT)|sprint]], [[training_knowledge#12. DURABILITY TEMPLATES|durability]]).
-- [[nutrition_knowledge]] — advanced fuelling ([[nutrition_knowledge#1. FUEL FOR THE WORK REQUIRED (FFTWR)|fuel for the work required]], protein distribution).
-`;
-}
-
-export async function writeAthleteProfileMd(profile: AthleteProfile): Promise<void> {
-  await fs.mkdir(KB_DIR, { recursive: true }); // first write on a fresh setup creates the dir
-  await fs.writeFile(
-    path.join(KB_DIR, "athlete_profile.md"),
-    athleteProfileToMarkdown(profile),
-    "utf-8"
-  );
-}
