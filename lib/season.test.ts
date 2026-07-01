@@ -65,6 +65,21 @@ describe("load envelope", () => {
   it("withholds targets when there is no seed (no FTP/CTL)", () => {
     expect(assignLoadTargets([p()], null, 1.3)[0].targetWeeklyTss).toBeNull();
   });
+  it("does not advance the ramp base past a deload — resumes the ramp from the pre-deload target", () => {
+    const periods = [
+      { ...p(), deloadWeek: false },
+      { ...p(), deloadWeek: false },
+      { ...p(), deloadWeek: true }, // deload — must not become the new ramp base
+      { ...p(), deloadWeek: false },
+      { ...p(), deloadWeek: false },
+    ];
+    const out = assignLoadTargets(periods, 400, 1.3);
+    expect(out[0].targetWeeklyTss).toBe(424); // 400 * 1.06
+    expect(out[1].targetWeeklyTss).toBe(449); // 424 * 1.06, rounded
+    expect(out[2].targetWeeklyTss).toBe(269); // deload: 449 * 0.6, rounded — prev stays 449
+    expect(out[3].targetWeeklyTss).toBe(476); // resumes from 449 (pre-deload), NOT 269: 449 * 1.06, rounded
+    expect(out[4].targetWeeklyTss).toBe(505); // 476 * 1.06, rounded
+  });
 });
 
 describe("deload cadence", () => {
