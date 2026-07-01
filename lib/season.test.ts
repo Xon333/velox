@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, type SeasonDraftInput } from "./season";
+import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, type SeasonDraftInput } from "./season";
 
 describe("season constants + helpers", () => {
   it("encodes the KB deload cadence (3:1 default, 2:1 tight)", () => {
@@ -49,6 +49,23 @@ describe("draftSeasonArc — Mode-C", () => {
 function addWeeksExpected(p: { startDate: string; plannedWeeks: number }): string {
   return new Date(Date.parse(p.startDate) + p.plannedWeeks * 7 * 86_400_000).toISOString().slice(0, 10);
 }
+
+describe("load envelope", () => {
+  const p = (): import("./types").FocusPeriod => ({
+    focus: "threshold", phase: "build", startDate: "2026-07-01", plannedWeeks: 3,
+    intensitySplit: "80/20", targetWeeklyTss: null, deloadWeek: false, rationale: "", source: "derived", confidence: "medium",
+  });
+  it("ramps ~+6% off the seed, capped by ACWR", () => {
+    const out = assignLoadTargets([p(), p(), p()], 400, 1.3);
+    expect(out[0].targetWeeklyTss).toBe(424); // 400 * 1.06
+    expect(out[1].targetWeeklyTss!).toBeGreaterThan(out[0].targetWeeklyTss!);
+    // never a jump beyond the ACWR ceiling vs the seed-derived chronic
+    expect(out[2].targetWeeklyTss! / 400).toBeLessThanOrEqual(1.3 + 0.001);
+  });
+  it("withholds targets when there is no seed (no FTP/CTL)", () => {
+    expect(assignLoadTargets([p()], null, 1.3)[0].targetWeeklyTss).toBeNull();
+  });
+});
 
 describe("deload cadence", () => {
   const p = (weeks: number): import("./types").FocusPeriod => ({

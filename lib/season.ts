@@ -1,6 +1,7 @@
 // Macro periodization engine (MACRO-1..3). Pure + deterministic: drafts a rough, rolling season arc of
 // limiter-focus periods, grounded in the knowledge base. The LLM only phrases FocusPeriod.rationale.
 import type { FocusPeriod, SeasonEvent, SeasonFocus, SeasonPhase } from "./types";
+import { DEFAULT_ACWR_BANDS } from "./calibration";
 
 // KB-grounded (cycling_database.md Annual Periodisation Framework + training_knowledge.md). Mode-C focus
 // periods are mesocycle-sized (a "base touch" is 2–4 wk, not the 10–16 wk annual base phase).
@@ -95,7 +96,27 @@ export function draftSeasonArc(input: SeasonDraftInput, today: string): FocusPer
   }
 
   periods.push(period("sharpen", "build", cursor, conf, "Realize — a lighter week to absorb the block and re-test."));
-  return applyDeloadCadence(periods, input.heavyFatigue);
+  const withDeloads = applyDeloadCadence(periods, input.heavyFatigue);
+  const seed = input.ftp !== null && input.ctl !== null ? input.recentWeeklyTss : null;
+  return assignLoadTargets(withDeloads, seed, DEFAULT_ACWR_BANDS.optimalHigh);
+}
+
+// Ramps each period's targetWeeklyTss ~+loadRampPct% off the prior period (first period off seedWeeklyTss).
+// A deload period gets ~60% of the running load and does NOT advance the ramp base.
+// Capped so a target never exceeds seedWeeklyTss * acwrCeiling.
+// Null seed → all targets remain null.
+export function assignLoadTargets(periods: FocusPeriod[], seedWeeklyTss: number | null, acwrCeiling: number): FocusPeriod[] {
+  if (seedWeeklyTss === null || !Number.isFinite(seedWeeklyTss) || seedWeeklyTss <= 0) {
+    return periods.map((p) => ({ ...p, targetWeeklyTss: null }));
+  }
+  const ramp = 1 + SEASON_CONSTANTS.loadRampPct / 100;
+  const ceiling = seedWeeklyTss * acwrCeiling;
+  let prev = seedWeeklyTss;
+  return periods.map((p) => {
+    const target = p.deloadWeek ? Math.round(prev * 0.6) : Math.min(Math.round(prev * ramp), Math.round(ceiling));
+    if (!p.deloadWeek) prev = target;
+    return { ...p, targetWeeklyTss: target };
+  });
 }
 
 // Mark the period that crosses each deload boundary (30–50% volume cut lands in its trailing week).
