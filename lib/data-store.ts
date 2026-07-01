@@ -36,7 +36,10 @@ export async function applyGoalsMigration(
   profile: AthleteProfile,
   parseMd: () => Promise<{ goals: AthleteProfile["goals"]; weakpoints: AthleteProfile["weakpoints"] }>
 ): Promise<AthleteProfile> {
-  if (profile.goalsMigratedAt !== null) return profile;
+  // Loose check (not `!== null`): a real on-disk athlete.json written before this field existed
+  // parses back with the key entirely absent (`undefined`), which a strict null-check would wrongly
+  // treat as "already migrated" and skip forever.
+  if (profile.goalsMigratedAt) return profile;
   const now = new Date().toISOString();
   if (profile.goals.length > 0 || profile.weakpoints.length > 0) {
     return { ...profile, goalsMigratedAt: now };
@@ -47,7 +50,7 @@ export async function applyGoalsMigration(
 
 export async function readAthleteProfile(): Promise<AthleteProfile> {
   let profile = await readJson<AthleteProfile>("athlete.json", DEFAULT_PROFILE);
-  if (profile.goalsMigratedAt === null) {
+  if (!profile.goalsMigratedAt) {
     profile = await applyGoalsMigration(profile, parseGoalsWeakpointsForMigration);
     await writeAthleteProfile(profile);
   }

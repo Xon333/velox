@@ -46,4 +46,20 @@ describe("applyGoalsMigration", () => {
     expect(result.weakpoints).toEqual([]);
     expect(result.goalsMigratedAt).not.toBeNull();
   });
+
+  it("treats a missing goalsMigratedAt (a real on-disk profile written before this field existed) the same as null", async () => {
+    // readJsonFile does a raw JSON.parse with no schema normalization, so a pre-existing athlete.json
+    // predating this field yields `undefined` here, not `null` — a strict `!== null` guard would wrongly
+    // treat that as "already migrated" and skip it forever.
+    const legacy = baseProfile();
+    const { goalsMigratedAt: _drop, ...withoutFlag } = legacy;
+    const parseMd = async () => ({
+      goals: [{ goal: "FTP", target: "300W", focus: "general" as const }],
+      weakpoints: [{ weakpoint: "Cornering", detail: "" }],
+    });
+    const result = await applyGoalsMigration(withoutFlag as AthleteProfile, parseMd);
+    expect(result.goals).toEqual([{ goal: "FTP", target: "300W", focus: "general" }]);
+    expect(result.weakpoints).toEqual([{ weakpoint: "Cornering", detail: "" }]);
+    expect(result.goalsMigratedAt).not.toBeNull();
+  });
 });
