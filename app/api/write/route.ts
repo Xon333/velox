@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createEvent, deleteEvents, isIntervalsConfigured } from "@/lib/intervals-api";
-import { appendBlockHistory, readAthleteProfile, readCurrentBlock, readInterventionLog, readLastSync, readScoreLog, writeCurrentBlock, writeInterventionLog } from "@/lib/data-store";
+import { appendBlockHistory, readAthleteProfile, readCurrentBlock, readInterventionLog, readLastSync, readScoreLog, readSeasonPlan, writeCurrentBlock, writeInterventionLog } from "@/lib/data-store";
+import { currentPeriod } from "@/lib/season";
 import { buildAthleteModel, deriveInsights } from "@/lib/athlete-model";
 import { buildInterventions, mergeInterventions } from "@/lib/intervention";
 import { planDayToEvent } from "@/lib/plan-parser";
@@ -106,6 +107,10 @@ export async function POST(req: Request) {
 
   const dates = plan.days.map((d) => d.date).sort();
   const ftp = (await readAthleteProfile()).performance.ftp;
+  // MACRO: stamp the block with the season focus period it was generated under, when one exists.
+  // Best-effort by construction — currentPeriod is a pure lookup over the plan already on disk.
+  const today = new Date().toISOString().slice(0, 10);
+  const seasonPeriod = currentPeriod(await readSeasonPlan(), today);
   // The event id each day was written as, so the block's events can be pruned on a later discard/replace.
   const eventIdByDate = new Map(results.map((r) => [r.date, r.eventId]));
   const currentBlock: CurrentBlock = {
@@ -118,6 +123,7 @@ export async function POST(req: Request) {
     model: plan.model,
     promptVersion: plan.promptVersion,
     durabilityTemplate: plan.durabilityTemplate,
+    ...(seasonPeriod ? { seasonFocus: seasonPeriod.focus, seasonPhase: seasonPeriod.phase } : {}),
     // Track B: stamp the template on the week's long Z2 ride(s) — a Z2 day at/near the block's longest Z2
     // duration — so scoring can grade that ride against the template's expected signal. Short easy Z2 days
     // (well below the long-ride duration) aren't durability rides and stay unstamped.

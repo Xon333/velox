@@ -9,7 +9,7 @@ import {
   isAnthropicConfigured,
   PROMPT_VERSION,
 } from "@/lib/anthropic-api";
-import { readAthleteProfile, readBlockHistory, readBlockSettings, readCurrentBlock, readInterventionLog, readLastSync, readQuirks, readRollingBaselines, readScoreLog } from "@/lib/data-store";
+import { readAthleteProfile, readBlockHistory, readBlockSettings, readCurrentBlock, readInterventionLog, readLastSync, readQuirks, readRollingBaselines, readScoreLog, readSeasonPlan, writeSeasonPlan } from "@/lib/data-store";
 import { latestRetrospectiveSeeds, loadKnowledgeBaseContext } from "@/lib/kb-loader";
 import { formatReflectionsForPrompt } from "@/lib/retrospective-schema";
 import { formatQuirksForPrompt } from "@/lib/quirks";
@@ -34,16 +34,32 @@ import { validateSchedule } from "@/lib/schedule-validate";
 import { deriveSessionRequirements, formatSessionRequirements, validateSessionRequirements } from "@/lib/session-requirements";
 import { formatDurabilityForPrompt, selectDurabilityTemplate } from "@/lib/durability";
 import { dedupeGeneration, generationKey } from "@/lib/generate-cache";
-import type { BlockParams, GeneratedPlan } from "@/lib/types";
+import { currentPeriod, formatSeasonContext, replanSeasonArc, validateSeasonFit } from "@/lib/season";
+import type { BlockParams, GeneratedPlan, PowerSystem, SeasonFocus } from "@/lib/types";
 
 // Generation calls take 1–2 minutes for a 4-week block.
 export const maxDuration = 300;
+
+// Maps the power-profile's physiological systems onto the season engine's focus vocabulary. Threshold
+// maps 1:1; anaerobic covers both neuromuscular and anaerobic (the season arc has no separate sprint focus).
+function mapSystemToFocus(system: PowerSystem): SeasonFocus {
+  switch (system) {
+    case "neuromuscular":
+      return "anaerobic";
+    case "anaerobic":
+      return "anaerobic";
+    case "vo2max":
+      return "vo2max";
+    case "threshold":
+      return "threshold";
+  }
+}
 
 function parseBlockParams(body: unknown): BlockParams | string {
   if (!body || typeof body !== "object") return "Request body must be a JSON object.";
   const b = body as Record<string, unknown>;
   const lengthWeeks = b.lengthWeeks;
-  if (lengthWeeks !== 2 && lengthWeeks !== 4) return "lengthWeeks must be 2 or 4.";
+  if (lengthWeeks !== 2 && lengthWeeks !== 4 && lengthWeeks !== 6 && lengthWeeks !== 8) return "lengthWeeks must be 2, 4, 6 or 8.";
   const goal = typeof b.goal === "string" ? b.goal.trim() : "";
   if (!goal) return "goal is required.";
   const startDate = typeof b.startDate === "string" ? b.startDate : "";
@@ -77,7 +93,7 @@ export async function POST(req: Request) {
 
   try {
     // Knowledge base is read fresh every call so manager edits apply immediately.
-    const [profile, sync, kbContext, blockSettings, retroSeeds, scoreLog, physStore, interventionLog, baselines, currentBlock, blockHistory, quirks] = await Promise.all([
+    const [profile, sync, kbContext, blockSettings, retroSeeds, scoreLog, physStore, interventionLog, baselines, currentBlock, blockHistory, quirks, existingSeason] = await Promise.all([
       readAthleteProfile(),
       readLastSync(),
       loadKnowledgeBaseContext(),
@@ -90,6 +106,7 @@ export async function POST(req: Request) {
       readCurrentBlock(),
       readBlockHistory(),
       readQuirks(),
+      readSeasonPlan(),
     ]);
 
     const weightTrend = (sync ? weightTrendFromWellness(sync.wellness) : null) ?? 0;
@@ -127,9 +144,8 @@ export async function POST(req: Request) {
     // Track A: classify the power-curve shape into a rider type + auto-derived weak point ("easy win"),
     // injected as a hint that complements the manual weakpoints. Deterministic; the LLM only phrases it.
     // All-time best efforts give the truest read of what this rider is built for.
-    const powerProfileContext = formatPowerProfileForPrompt(
-      analyzePowerProfile(sync?.powerCurveAllTime ?? sync?.powerCurve ?? [], profile.performance.ftp, latestWeight)
-    );
+    const powerProfile = analyzePowerProfile(sync?.powerCurveAllTime ?? sync?.powerCurve ?? [], profile.performance.ftp, latestWeight);
+    const powerProfileContext = formatPowerProfileForPrompt(powerProfile);
 
     // ONE synthesised coaching block: the athlete model's ranked insights (weak/under-
     // delivering/trending types, off-plan drift) folded together with each dimension's
@@ -180,6 +196,28 @@ export async function POST(req: Request) {
       ? `\nCARRY-FORWARD (quality the athlete had to drop last block with no make-up slot — re-prioritise): ${currentBlock.deferredQuality.join("; ")}.`
       : "";
 
+    // Macro periodization (MACRO-3): re-plan the arc from current fitness, then hand the generator the
+    // current focus period as context. Best-effort — a failure here must never block generation.
+    let seasonContext = "";
+    let currentSeasonPeriod: import("@/lib/types").FocusPeriod | null = null;
+    try {
+      const limiter = powerProfile?.easyWin
+        ? { system: mapSystemToFocus(powerProfile.easyWin.system), confidence: powerProfile.confident ? "high" as const : "low" as const }
+        : { system: null, confidence: "low" as const };
+      const today = new Date().toISOString().slice(0, 10);
+      // Preserve the athlete's owned objective/events (Task 8 PUT); the engine only re-drafts `periods`.
+      const replanned = replanSeasonArc(
+        existingSeason,
+        { objective: existingSeason.objective, events: existingSeason.events, ctl: sync?.fitness.ctl ?? null, ftp: profile.performance.ftp, recentWeeklyTss: baselines.avgTss90d != null ? Math.round(baselines.avgTss90d * 7) : null, limiter, recentFocuses: [], heavyFatigue: !!(signals.loadRamp?.triggered) },
+        () => null,
+        today
+      );
+      await writeSeasonPlan(replanned);
+      currentSeasonPeriod = currentPeriod(replanned, today);
+      const line = formatSeasonContext(replanned, today);
+      if (line) seasonContext = `\n${line}`;
+    } catch { /* season layer is best-effort */ }
+
     // Live training zones from the physiology store, rendered for the prompt (these used to
     // live in athlete_profile.md but are now synced from Intervals.icu).
     const fmtZoneRange = (z: Zone, unit: string) =>
@@ -202,7 +240,7 @@ export async function POST(req: Request) {
     // don't invalidate the cached prefix.
     const { cached, dynamic } = buildSystemPrompt(
       kbContext,
-      seedsContext + reflectionsContext + stateContext + directivesContext + quirkContext + powerProfileContext + formFuelContext + sessionReqContext + durabilityContext + deferredContext,
+      seedsContext + reflectionsContext + stateContext + directivesContext + quirkContext + powerProfileContext + formFuelContext + sessionReqContext + durabilityContext + deferredContext + seasonContext,
       buildAthleteDataSection(profile, sync, zonesText),
       blockParams
     );
@@ -248,6 +286,9 @@ export async function POST(req: Request) {
     warnings.push(...validateNutrition(days, nutritionConfig, profile.performance.ftp, weightTrend));
     // Track B: enforce the goal-driven session requirement (terrain/race goal ⇒ ≥1 RaceSim).
     warnings.push(...validateSessionRequirements(days, requirements));
+    // MACRO-3: flag a block whose intensity mix contradicts the current season focus period (e.g. hard
+    // sessions stacked into a base/aerobic period). Only when a current period was resolved above.
+    if (currentSeasonPeriod) warnings.push(...validateSeasonFit(days, currentSeasonPeriod, profile.performance.ftp));
     if (truncated) {
       warnings.unshift("The AI response hit the token limit and may be incomplete.");
     }

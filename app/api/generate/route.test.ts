@@ -54,6 +54,8 @@ vi.mock("@/lib/data-store", () => ({
   readQuirks: vi.fn(),
   readRollingBaselines: vi.fn(),
   readScoreLog: vi.fn(),
+  readSeasonPlan: vi.fn(),
+  writeSeasonPlan: vi.fn(),
 }));
 
 import * as store from "@/lib/data-store";
@@ -78,6 +80,8 @@ beforeEach(() => {
   vi.mocked(store.readQuirks).mockResolvedValue({ entries: [], extractedAt: "", engine: "" });
   vi.mocked(store.readRollingBaselines).mockResolvedValue({} as never);
   vi.mocked(store.readScoreLog).mockResolvedValue({ entries: [], updatedAt: "" });
+  vi.mocked(store.readSeasonPlan).mockResolvedValue({ objective: "", events: [], periods: [], updatedAt: "" });
+  vi.mocked(store.writeSeasonPlan).mockResolvedValue(undefined);
 });
 
 const gen = (goal: string) =>

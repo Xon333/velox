@@ -22,6 +22,7 @@ vi.mock("@/lib/data-store", () => ({
   readInterventionLog: vi.fn(async () => ({ records: [], updatedAt: "" })),
   readLastSync: vi.fn(async () => null),
   readScoreLog: vi.fn(async () => ({ entries: [] })),
+  readSeasonPlan: vi.fn(async () => ({ objective: "", events: [], periods: [], updatedAt: "" })),
   writeCurrentBlock: vi.fn(async () => {}),
   writeInterventionLog: vi.fn(async () => {}),
 }));

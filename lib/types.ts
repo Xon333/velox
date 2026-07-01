@@ -294,6 +294,8 @@ export interface CurrentBlock {
   // Quality sessions dropped mid-block (a proactive downgrade with no make-up slot) — surfaced to the
   // next generation as a carry-forward priority so the stimulus isn't silently lost (CR-6).
   deferredQuality?: string[];
+  seasonFocus?: string; // MACRO: the focus period this block was generated under
+  seasonPhase?: string;
 }
 
 // ---------- Season plan (data/season-plan.json) — macro periodization (MACRO-1..3) ----------
