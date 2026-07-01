@@ -33,6 +33,7 @@ export interface SeasonDraftInput {
   recentWeeklyTss: number | null;
   limiter: { system: SeasonFocus | null; confidence: "low" | "medium" | "high" };
   recentFocuses: SeasonFocus[]; // most recent last
+  heavyFatigue: boolean;
 }
 
 const BUILD_FOCI: SeasonFocus[] = ["threshold", "vo2max", "anaerobic", "durability"];
@@ -94,5 +95,22 @@ export function draftSeasonArc(input: SeasonDraftInput, today: string): FocusPer
   }
 
   periods.push(period("sharpen", "build", cursor, conf, "Realize — a lighter week to absorb the block and re-test."));
-  return periods;
+  return applyDeloadCadence(periods, input.heavyFatigue);
+}
+
+// Mark the period that crosses each deload boundary (30–50% volume cut lands in its trailing week).
+// Boundary fires when cumulative loading weeks reach (every - 1), i.e. after 3 loading weeks for 3:1,
+// after 2 loading weeks for 2:1 (tight).
+export function applyDeloadCadence(periods: FocusPeriod[], tight: boolean): FocusPeriod[] {
+  const every = tight ? SEASON_CONSTANTS.deloadTightEveryWeeks : SEASON_CONSTANTS.deloadEveryWeeks;
+  const threshold = every - 1; // loading weeks before the deload period
+  let weeksSinceDeload = 0;
+  return periods.map((p) => {
+    weeksSinceDeload += p.plannedWeeks;
+    if (weeksSinceDeload >= threshold) {
+      weeksSinceDeload = 0;
+      return { ...p, deloadWeek: true };
+    }
+    return { ...p, deloadWeek: false };
+  });
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, type SeasonDraftInput } from "./season";
+import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, type SeasonDraftInput } from "./season";
 
 describe("season constants + helpers", () => {
   it("encodes the KB deload cadence (3:1 default, 2:1 tight)", () => {
@@ -16,7 +16,7 @@ describe("season constants + helpers", () => {
 
 const baseInput = (over: Partial<SeasonDraftInput> = {}): SeasonDraftInput => ({
   objective: "get faster", events: [], ctl: 60, ftp: 280, recentWeeklyTss: 420,
-  limiter: { system: null, confidence: "low" }, recentFocuses: ["aerobic-base", "threshold"], ...over,
+  limiter: { system: null, confidence: "low" }, recentFocuses: ["aerobic-base", "threshold"], heavyFatigue: false, ...over,
 });
 
 describe("draftSeasonArc — Mode-C", () => {
@@ -49,3 +49,19 @@ describe("draftSeasonArc — Mode-C", () => {
 function addWeeksExpected(p: { startDate: string; plannedWeeks: number }): string {
   return new Date(Date.parse(p.startDate) + p.plannedWeeks * 7 * 86_400_000).toISOString().slice(0, 10);
 }
+
+describe("deload cadence", () => {
+  const p = (weeks: number): import("./types").FocusPeriod => ({
+    focus: "threshold", phase: "build", startDate: "2026-07-01", plannedWeeks: weeks,
+    intensitySplit: "80/20", targetWeeklyTss: null, deloadWeek: false, rationale: "", source: "derived", confidence: "medium",
+  });
+  it("flags a deload after ~3 loading weeks (3:1 default)", () => {
+    const out = applyDeloadCadence([p(2), p(2), p(2)], false); // cumulative 2,4,6 wk
+    expect(out[0].deloadWeek).toBe(false); // 2 wk in
+    expect(out[1].deloadWeek).toBe(true); // crosses the 4-week (3:1) boundary
+  });
+  it("tightens to 2:1 under heavy fatigue", () => {
+    const out = applyDeloadCadence([p(2), p(2)], true); // boundary at 3 wk
+    expect(out[0].deloadWeek).toBe(true);
+  });
+});
