@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, replanSeasonArc, currentPeriod, formatSeasonContext, validateSeasonFit, type SeasonDraftInput } from "./season";
+import { SEASON_CONSTANTS, defaultBuildOrder, addWeeks, needsBaseGate, nextBuildFocus, draftSeasonArc, applyDeloadCadence, assignLoadTargets, backwardScheduleFromEvent, replanSeasonArc, currentPeriod, formatSeasonContext, validateSeasonFit, validateSeasonPlanInput, type SeasonDraftInput } from "./season";
 import type { SeasonPlan, PlannedDay } from "./types";
 
 describe("season constants + helpers", () => {
@@ -206,5 +206,16 @@ describe("season context + fit validation", () => {
       { date: "2026-07-02", weekNumber: 1, weekTheme: "", name: "Z2", type: "Z2", durationMin: 60, workoutText: "", description: "" },
     ];
     expect(validateSeasonFit(days, base, 280).length).toBeGreaterThan(0);
+  });
+});
+
+describe("validateSeasonPlanInput", () => {
+  it("accepts an objective + well-formed events", () => {
+    const r = validateSeasonPlanInput({ objective: "get faster", events: [{ name: "GF", date: "2026-10-01", priority: "A" }] });
+    expect(typeof r).not.toBe("string");
+  });
+  it("rejects a bad event date / priority", () => {
+    expect(typeof validateSeasonPlanInput({ objective: "x", events: [{ name: "GF", date: "nope", priority: "A" }] })).toBe("string");
+    expect(typeof validateSeasonPlanInput({ objective: "x", events: [{ name: "GF", date: "2026-10-01", priority: "Z" }] })).toBe("string");
   });
 });

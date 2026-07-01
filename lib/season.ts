@@ -265,3 +265,25 @@ export function validateSeasonFit(days: PlannedDay[], period: FocusPeriod, ftp: 
   }
   return warnings;
 }
+
+// Pure input validator for PUT /api/season (athlete-owned fields only — periods stay engine-drafted).
+// Mirrors parseBlockParams' style: returns the parsed object, or a string error message on invalid input.
+export function validateSeasonPlanInput(body: unknown): { objective: string; events: SeasonEvent[] } | string {
+  if (!body || typeof body !== "object") return "Request body must be a JSON object.";
+  const b = body as Record<string, unknown>;
+  const objective = typeof b.objective === "string" ? b.objective.trim() : "";
+  const rawEvents = Array.isArray(b.events) ? b.events : [];
+  const events: SeasonEvent[] = [];
+  for (const e of rawEvents) {
+    if (!e || typeof e !== "object") return "Each event must be an object.";
+    const ev = e as Record<string, unknown>;
+    const name = typeof ev.name === "string" ? ev.name.trim() : "";
+    const date = typeof ev.date === "string" ? ev.date : "";
+    const priority = ev.priority;
+    if (!name) return "Event name is required.";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return "Event date must be a valid YYYY-MM-DD.";
+    if (priority !== "A" && priority !== "B" && priority !== "C") return "Event priority must be A, B or C.";
+    events.push({ name, date, priority });
+  }
+  return { objective, events };
+}
