@@ -95,11 +95,15 @@ re-matched historical entries distinctly from live-frozen ones?
 **Problem.** The prior ~6 months (100 legacy rides) followed real structure, but the app has no
 prescription to grade them against → excluded from execution learning. Single biggest unlock for the
 current data situation.
+**Athlete confirmed (2026-07-01): the legacy rides were structured workouts**, not free rides — so this
+resolves the key open question below in the *feasible* direction: the planned targets for that window
+should genuinely be recoverable from Intervals.icu's own calendar/workout events, not just for a
+partial subset.
 **Sketch.** Reconstruct planned days from Intervals.icu's own calendar/workout events (they carry the
 planned targets) across the legacy window → retroactively grade → turn legacy into corpus.
-🧠 **Brainstorm:** is "what was planned" recoverable from Intervals events for those months, or only where
-workouts were authored there? how to avoid mis-grading genuinely unstructured rides? flag backfilled
-entries as lower-trust (distinct from live-scored)? one-shot opt-in import vs ongoing?
+🧠 **Brainstorm:** how to avoid mis-grading the rare genuinely-unstructured ride that slipped into the
+window? flag backfilled entries as lower-trust (distinct from live-scored)? one-shot opt-in import vs
+ongoing?
 
 ### SUB-3 · Route tests (`sync` + `generate`)
 The 494-line `sync` + 272-line `generate` routes (reconciliation, scoring orchestration, tool-use parsing)
