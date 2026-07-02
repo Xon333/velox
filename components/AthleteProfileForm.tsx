@@ -449,7 +449,7 @@ export default function AthleteProfileForm() {
           instead of hand-edited markdown. Independent Save button/state from Nutrition and Season. */}
       <Section title="Goals & Weakpoints">
         <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
-          What you're working toward, and where you're weak — the coach reads these every generation.
+          What you&apos;re working toward, and where you&apos;re weak — the coach reads these every generation.
         </p>
         <div className="space-y-2">
           {goals.map((g, i) => (
@@ -559,7 +559,7 @@ export default function AthleteProfileForm() {
           these to decide when to activate event-anchored mode (taper/peak toward a race date). */}
       <Section title="Season">
         <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
-          What you're training for, and any target events — the coach plans the season arc around these.
+          What you&apos;re training for, and any target events — the coach plans the season arc around these.
         </p>
         <label className="block">
           <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Objective</span>

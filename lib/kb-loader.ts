@@ -3,7 +3,6 @@
 // very next generation.
 import { promises as fs } from "fs";
 import path from "path";
-import type { AthleteProfile } from "./types";
 import type { Zone } from "./zones";
 
 // ---------- athlete_profile.md parser ----------

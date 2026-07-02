@@ -76,6 +76,13 @@ npm run dev                        # http://localhost:3000  (redirects to /today
 > serverless filesystem (e.g. Vercel) — run it locally with `npm run dev`, or
 > `npm run build && npm start`.
 
+> **Bound to localhost — there is no auth.** `npm run dev`/`npm start` bind `127.0.0.1` only: this
+> app has no login (single-user, local-first by design), and its routes spend Anthropic credits
+> (`/api/generate`) and can overwrite the athlete's data (`/api/import`) or Intervals.icu calendar
+> (`/api/write`), so leaving it open on `0.0.0.0` would let any device on the same network drive-by
+> those routes with plain `curl`. `npm run dev:lan` opts back into LAN access (e.g. to check the app
+> from a phone) — only run it on a network you trust.
+
 > **Stack note for new contributors.** This is Next.js 16 (App Router) / React 19 /
 > TypeScript / Tailwind v4. APIs and conventions differ from older Next.js — see `AGENTS.md`
 > and read the bundled guides in `node_modules/next/dist/docs/` before changing routing or
@@ -138,11 +145,15 @@ store). Each file has one responsibility:
 | `score-log.json` | data-store | Immutable per-ride execution ledger (the learning corpus) |
 | `dispositions.json` | data-store | Athlete attribution per session (completed/partial/compromised) — only `compromised` changes scoring |
 | `intervention-log.json` | data-store | Coaching directives fired per block + their validated/refuted outcomes |
-| `compliance-memory.json` | data-store | Rolling per-workout-type compliance |
 | `rolling-baselines.json` | data-store | 90-day baselines (CTL, decoupling, cadence, TSS) |
 | `today-analysis.json` | data-store | Latest ride analysis + coach note + interval comparison + power PRs |
 | `block-history.json` | data-store | Completed blocks + retrospectives |
 | `block-settings.json` | data-store | Volume/structure knobs + platform toggles |
+| `calibration.json` | data-store | Per-athlete `CalibratedParameter`s (value/source/confidence/lock/override) — ROADMAP #2 |
+| `athlete-quirks.json` | data-store | Recurring patterns extracted from ride/coach notes (e.g. "cramp", "indoor aversion"), frequency-ranked |
+| `morning-check.json` | data-store | Log of proactive pre-session check-in decisions (proceed/downgrade) |
+| `ledger-rebuild.json` | data-store | One-shot marker guarding the opt-in score-log rebuild (never re-runs automatically) |
+| `ai-usage.json` | ai-usage | Best-effort Anthropic token/cost telemetry per call site — regenerable, no `.bak` |
 
 ### Sync window & recency
 
@@ -451,6 +462,7 @@ deliberate cornering practice.
 | `/profile` | Synced performance (FTP, threshold/max HR), all-time PRs, an add/edit/delete goals & weakpoints form, season objective + target events, nutrition settings |
 | `/knowledge` | In-place markdown editor for the knowledge base + retrospectives |
 | `/settings` | Volume/structure knobs, training philosophy, platform toggles |
+| `/model` | What the second brain knows and why: state drivers, standing coaching directives + track record, per-athlete calibration (with a contest/correct manual override) |
 
 | Route | Method | Role |
 |---|---|---|
@@ -459,10 +471,14 @@ deliberate cornering practice.
 | `/api/write` | POST | Write a generated block to Intervals.icu, set as active block |
 | `/api/trends` | GET | Long-term derived analytics + learned insights |
 | `/api/profile` | GET / PUT | Profile snapshot (physiology projected, goals/weakpoints) / save nutrition settings and/or goals/weakpoints |
+| `/api/season` | GET / PUT | Read the season plan / update the athlete's objective + target events |
+| `/api/calibration` | GET / POST | Read calibrated parameters / set or clear a manual override (e.g. `decouplingGood`) |
 | `/api/knowledge` | GET / PUT | List & edit knowledge-base / retrospective files |
 | `/api/settings` | GET / PUT | Block-generation settings + platform toggles |
 | `/api/ask` | POST | Low-token "ask coach" spot-check — reads the resolved CoachSnapshot (block, today's execution, form + TSB modifier, fuel, directives, morning check, disposition) + the next planned session; not the full ledger |
+| `/api/analyze` | POST | Generate (or force-regenerate) today's AI coach note — deferred out of `/api/sync` so the fast deterministic path isn't blocked on the LLM |
 | `/api/disposition` | GET / POST | Read/set a session's athlete attribution (completed/partial/compromised); re-stamps the ledger immediately |
+| `/api/export` / `/api/import` | GET / POST | Download a full `data/` + `knowledge-base/` backup bundle / restore one (path-traversal-guarded, self-identifying) |
 | `/api/morning-check` | GET / POST / PUT | Proactive check-in: UI state / submit + deterministic decision / apply the downgrade + reschedule |
 | `/api/retrospective`, `/api/history`, `/api/note`, `/api/reschedule` | — | Block retro generation, block history, manual note write-back, auto-reschedule |
 
@@ -532,4 +548,4 @@ npm run build
 - **Tests are the contract for the deterministic core.** Pure logic (physiology
   parse/resolve/reconcile, execution scoring, the athlete model, nutrition, plan parsing) is
   unit-tested; keep new pure logic testable and covered.
-- **Verification loop for changes:** `npx tsc --noEmit && npm run build && npm test`.
+- **Verification loop for changes:** `npx tsc --noEmit && npm run lint && npm run build && npm test`.
